@@ -7,31 +7,54 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { pickAllPendingPayments } from "@/services/paymentService";
 import { PaymentAlert } from "@/types";
 import { toast } from "sonner";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 interface PickInstitutionPaymentsProps {
   onPaymentsPicked: () => void;
 }
 
+interface InstitutionFormData {
+  institutionId: string;
+  password: string;
+}
+
 export default function PickInstitutionPayments({ onPaymentsPicked }: PickInstitutionPaymentsProps) {
-  const [institutionId, setInstitutionId] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pickedPayments, setPickedPayments] = useState<PaymentAlert[]>([]);
   const [showResults, setShowResults] = useState(false);
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!institutionId || !password) {
+  // Using react-hook-form for better validation
+  const form = useForm<InstitutionFormData>({
+    defaultValues: {
+      institutionId: "",
+      password: ""
+    }
+  });
+  
+  const handleSubmit = async (data: InstitutionFormData) => {
+    if (!data.institutionId || !data.password) {
       toast.error("Please fill in all fields");
       return;
     }
     
     setIsLoading(true);
     try {
+      // Hint for demo purposes: use INST_XYZ and password123
+      if (data.institutionId !== "INST_XYZ" && process.env.NODE_ENV === "development") {
+        toast.info("Hint: Try using INST_XYZ with password123");
+      }
+      
       const result = await pickAllPendingPayments({
-        institutionId,
-        password
+        institutionId: data.institutionId,
+        password: data.password
       });
       
       setPickedPayments(result);
@@ -49,42 +72,56 @@ export default function PickInstitutionPayments({ onPaymentsPicked }: PickInstit
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Pick Pending Payments</CardTitle>
+        <CardTitle>Institution Connection</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="institutionId">Institution ID</Label>
-              <Input
-                id="institutionId"
-                placeholder="Enter your institution ID"
-                value={institutionId}
-                onChange={(e) => setInstitutionId(e.target.value)}
-              />
-            </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="institutionId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Institution ID</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter your institution ID"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Enter your password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Processing..." : "Pick All Pending Payments"}
             </Button>
-          </div>
-        </form>
+          </form>
+        </Form>
         
         {showResults && pickedPayments.length > 0 && (
           <div className="mt-6">
             <h3 className="text-md font-medium mb-2">Picked Payments</h3>
-            <div className="bg-gray-50 p-4 rounded border">
+            <div className="bg-gray-800 p-4 rounded border border-gray-700 dark:bg-gray-100 dark:border-gray-300">
               <p className="text-sm mb-2">{pickedPayments.length} payments were successfully picked.</p>
               <Button 
                 variant="outline" 
@@ -99,7 +136,7 @@ export default function PickInstitutionPayments({ onPaymentsPicked }: PickInstit
         
         {showResults && pickedPayments.length === 0 && (
           <div className="mt-6">
-            <div className="bg-gray-50 p-4 rounded border">
+            <div className="bg-gray-800 p-4 rounded border border-gray-700 dark:bg-gray-100 dark:border-gray-300">
               <p className="text-sm">No pending payments were found for your institution.</p>
               <Button 
                 variant="outline" 

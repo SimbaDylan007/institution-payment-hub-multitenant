@@ -54,7 +54,7 @@ export default function Dashboard() {
   }
   
   return (
-    <div className="min-h-screen bg-[#121828] text-white flex flex-col">
+    <div className="min-h-screen bg-[#121828] text-white dark:bg-gray-100 dark:text-gray-900 flex flex-col">
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8">
@@ -62,16 +62,16 @@ export default function Dashboard() {
         
         <Stats payments={payments} />
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+          <div className="lg:col-span-3">
             <SearchFilters onSearch={handleSearch} />
           </div>
-          <div>
+          <div className="lg:col-span-1">
             <PickInstitutionPayments onPaymentsPicked={handlePaymentsPicked} />
           </div>
         </div>
         
-        <div className="bg-[#1A1F2C] p-6 border border-gray-800 rounded-lg shadow-sm">
+        <div className="bg-[#1A1F2C] dark:bg-white p-6 border border-gray-800 dark:border-gray-200 rounded-lg shadow-sm">
           <h2 className="text-lg font-medium mb-4">Payment Records</h2>
           
           {isLoading ? (
@@ -87,8 +87,8 @@ export default function Dashboard() {
         </div>
       </main>
       
-      <footer className="bg-[#1A1F2C] border-t border-gray-800 py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-500">
+      <footer className="bg-[#1A1F2C] dark:bg-white border-t border-gray-800 dark:border-gray-200 py-4">
+        <div className="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-600">
           &copy; {new Date().getFullYear()} Institution Payment Hub
         </div>
       </footer>

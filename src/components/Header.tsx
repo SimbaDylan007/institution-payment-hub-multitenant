@@ -8,12 +8,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "./ThemeToggle";
 
 export default function Header() {
   const { user, logout } = useAuth();
 
   return (
-    <header className="w-full bg-[#1A1F2C] border-b border-gray-800 sticky top-0 z-10">
+    <header className="w-full bg-[#1A1F2C] border-b border-gray-800 sticky top-0 z-10 dark:bg-white dark:border-gray-200">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-3">
           <div className="bg-purple-600 p-2 rounded">
@@ -23,14 +24,15 @@ export default function Header() {
               <line x1="12" x2="12" y1="17" y2="21"></line>
             </svg>
           </div>
-          <div className="font-bold text-lg md:text-xl text-white">
+          <div className="font-bold text-lg md:text-xl text-white dark:text-gray-900">
             <span>Institution Payment Hub</span>
           </div>
         </div>
 
         {user && (
           <div className="flex items-center gap-4">
-            <span className="hidden md:inline text-sm text-gray-300">
+            <ThemeToggle />
+            <span className="hidden md:inline text-sm text-gray-300 dark:text-gray-700">
               Welcome, {user.name}
             </span>
             <DropdownMenu>
@@ -47,10 +49,10 @@ export default function Header() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-[#1A1F2C] border-gray-800">
+              <DropdownMenuContent align="end" className="w-56 bg-[#1A1F2C] border-gray-800 dark:bg-white dark:border-gray-200">
                 <DropdownMenuItem 
                   onClick={logout}
-                  className="cursor-pointer text-red-400 focus:text-red-300 focus:bg-[#252e3e]"
+                  className="cursor-pointer text-red-400 focus:text-red-300 focus:bg-[#252e3e] dark:text-red-600 dark:focus:bg-gray-100"
                 >
                   Logout
                 </DropdownMenuItem>
