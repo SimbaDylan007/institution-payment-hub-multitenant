@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 
 const Auth = () => {
   const { user, login, register, isLoading } = useAuth();
@@ -39,7 +40,20 @@ const Auth = () => {
       return;
     }
     
-    await login({ email: loginEmail, password: loginPassword });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(loginEmail)) {
+      setLoginErrorMessage("Please enter a valid email address");
+      return;
+    }
+    
+    // Now try to login
+    const success = await login({ email: loginEmail, password: loginPassword });
+    
+    if (!success) {
+      // The error toast is handled in the AuthContext, so we don't need to show it here
+      console.log("Login failed");
+    }
   };
   
   // Handle register form submission
@@ -98,7 +112,7 @@ const Auth = () => {
           
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-300">Username</Label>
+              <Label htmlFor="email" className="text-gray-300">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -158,14 +172,6 @@ const Auth = () => {
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign In with Email"}
-            </Button>
-            
-            <Button 
-              type="button" 
-              variant="outline"
-              className="w-full border-gray-700 bg-[#1A1F2C] text-white hover:bg-[#252e3e]"
-            >
-              Sign In with Active Directory
             </Button>
             
             <div className="text-center text-sm text-gray-400">

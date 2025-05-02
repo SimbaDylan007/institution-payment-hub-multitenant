@@ -46,8 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock authentication - replace with actual API call
-      if (credentials.email === "admin@example.com" && credentials.password === "password") {
+      // Use strict comparison for user credentials
+      if (credentials.email.toLowerCase() === "admin@example.com" && credentials.password === "password") {
         const mockUser: User = {
           id: "1",
           email: credentials.email,
@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem("user", JSON.stringify(mockUser));
         toast.success("Login successful!");
         return true;
-      } else if (credentials.email === "user@example.com" && credentials.password === "password") {
+      } else if (credentials.email.toLowerCase() === "user@example.com" && credentials.password === "password") {
         const mockUser: User = {
           id: "2",
           email: credentials.email,
@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.success("Login successful!");
         return true;
       } else {
-        toast.error("Invalid email or password");
+        toast.error("Invalid email or password. Try admin@example.com / password or user@example.com / password");
         return false;
       }
     } catch (error) {
