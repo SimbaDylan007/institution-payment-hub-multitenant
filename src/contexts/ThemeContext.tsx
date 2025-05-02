@@ -20,8 +20,6 @@ export const useTheme = () => {
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'dark';
-    
     // Check if theme is stored in localStorage
     const storedTheme = localStorage.getItem("theme");
     if (storedTheme) {
@@ -35,8 +33,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
     const root = window.document.documentElement;
     
     // Remove previous class
