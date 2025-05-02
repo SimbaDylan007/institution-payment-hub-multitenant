@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
-import { PaymentAlert, SearchFilters } from "@/types";
+import { PaymentAlert, SearchFilters as SearchFiltersType } from "@/types";
 import Header from "@/components/Header";
 import Stats from "@/components/Stats";
 import SearchFilters from "@/components/SearchFilters";
@@ -14,9 +14,9 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [payments, setPayments] = useState<PaymentAlert[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [filters, setFilters] = useState<SearchFilters>({});
+  const [filters, setFilters] = useState<SearchFiltersType>({});
   
-  const loadPayments = async (searchFilters?: SearchFilters) => {
+  const loadPayments = async (searchFilters?: SearchFiltersType) => {
     setIsLoading(true);
     try {
       const data = await fetchPayments(searchFilters);
@@ -28,7 +28,7 @@ export default function Dashboard() {
     }
   };
   
-  const handleSearch = (newFilters: SearchFilters) => {
+  const handleSearch = (newFilters: SearchFiltersType) => {
     setFilters(newFilters);
     loadPayments(newFilters);
   };
