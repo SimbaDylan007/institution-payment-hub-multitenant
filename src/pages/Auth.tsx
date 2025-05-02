@@ -5,8 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Eye, EyeOff } from "lucide-react";
 
 const Auth = () => {
   const { user, login, register, isLoading } = useAuth();
@@ -15,6 +16,8 @@ const Auth = () => {
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   
   // Register form state
   const [registerName, setRegisterName] = useState("");
@@ -61,135 +64,147 @@ const Auth = () => {
     });
   };
   
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+  
   // Redirect if already logged in
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-brand-700">Institution Payment Hub</h1>
-          <p className="text-gray-600 mt-2">Manage student payments efficiently</p>
+    <div className="min-h-screen flex bg-[#121828] text-white">
+      {/* Left side - login form */}
+      <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
+        <div className="max-w-md mx-auto w-full">
+          <div className="flex items-center mb-8">
+            <div className="bg-purple-600 p-3 rounded-lg mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" x2="16" y1="21" y2="21"></line>
+                <line x1="12" x2="12" y1="17" y2="21"></line>
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Institution Payment Hub</h1>
+              <p className="text-gray-400">Student Payment Management</p>
+            </div>
+          </div>
+          
+          <h2 className="text-2xl font-bold mb-2">Sign In</h2>
+          <p className="text-gray-400 mb-6">Enter your credentials to access your dashboard</p>
+          
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-gray-300">Username</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your.email@example.com"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                className="bg-[#1A1F2C] border-gray-700 text-white"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-gray-300">Password</Label>
+                <button 
+                  type="button" 
+                  onClick={() => {}} 
+                  className="text-sm text-purple-400 hover:text-purple-300"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="bg-[#1A1F2C] border-gray-700 text-white pr-10"
+                />
+                <button 
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="remember" 
+                checked={rememberMe} 
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
+              />
+              <Label htmlFor="remember" className="text-sm text-gray-400">Remember me</Label>
+            </div>
+            
+            {loginErrorMessage && (
+              <div className="text-sm text-red-500">{loginErrorMessage}</div>
+            )}
+            
+            <Button 
+              type="submit" 
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white" 
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing in..." : "Sign In with Email"}
+            </Button>
+            
+            <Button 
+              type="button" 
+              variant="outline"
+              className="w-full border-gray-700 bg-[#1A1F2C] text-white hover:bg-[#252e3e]"
+            >
+              Sign In with Active Directory
+            </Button>
+            
+            <div className="text-center text-sm text-gray-400">
+              Don't have an account? 
+              <button 
+                type="button" 
+                onClick={() => setAuthMode("register")} 
+                className="ml-1 text-purple-400 hover:text-purple-300"
+              >
+                Register
+              </button>
+            </div>
+          </form>
         </div>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome</CardTitle>
-            <CardDescription>
-              Sign in to access your dashboard or create a new account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={authMode} onValueChange={(value) => setAuthMode(value as "login" | "register")}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login">
-                <form onSubmit={handleLogin}>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="your.email@example.com"
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="password">Password</Label>
-                      </div>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                      />
-                    </div>
-                    
-                    {loginErrorMessage && (
-                      <div className="text-sm text-red-500">{loginErrorMessage}</div>
-                    )}
-                    
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? "Logging in..." : "Login"}
-                    </Button>
-                    
-                    <div className="text-center text-sm text-gray-500">
-                      Demo accounts: admin@example.com / password or user@example.com / password
-                    </div>
-                  </div>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="register">
-                <form onSubmit={handleRegister}>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input
-                        id="name"
-                        placeholder="John Doe"
-                        value={registerName}
-                        onChange={(e) => setRegisterName(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-email">Email</Label>
-                      <Input
-                        id="register-email"
-                        type="email"
-                        placeholder="your.email@example.com"
-                        value={registerEmail}
-                        onChange={(e) => setRegisterEmail(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-password">Password</Label>
-                      <Input
-                        id="register-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={registerPassword}
-                        onChange={(e) => setRegisterPassword(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirm-password">Confirm Password</Label>
-                      <Input
-                        id="confirm-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                      />
-                    </div>
-                    
-                    {registerErrorMessage && (
-                      <div className="text-sm text-red-500">{registerErrorMessage}</div>
-                    )}
-                    
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? "Creating account..." : "Create Account"}
-                    </Button>
-                  </div>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-gray-500">
-              By continuing, you agree to our Terms of Service and Privacy Policy
-            </p>
-          </CardFooter>
-        </Card>
+      </div>
+      
+      {/* Right side - purple gradient */}
+      <div className="hidden md:block md:w-1/2 bg-gradient-to-br from-purple-600 to-purple-800 p-12 flex flex-col justify-center">
+        <div className="max-w-lg">
+          <h2 className="text-4xl font-bold mb-6">Institution Payment Management</h2>
+          <ul className="space-y-4">
+            <li className="flex items-center">
+              <div className="mr-4 text-xl">•</div>
+              <div>Track and manage student payments efficiently</div>
+            </li>
+            <li className="flex items-center">
+              <div className="mr-4 text-xl">•</div>
+              <div>Streamlined payment validation and processing</div>
+            </li>
+            <li className="flex items-center">
+              <div className="mr-4 text-xl">•</div>
+              <div>Comprehensive reporting and analytics</div>
+            </li>
+            <li className="flex items-center">
+              <div className="mr-4 text-xl">•</div>
+              <div>Secure and reliable payment data management</div>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   );

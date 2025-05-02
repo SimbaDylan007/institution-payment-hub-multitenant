@@ -54,7 +54,7 @@ export default function Dashboard() {
   }
   
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[#121828] text-white flex flex-col">
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8">
@@ -71,12 +71,12 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div className="bg-white p-6 border rounded-lg shadow-sm">
+        <div className="bg-[#1A1F2C] p-6 border border-gray-800 rounded-lg shadow-sm">
           <h2 className="text-lg font-medium mb-4">Payment Records</h2>
           
           {isLoading ? (
             <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
             </div>
           ) : (
             <PaymentTable 
@@ -87,7 +87,7 @@ export default function Dashboard() {
         </div>
       </main>
       
-      <footer className="bg-white border-t border-gray-200 py-4">
+      <footer className="bg-[#1A1F2C] border-t border-gray-800 py-4">
         <div className="container mx-auto px-4 text-center text-sm text-gray-500">
           &copy; {new Date().getFullYear()} Institution Payment Hub
         </div>
