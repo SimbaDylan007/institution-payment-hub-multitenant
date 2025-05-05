@@ -12,9 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -60,8 +58,11 @@ public class ZbApiService {
             
             return enhancedPayments;
         } catch (HttpClientErrorException e) {
+            System.err.println("API Error: " + e.getResponseBodyAsString());
             throw new RuntimeException("API Error: " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
+            System.err.println("Error picking pending payments: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Error picking pending payments", e);
         }
     }
@@ -91,8 +92,11 @@ public class ZbApiService {
             
             return enhancedPayments;
         } catch (HttpClientErrorException e) {
+            System.err.println("API Error: " + e.getResponseBodyAsString());
             throw new RuntimeException("API Error: " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
+            System.err.println("Error getting all payments: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Error getting all payments", e);
         }
     }
@@ -127,16 +131,33 @@ public class ZbApiService {
     // Method to reset a payment
     public boolean resetPayment(String paymentId) {
         try {
-            PaymentAlert payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
-                
-            payment.setPicked(0);
-            payment.setStatus("pending");
-            paymentRepository.save(payment);
+            Optional<PaymentAlert> paymentOptional = paymentRepository.findById(paymentId);
             
-            return true;
+            if (paymentOptional.isPresent()) {
+                PaymentAlert payment = paymentOptional.get();
+                payment.setPicked(0);
+                payment.setStatus("pending");
+                paymentRepository.save(payment);
+                return true;
+            } else {
+                System.err.println("Payment not found with id: " + paymentId);
+                return false;
+            }
         } catch (Exception e) {
+            System.err.println("Error resetting payment: " + e.getMessage());
+            e.printStackTrace();
             return false;
+        }
+    }
+    
+    // Method to get payments by status
+    public List<PaymentAlert> getPaymentsByStatus(String status) {
+        try {
+            return paymentRepository.findByStatus(status);
+        } catch (Exception e) {
+            System.err.println("Error getting payments by status: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
         }
     }
 }
