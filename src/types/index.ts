@@ -17,21 +17,23 @@ export interface RegisterData {
   password: string;
 }
 
+export interface Timestamp {
+  date: number;
+  day: number;
+  hours: number;
+  minutes: number;
+  month: number;
+  nanos: number;
+  seconds: number;
+  time: number;
+  timezoneOffset: number;
+  year: number;
+}
+
 export interface PaymentAlert {
   id: string;
   amount: number;
-  date: {
-    date: number;
-    day: number;
-    hours: number;
-    minutes: number;
-    month: number;
-    nanos: number;
-    seconds: number;
-    time: number;
-    timezoneOffset: number;
-    year: number;
-  };
+  date: Timestamp | string;
   narrative: string;
   nr1?: string;
   nr2?: string;
@@ -43,9 +45,9 @@ export interface PaymentAlert {
   status: string;
   tcd?: string;
   transactionDate: string;
-  studentName?: string; // Added for student info
-  studentSurname?: string; // Added for student info
-  regNumber?: string; // Added for student reg number
+  studentName?: string; // Derived from narrative or nr1
+  studentSurname?: string; // Derived from narrative or nr1
+  regNumber?: string; // Derived from reference
 }
 
 export interface PickPaymentRequest {
@@ -69,4 +71,10 @@ export interface SearchFilters {
   maxAmount?: number;
   name?: string;
   surname?: string;
+}
+
+export interface ApiResponse<T> {
+  data?: T;
+  error?: ErrorDetails;
+  status: number;
 }

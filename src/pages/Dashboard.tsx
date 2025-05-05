@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
-import { PaymentAlert, SearchFilters as SearchFiltersType } from "@/types";
+import { PaymentAlert, SearchFilters as SearchFiltersType, PickPaymentRequest } from "@/types";
 import Header from "@/components/Header";
 import Stats from "@/components/Stats";
 import SearchFilters from "@/components/SearchFilters";
@@ -15,11 +15,12 @@ export default function Dashboard() {
   const [payments, setPayments] = useState<PaymentAlert[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filters, setFilters] = useState<SearchFiltersType>({});
+  const [credentials, setCredentials] = useState<PickPaymentRequest | undefined>();
   
   const loadPayments = async (searchFilters?: SearchFiltersType) => {
     setIsLoading(true);
     try {
-      const data = await fetchPayments(searchFilters);
+      const data = await fetchPayments(searchFilters, credentials);
       setPayments(data);
     } catch (error) {
       console.error("Error fetching payments:", error);
@@ -43,11 +44,35 @@ export default function Dashboard() {
     loadPayments(filters);
   };
   
+  // Store last successful credentials in localStorage
+  const storeCredentials = (institutionId: string, password: string) => {
+    const creds = { institutionId, password };
+    setCredentials(creds);
+    localStorage.setItem('paymentCredentials', JSON.stringify(creds));
+  };
+  
+  // Effect to load stored credentials on mount
+  useEffect(() => {
+    const storedCreds = localStorage.getItem('paymentCredentials');
+    if (storedCreds) {
+      try {
+        const parsed = JSON.parse(storedCreds);
+        if (parsed.institutionId && parsed.password) {
+          setCredentials(parsed);
+        }
+      } catch (e) {
+        console.error('Error parsing stored credentials', e);
+        localStorage.removeItem('paymentCredentials');
+      }
+    }
+  }, []);
+  
+  // Load payments when component mounts or credentials change
   useEffect(() => {
     if (user) {
-      loadPayments();
+      loadPayments(filters);
     }
-  }, [user]);
+  }, [user, credentials]);
   
   if (!user) {
     return <Navigate to="/" replace />;

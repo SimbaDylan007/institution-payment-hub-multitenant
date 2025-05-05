@@ -1,7 +1,7 @@
-
 import { PaymentAlert, PickPaymentRequest, SearchFilters } from "../types";
+import { getAllPayments, pickAllPendingPayments } from "./apiService";
 
-// Mock data for development
+// Mock data for development and fallback
 const mockPayments: PaymentAlert[] = [
   {
     id: "ALERT_54321",
@@ -124,17 +124,35 @@ for (let i = 0; i < 27; i++) {
 }
 
 // Function to fetch payments based on search filters
-export const fetchPayments = async (filters?: SearchFilters): Promise<PaymentAlert[]> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
+export const fetchPayments = async (filters?: SearchFilters, credentials?: PickPaymentRequest): Promise<PaymentAlert[]> => {
+  try {
+    // If credentials are provided, try to get real payments from API
+    if (credentials?.institutionId && credentials?.password) {
+      const payments = await getAllPayments(credentials);
+      return filterPayments(payments, filters);
+    } else {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Use mock data if no credentials
+      return filterPayments(mockPayments, filters);
+    }
+  } catch (error) {
+    console.error("Error fetching payments:", error);
+    // Return filtered mock data as fallback
+    return filterPayments(mockPayments, filters);
+  }
+};
+
+// Helper function to filter payments
+const filterPayments = (payments: PaymentAlert[], filters?: SearchFilters): PaymentAlert[] => {
   // If no filters, return all payments
   if (!filters) {
-    return mockPayments;
+    return payments;
   }
   
   // Filter payments based on search criteria
-  return mockPayments.filter(payment => {
+  return payments.filter(payment => {
     const paymentDate = new Date(payment.transactionDate);
     
     // Filter by date range
@@ -176,7 +194,7 @@ export const fetchPayments = async (filters?: SearchFilters): Promise<PaymentAle
   });
 };
 
-// Function to reset a payment
+// Function to reset a payment (mock function since API doesn't support this)
 export const resetPayment = async (paymentId: string): Promise<boolean> => {
   // Simulate API call delay
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -192,26 +210,14 @@ export const resetPayment = async (paymentId: string): Promise<boolean> => {
   return false;
 };
 
-// Function to pick all pending payments
-export const pickAllPendingPayments = async (request: PickPaymentRequest): Promise<PaymentAlert[]> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Validate institution credentials (mock validation)
-  if (request.institutionId !== "INST_XYZ" || request.password !== "password123") {
-    throw new Error("Invalid institution credentials");
+// Function to pick all pending payments using real API
+export const pickAllPendingPaymentsAPI = async (request: PickPaymentRequest): Promise<PaymentAlert[]> => {
+  try {
+    return await pickAllPendingPayments(request);
+  } catch (error) {
+    console.error("Error picking payments:", error);
+    throw error;
   }
-  
-  // Find all pending payments
-  const pendingPayments = mockPayments.filter(p => p.status === "pending" && p.picked === 0);
-  
-  // Update the payments to picked status
-  pendingPayments.forEach(payment => {
-    payment.picked = 1;
-    payment.status = "completed";
-  });
-  
-  return pendingPayments;
 };
 
 // Function to export payments to specified format

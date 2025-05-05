@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { pickAllPendingPayments } from "@/services/paymentService";
+import { pickAllPendingPaymentsAPI } from "@/services/paymentService";
 import { PaymentAlert } from "@/types";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
@@ -47,12 +47,7 @@ export default function PickInstitutionPayments({ onPaymentsPicked }: PickInstit
     
     setIsLoading(true);
     try {
-      // Hint for demo purposes: use INST_XYZ and password123
-      if (data.institutionId !== "INST_XYZ" && process.env.NODE_ENV === "development") {
-        toast.info("Hint: Try using INST_XYZ with password123");
-      }
-      
-      const result = await pickAllPendingPayments({
+      const result = await pickAllPendingPaymentsAPI({
         institutionId: data.institutionId,
         password: data.password
       });
