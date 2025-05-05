@@ -16,11 +16,11 @@ export default function Stats({ payments }: StatsProps) {
   ).toFixed(2);
   
   const pendingPayments = payments.filter(
-    payment => payment.status === "pending"
+    payment => payment.status.toLowerCase() === "pending"
   ).length;
   
   const completedPayments = payments.filter(
-    payment => payment.status === "completed"
+    payment => payment.status.toLowerCase() === "completed"
   ).length;
   
   // Get today's date (without time)
