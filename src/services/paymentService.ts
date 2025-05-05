@@ -1,6 +1,8 @@
 import { PaymentAlert, PickPaymentRequest, SearchFilters } from "../types";
 import { getAllPayments, pickAllPendingPayments, resetPayment as resetPaymentApi, getLocalPayments } from "./apiService";
-
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import autoTable from "jspdf-autotable";
 // Mock data for development and fallback
 const mockPayments: PaymentAlert[] = [
   {
@@ -300,8 +302,55 @@ const exportToExcel = (payments: PaymentAlert[]): void => {
 };
 
 // Helper function to export to PDF (simplified)
+// const exportToPDF = (payments: PaymentAlert[]): void => {
+//   // In a real implementation, you would use a library like jsPDF
+//   // For this demo, we'll just show an alert
+//   alert('PDF export would be implemented here with a library like jsPDF');
+// };
+
 const exportToPDF = (payments: PaymentAlert[]): void => {
-  // In a real implementation, you would use a library like jsPDF
-  // For this demo, we'll just show an alert
-  alert('PDF export would be implemented here with a library like jsPDF');
+  const doc = new jsPDF();
+
+  doc.text('Payment Alerts Report', 14, 15);
+
+  const headers = [
+    'ID',
+    'Amount',
+    'Transaction Date',
+    'Narrative',
+    'Picked',
+    'Reference',
+    'Source',
+    'Status',
+    'Transaction Date',
+    'Student Name',
+    'Student Surname',
+    'Reg Number',
+  ];
+
+  const rows = payments.map(payment => [
+    payment.id,
+    payment.amount.toFixed(2),
+    payment.transactionDate,
+    payment.narrative,
+    payment.picked,
+    payment.reference,
+    payment.source,
+    payment.status,
+    payment.transactionDate,
+    payment.studentName || '',
+    payment.studentSurname || '',
+    payment.regNumber,
+  ]);
+
+  autoTable(doc, {
+    head: [headers],
+    body: rows,
+    startY: 20,
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [22, 160, 133] },
+  });
+
+  doc.save('payment-alerts.pdf');
 };
+
