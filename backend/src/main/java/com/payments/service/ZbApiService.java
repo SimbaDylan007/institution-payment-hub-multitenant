@@ -117,11 +117,13 @@ public class ZbApiService {
                     payment.setStudentName(nameParts.length > 1 ? 
                             String.join(" ", Arrays.copyOfRange(nameParts, 0, nameParts.length - 1)) : nameParts[0]);
                 }
+                payment.setRegNumber(parts.length>3?parts[4]:"");
+
             }
         }
         
         // Use reference as registration number
-        if (payment.getReference() != null) {
+        if (payment.getRegNumber()== null) {
             payment.setRegNumber(payment.getReference());
         }
         

@@ -233,6 +233,16 @@ export const pickAllPendingPaymentsAPI = async (request: PickPaymentRequest): Pr
   }
 };
 
+// Function to pick all  payments using real API
+export const pickAllPaymentsAPI = async (request: PickPaymentRequest): Promise<PaymentAlert[]> => {
+  try {
+    return await getAllPayments(request);
+  } catch (error) {
+    console.error("Error picking payments:", error);
+    throw error;
+  }
+};
+
 // Function to export payments to specified format
 export const exportPayments = (payments: PaymentAlert[], format: string): void => {
   if (format === 'csv') {
