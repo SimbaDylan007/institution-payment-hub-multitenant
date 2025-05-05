@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { PaymentAlert, ExportFormat } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -142,11 +141,26 @@ export default function PaymentTable({ payments, onPaymentReset }: PaymentTableP
     return items;
   };
   
-  // Format date from the timestamp object
+  // Format date from the timestamp object or string
   const formatDate = (dateObj: PaymentAlert['date']) => {
     if (!dateObj) return 'N/A';
-    const date = new Date(dateObj.time);
-    return date.toLocaleDateString();
+    
+    // Check if dateObj is a Timestamp object (has time property)
+    if (typeof dateObj !== 'string' && 'time' in dateObj) {
+      const date = new Date(dateObj.time);
+      return date.toLocaleDateString();
+    } 
+    // If it's a string, try to parse it directly
+    else if (typeof dateObj === 'string') {
+      try {
+        const date = new Date(dateObj);
+        return date.toLocaleDateString();
+      } catch (e) {
+        return dateObj; // Return the original string if parsing fails
+      }
+    }
+    
+    return 'N/A'; // Fallback
   };
   
   return (
