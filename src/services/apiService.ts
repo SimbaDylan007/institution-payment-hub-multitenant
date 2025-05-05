@@ -2,34 +2,8 @@
 import { ApiResponse, ErrorDetails, PaymentAlert, PickPaymentRequest } from "@/types";
 import { toast } from "sonner";
 
-const API_BASE_URL = "https://zbnet.zb.co.zw";
-
-// Helper function to extract student information from narrative
-const extractStudentInfo = (payment: PaymentAlert): PaymentAlert => {
-  const updatedPayment = { ...payment };
-  
-  // Extract student info from narrative or nr1 field
-  if (payment.narrative) {
-    const parts = payment.narrative.split('|');
-    if (parts.length >= 3) {
-      const studentFullName = payment.nr1 || parts[2] || '';
-      const nameParts = studentFullName.trim().split(' ');
-      
-      if (nameParts.length > 0) {
-        // Last part as surname, rest as first name
-        updatedPayment.studentSurname = nameParts.pop() || '';
-        updatedPayment.studentName = nameParts.join(' ');
-      }
-    }
-  }
-  
-  // Use reference as registration number
-  if (payment.reference) {
-    updatedPayment.regNumber = payment.reference;
-  }
-  
-  return updatedPayment;
-};
+// Now we're connecting to our Spring Boot backend instead of directly to ZB API
+const API_BASE_URL = "http://localhost:8080/api/payments";
 
 // Generic fetch function with error handling
 async function fetchWithErrorHandling<T>(
@@ -70,12 +44,12 @@ async function fetchWithErrorHandling<T>(
   }
 }
 
-// Function to pick all pending payments
+// Function to pick all pending payments - now connects to our Spring Boot backend
 export async function pickAllPendingPayments(
   request: PickPaymentRequest
 ): Promise<PaymentAlert[]> {
   const response = await fetchWithErrorHandling<PaymentAlert[]>(
-    `${API_BASE_URL}/alerts/payments/pick-all-pending`,
+    `${API_BASE_URL}/pick-all-pending`,
     {
       method: "POST",
       headers: {
@@ -86,19 +60,18 @@ export async function pickAllPendingPayments(
   );
   
   if (response.data) {
-    // Enhance payments with derived student information
-    return response.data.map(payment => extractStudentInfo(payment));
+    return response.data;
   } else {
     throw new Error(response.error?.message || "Failed to fetch payments");
   }
 }
 
-// Function to get all payments for an institution (regardless of status)
+// Function to get all payments for an institution - now connects to our Spring Boot backend
 export async function getAllPayments(
   request: PickPaymentRequest
 ): Promise<PaymentAlert[]> {
   const response = await fetchWithErrorHandling<PaymentAlert[]>(
-    `${API_BASE_URL}/alerts/payments/all-payments`,
+    `${API_BASE_URL}/all-payments`,
     {
       method: "POST",
       headers: {
@@ -109,9 +82,46 @@ export async function getAllPayments(
   );
   
   if (response.data) {
-    // Enhance payments with derived student information
-    return response.data.map(payment => extractStudentInfo(payment));
+    return response.data;
   } else {
     throw new Error(response.error?.message || "Failed to fetch payments");
+  }
+}
+
+// New function to reset a payment - connects to our Spring Boot backend
+export async function resetPayment(paymentId: string): Promise<boolean> {
+  const response = await fetchWithErrorHandling<boolean>(
+    `${API_BASE_URL}/reset/${paymentId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json"
+      }
+    }
+  );
+  
+  if (response.data !== undefined) {
+    return response.data;
+  } else {
+    throw new Error(response.error?.message || "Failed to reset payment");
+  }
+}
+
+// Function to get payments from local database as fallback
+export async function getLocalPayments(): Promise<PaymentAlert[]> {
+  const response = await fetchWithErrorHandling<PaymentAlert[]>(
+    `${API_BASE_URL}/local`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json"
+      }
+    }
+  );
+  
+  if (response.data) {
+    return response.data;
+  } else {
+    throw new Error(response.error?.message || "Failed to fetch local payments");
   }
 }

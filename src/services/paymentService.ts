@@ -1,5 +1,5 @@
 import { PaymentAlert, PickPaymentRequest, SearchFilters } from "../types";
-import { getAllPayments, pickAllPendingPayments } from "./apiService";
+import { getAllPayments, pickAllPendingPayments, resetPayment as resetPaymentApi, getLocalPayments } from "./apiService";
 
 // Mock data for development and fallback
 const mockPayments: PaymentAlert[] = [
@@ -131,11 +131,18 @@ export const fetchPayments = async (filters?: SearchFilters, credentials?: PickP
       const payments = await getAllPayments(credentials);
       return filterPayments(payments, filters);
     } else {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Use mock data if no credentials
-      return filterPayments(mockPayments, filters);
+      try {
+        // Try to get payments from local database first
+        const localPayments = await getLocalPayments();
+        return filterPayments(localPayments, filters);
+      } catch (error) {
+        console.error("Error fetching from local DB, using mock data:", error);
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Use mock data if local DB fails
+        return filterPayments(mockPayments, filters);
+      }
     }
   } catch (error) {
     console.error("Error fetching payments:", error);
@@ -194,20 +201,26 @@ const filterPayments = (payments: PaymentAlert[], filters?: SearchFilters): Paym
   });
 };
 
-// Function to reset a payment (mock function since API doesn't support this)
+// Function to reset a payment (now uses the API)
 export const resetPayment = async (paymentId: string): Promise<boolean> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Find the payment in mock data and update it
-  const paymentIndex = mockPayments.findIndex(p => p.id === paymentId);
-  if (paymentIndex !== -1) {
-    mockPayments[paymentIndex].picked = 0;
-    mockPayments[paymentIndex].status = "pending";
-    return true;
+  try {
+    return await resetPaymentApi(paymentId);
+  } catch (error) {
+    console.error("Error resetting payment, falling back to mock:", error);
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Find the payment in mock data and update it as fallback
+    const paymentIndex = mockPayments.findIndex(p => p.id === paymentId);
+    if (paymentIndex !== -1) {
+      mockPayments[paymentIndex].picked = 0;
+      mockPayments[paymentIndex].status = "pending";
+      return true;
+    }
+    
+    return false;
   }
-  
-  return false;
 };
 
 // Function to pick all pending payments using real API
