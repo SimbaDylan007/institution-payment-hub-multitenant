@@ -33,18 +33,20 @@ export default function Header() {
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <span className="hidden md:inline text-sm text-gray-300 dark:text-gray-700">
-              Welcome, {user.name}
+              Welcome, {user.name || 'User'}
             </span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-purple-600 text-white">
-                      {user.name
-                        .split(' ')
-                        .map(n => n[0])
-                        .join('')
-                        .toUpperCase()}
+                      {user.name 
+                        ? user.name
+                            .split(' ')
+                            .map(n => n[0])
+                            .join('')
+                            .toUpperCase()
+                        : 'U'}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
