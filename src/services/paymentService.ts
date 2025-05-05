@@ -301,12 +301,6 @@ const exportToExcel = (payments: PaymentAlert[]): void => {
   exportToCSV(payments);
 };
 
-// Helper function to export to PDF (simplified)
-// const exportToPDF = (payments: PaymentAlert[]): void => {
-//   // In a real implementation, you would use a library like jsPDF
-//   // For this demo, we'll just show an alert
-//   alert('PDF export would be implemented here with a library like jsPDF');
-// };
 
 const exportToPDF = (payments: PaymentAlert[]): void => {
   const doc = new jsPDF();
