@@ -5,77 +5,38 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
-import { toast } from "sonner";
 
 const Auth = () => {
-  const { user, login, register, isLoading } = useAuth();
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const { user, login, isLoading } = useAuth();
   
   // Login form state
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("admin");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   
-  // Register form state
-  const [registerName, setRegisterName] = useState("");
-  const [registerEmail, setRegisterEmail] = useState("");
-  const [registerPassword, setRegisterPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  
   // Validation messages
-  const [loginErrorMessage, setLoginErrorMessage] = useState("");
-  const [registerErrorMessage, setRegisterErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   
   // Handle login form submission
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginErrorMessage("");
+    setErrorMessage("");
     
-    if (!loginEmail || !loginPassword) {
-      setLoginErrorMessage("Please fill in all fields");
-      return;
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(loginEmail)) {
-      setLoginErrorMessage("Please enter a valid email address");
+    if (!username || !password) {
+      setErrorMessage("Please fill in all fields");
       return;
     }
     
     // Now try to login
-    const success = await login({ email: loginEmail, password: loginPassword });
+    const success = await login({ username, password });
     
     if (!success) {
       // The error toast is handled in the AuthContext, so we don't need to show it here
       console.log("Login failed");
     }
-  };
-  
-  // Handle register form submission
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setRegisterErrorMessage("");
-    
-    if (!registerName || !registerEmail || !registerPassword || !confirmPassword) {
-      setRegisterErrorMessage("Please fill in all fields");
-      return;
-    }
-    
-    if (registerPassword !== confirmPassword) {
-      setRegisterErrorMessage("Passwords do not match");
-      return;
-    }
-    
-    await register({
-      name: registerName,
-      email: registerEmail,
-      password: registerPassword
-    });
   };
   
   // Toggle password visibility
@@ -112,13 +73,13 @@ const Auth = () => {
           
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-300">Email</Label>
+              <Label htmlFor="username" className="text-gray-300">Username</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="your.email@example.com"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="bg-[#1A1F2C] border-gray-700 text-white"
               />
             </div>
@@ -130,6 +91,7 @@ const Auth = () => {
                   type="button" 
                   onClick={() => {}} 
                   className="text-sm text-purple-400 hover:text-purple-300"
+                  title="Hint: Administrator credentials"
                 >
                   Forgot your password?
                 </button>
@@ -139,8 +101,8 @@ const Auth = () => {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="bg-[#1A1F2C] border-gray-700 text-white pr-10"
                 />
                 <button 
@@ -162,8 +124,8 @@ const Auth = () => {
               <Label htmlFor="remember" className="text-sm text-gray-400">Remember me</Label>
             </div>
             
-            {loginErrorMessage && (
-              <div className="text-sm text-red-500">{loginErrorMessage}</div>
+            {errorMessage && (
+              <div className="text-sm text-red-500">{errorMessage}</div>
             )}
             
             <Button 
@@ -171,19 +133,8 @@ const Auth = () => {
               className="w-full bg-purple-600 hover:bg-purple-700 text-white" 
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Sign In with Email"}
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
-            
-            <div className="text-center text-sm text-gray-400">
-              Don't have an account? 
-              <button 
-                type="button" 
-                onClick={() => setAuthMode("register")} 
-                className="ml-1 text-purple-400 hover:text-purple-300"
-              >
-                Register
-              </button>
-            </div>
           </form>
         </div>
       </div>

@@ -1,13 +1,14 @@
-
 export interface User {
   id: string;
-  email: string;
   name: string;
-  role: 'admin' | 'user';
+  email: string;
+  role: string;
+  username?: string;
 }
 
 export interface LoginCredentials {
-  email: string;
+  username?: string;
+  email?: string;
   password: string;
 }
 
@@ -15,6 +16,7 @@ export interface RegisterData {
   name: string;
   email: string;
   password: string;
+  username?: string;
 }
 
 export interface Timestamp {

@@ -46,25 +46,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Use strict comparison for user credentials
-      if (credentials.email.toLowerCase() === "admin@example.com" && credentials.password === "password") {
+      // Use username instead of email
+      if (credentials.username?.toLowerCase() === "admin" && credentials.password === "admin") {
         const mockUser: User = {
           id: "1",
-          email: credentials.email,
+          email: "admin@example.com",
           name: "Admin User",
-          role: "admin"
-        };
-        
-        setUser(mockUser);
-        localStorage.setItem("user", JSON.stringify(mockUser));
-        toast.success("Login successful!");
-        return true;
-      } else if (credentials.email.toLowerCase() === "user@example.com" && credentials.password === "password") {
-        const mockUser: User = {
-          id: "2",
-          email: credentials.email,
-          name: "Regular User",
-          role: "user"
+          role: "admin",
+          username: "admin"
         };
         
         setUser(mockUser);
@@ -72,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.success("Login successful!");
         return true;
       } else {
-        toast.error("Invalid email or password. Try admin@example.com / password or user@example.com / password");
+        toast.error("Invalid username or password. Try username: admin / password: admin");
         return false;
       }
     } catch (error) {
@@ -96,7 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: Math.random().toString(36).substr(2, 9),
         email: data.email,
         name: data.name,
-        role: "user"
+        role: "user",
+        username: data.username || data.email.split('@')[0]
       };
       
       setUser(mockUser);

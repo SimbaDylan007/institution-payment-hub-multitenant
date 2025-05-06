@@ -47,23 +47,23 @@
   }
 
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 240 10% 9%;
     --foreground: 0 0% 98%;
 
-    --card: 240 10% 3.9%;
+    --card: 240 10% 12%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 240 10% 3.9%;
+    --popover: 240 10% 12%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 267 70% 65%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 240 5% 22%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 240 5% 22%;
+    --muted-foreground: 240 5% 75%;
 
     --accent: 267 70% 65%;
     --accent-foreground: 0 0% 98%;
@@ -71,18 +71,18 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --border-light: 240 3.7% 25.9%;
-    --input: 240 3.7% 15.9%;
+    --border: 240 5% 22%; 
+    --border-light: 240 5% 30%;
+    --input: 240 5% 22%;
     --ring: 267 70% 65%;
 
-    --sidebar-background: 240 10% 3.9%;
+    --sidebar-background: 240 10% 9%;
     --sidebar-foreground: 240 5% 84.9%;
     --sidebar-primary: 267 70% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 240 5% 22%;
     --sidebar-accent-foreground: 240 5% 84.9%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-border: 240 5% 22%;
     --sidebar-ring: 267 70% 65%;
   }
 }
@@ -94,5 +94,13 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+  
+  .dropdown-content-dark {
+    @apply dark:bg-[#1A1F2C] dark:border-gray-800;
+  }
+  
+  .card-container-dark {
+    @apply bg-[#1A1F2C] dark:bg-[#2a2a2a] border border-gray-800 dark:border-gray-700;
   }
 }
