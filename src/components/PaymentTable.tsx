@@ -178,17 +178,17 @@ export default function PaymentTable({ payments, onPaymentReset }: PaymentTableP
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="border-purple-400 dark:border-purple-600 text-white dark:text-gray-900 hover:bg-purple-800/20 dark:hover:bg-purple-100">
                 <Download className="mr-2 h-4 w-4" />
-                Export
+                <span className="text-white dark:text-gray-900">Export</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-[#1A1F2C] border-gray-800 dark:bg-white">
-              <DropdownMenuItem onClick={() => handleExport('csv')} className="hover:bg-purple-800/20 dark:hover:bg-purple-100">
+              <DropdownMenuItem onClick={() => handleExport('csv')} className="hover:bg-purple-800/20 dark:hover:bg-purple-100 text-white dark:text-gray-900">
                 Export as CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')} className="hover:bg-purple-800/20 dark:hover:bg-purple-100">
+              <DropdownMenuItem onClick={() => handleExport('excel')} className="hover:bg-purple-800/20 dark:hover:bg-purple-100 text-white dark:text-gray-900">
                 Export as Excel
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')} className="hover:bg-purple-800/20 dark:hover:bg-purple-100">
+              <DropdownMenuItem onClick={() => handleExport('pdf')} className="hover:bg-purple-800/20 dark:hover:bg-purple-100 text-white dark:text-gray-900">
                 Export as PDF
               </DropdownMenuItem>
             </DropdownMenuContent>

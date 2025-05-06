@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -94,11 +95,11 @@ export default function Dashboard() {
             variant="outline" 
             size="sm" 
             onClick={handleRefresh} 
-            className="flex items-center gap-2 border-purple-400 dark:border-purple-600 text-white dark:text-gray-900 hover:bg-purple-800/20 dark:hover:bg-purple-100"
+            className="flex items-center gap-2 border-purple-400 dark:border-purple-600 text-white dark:hover:bg-purple-100"
             disabled={isLoading}
           >
             <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-            Refresh
+            <span className="text-white dark:text-gray-900">Refresh</span>
           </Button>
         </div>
         
