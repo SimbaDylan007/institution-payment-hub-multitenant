@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { PaymentAlert, ExportFormat } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/pagination";
 import { exportPayments, resetPayment } from "@/services/paymentService";
 import { toast } from "sonner";
+import { Download } from "lucide-react";
 
 interface PaymentTableProps {
   payments: PaymentAlert[];
@@ -174,16 +176,19 @@ export default function PaymentTable({ payments, onPaymentReset }: PaymentTableP
         <div className="flex gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">Export</Button>
+              <Button variant="outline" className="border-purple-400 dark:border-purple-600 text-white dark:text-gray-900 hover:bg-purple-800/20 dark:hover:bg-purple-100">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
+            <DropdownMenuContent className="bg-[#1A1F2C] border-gray-800 dark:bg-white">
+              <DropdownMenuItem onClick={() => handleExport('csv')} className="hover:bg-purple-800/20 dark:hover:bg-purple-100">
                 Export as CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
+              <DropdownMenuItem onClick={() => handleExport('excel')} className="hover:bg-purple-800/20 dark:hover:bg-purple-100">
                 Export as Excel
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+              <DropdownMenuItem onClick={() => handleExport('pdf')} className="hover:bg-purple-800/20 dark:hover:bg-purple-100">
                 Export as PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
