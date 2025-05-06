@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -79,4 +80,24 @@ export interface ApiResponse<T> {
   data?: T;
   error?: ErrorDetails;
   status: number;
+}
+
+export interface StudentRegistrationRequest {
+  billerId: string;
+  customerAccount: string;
+  customerAccountDetails1: string;
+  customerAccountDetails2: string;
+  customerName: string;
+}
+
+export interface StudentRegistrationId {
+  billerId: string;
+  customerAccount: string;
+}
+
+export interface StudentRegistration {
+  id: StudentRegistrationId;
+  customerAccountDetails1: string;
+  customerAccountDetails2: string;
+  customerName: string;
 }

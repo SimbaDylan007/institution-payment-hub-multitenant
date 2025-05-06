@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { PaymentAlert, SearchFilters as SearchFiltersType, PickPaymentRequest } from "@/types";
 import Header from "@/components/Header";
 import Stats from "@/components/Stats";
@@ -10,7 +9,7 @@ import PaymentTable from "@/components/PaymentTable";
 import PickInstitutionPayments from "@/components/PickInstitutionPayments";
 import { fetchPayments } from "@/services/paymentService";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, UserPlus } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -91,16 +90,29 @@ export default function Dashboard() {
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Payment Dashboard</h1>
-          <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              className="flex items-center gap-2 bg-purple-500 text-white hover:bg-purple-600 dark:bg-purple-500 dark:hover:bg-purple-600"
-              disabled={isLoading}
-          >
-            <RefreshCw size={16} className={isLoading ? "animate-spin text-white" : "text-white"} />
-            <span className="text-white">Refresh</span>
-          </Button>
+          <div className="flex gap-2">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                className="flex items-center gap-2 bg-purple-500 text-white hover:bg-purple-600 dark:bg-purple-500 dark:hover:bg-purple-600 border-white/20 dark:border-gray-300"
+                disabled={isLoading}
+            >
+              <RefreshCw size={16} className={isLoading ? "animate-spin text-white" : "text-white"} />
+              <span className="text-white">Refresh</span>
+            </Button>
+            
+            <Link to="/student-management">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 border-white/20 dark:border-gray-300"
+              >
+                <UserPlus size={16} className="text-white" />
+                <span className="text-white">Manage Students</span>
+              </Button>
+            </Link>
+          </div>
         </div>
         
         <Stats payments={payments} />

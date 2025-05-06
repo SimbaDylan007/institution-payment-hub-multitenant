@@ -11,6 +11,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import StudentManagement from "./pages/StudentManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/student-management" element={<StudentManagement />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
