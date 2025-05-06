@@ -91,15 +91,15 @@ export default function Dashboard() {
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Payment Dashboard</h1>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh} 
-            className="flex items-center gap-2 border-purple-400 dark:border-purple-600 text-white dark:hover:bg-purple-100"
-            disabled={isLoading}
+          <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              className="flex items-center gap-2 bg-purple-500 text-white hover:bg-purple-600 dark:bg-purple-500 dark:hover:bg-purple-600"
+              disabled={isLoading}
           >
-            <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-            <span className="text-white dark:text-gray-900">Refresh</span>
+            <RefreshCw size={16} className={isLoading ? "animate-spin text-white" : "text-white"} />
+            <span className="text-white">Refresh</span>
           </Button>
         </div>
         

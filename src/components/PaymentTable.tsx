@@ -176,9 +176,9 @@ export default function PaymentTable({ payments, onPaymentReset }: PaymentTableP
         <div className="flex gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="border-purple-400 dark:border-purple-600 text-white dark:text-gray-900 hover:bg-purple-800/20 dark:hover:bg-purple-100">
-                <Download className="mr-2 h-4 w-4" />
-                <span className="text-white dark:text-gray-900">Export</span>
+              <Button variant="outline" className="bg-purple-500 text-white hover:bg-purple-600 dark:bg-purple-500 dark:hover:bg-purple-600">
+                <Download className="mr-2 h-4 w-4 text-white" />
+                <span className="text-white">Export</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-[#1A1F2C] border-gray-800 dark:bg-white">
