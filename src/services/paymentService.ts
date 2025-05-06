@@ -303,7 +303,11 @@ const exportToExcel = (payments: PaymentAlert[]): void => {
 
 
 const exportToPDF = (payments: PaymentAlert[]): void => {
-  const doc = new jsPDF();
+  const doc = new jsPDF({
+    orientation: 'landscape', // This sets the orientation
+    unit: 'mm',
+    format: 'a4',
+  });
 
   doc.text('Payment Alerts Report', 14, 15);
 
