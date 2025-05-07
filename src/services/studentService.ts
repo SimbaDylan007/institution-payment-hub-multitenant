@@ -32,6 +32,7 @@ async function fetchWithErrorHandling<T>(
       return { error, status };
     }
   } catch (error) {
+    console.error("Network error:", error);
     const errorDetails: ErrorDetails = {
       message: error instanceof Error ? error.message : "Network error",
       timestamp: new Date().toISOString()
@@ -47,20 +48,29 @@ async function fetchWithErrorHandling<T>(
 export async function createOrUpdateStudentRegistration(
   request: StudentRegistrationRequest
 ): Promise<StudentRegistration | null> {
-  const response = await fetchWithErrorHandling<StudentRegistration>(
-    `${API_BASE_URL}/student-details`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(request)
-    }
-  );
+  console.log("Sending student registration request:", request);
   
-  if (response.data) {
-    return response.data;
-  } else {
+  try {
+    const response = await fetchWithErrorHandling<StudentRegistration>(
+      `${API_BASE_URL}/student-details`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(request)
+      }
+    );
+    
+    if (response.data) {
+      console.log("Student registration successful:", response.data);
+      return response.data;
+    } else {
+      console.error("Failed to register student:", response.error);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error in createOrUpdateStudentRegistration:", error);
     return null;
   }
 }

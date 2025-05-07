@@ -49,6 +49,7 @@ export default function StudentRegistrationForm() {
 
   const onSubmit = async (data: StudentFormValues) => {
     setIsSubmitting(true);
+    console.log("Form submitted with data:", data);
     
     try {
       const request: StudentRegistrationRequest = {
@@ -59,12 +60,15 @@ export default function StudentRegistrationForm() {
         customerAccountDetails2: data.customerAccountDetails2 || "",
       };
       
+      console.log("Sending request to API:", request);
       const result = await createOrUpdateStudentRegistration(request);
       
       if (result) {
+        console.log("Registration successful:", result);
         toast.success("Student registration saved successfully!");
         form.reset();
       } else {
+        console.error("Failed to save student registration", result);
         toast.error("Failed to save student registration.");
       }
     } catch (error) {
@@ -76,7 +80,7 @@ export default function StudentRegistrationForm() {
   };
 
   return (
-    <Card>
+    <Card className="dark:bg-white dark:text-gray-900">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <UserPlus className="h-5 w-5" />
@@ -92,11 +96,15 @@ export default function StudentRegistrationForm() {
                 name="billerId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Institution ID</FormLabel>
+                    <FormLabel className="text-white dark:text-gray-900">Institution ID</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., MSU" {...field} />
+                      <Input 
+                        placeholder="e.g., MSU" 
+                        {...field} 
+                        className="text-white dark:text-gray-900 bg-[#1A1F2C] dark:bg-white border-gray-700 dark:border-gray-300" 
+                      />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-gray-400 dark:text-gray-600">
                       The identifier for the institution.
                     </FormDescription>
                     <FormMessage />
@@ -109,11 +117,15 @@ export default function StudentRegistrationForm() {
                 name="customerAccount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Registration Number</FormLabel>
+                    <FormLabel className="text-white dark:text-gray-900">Registration Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., R000258G" {...field} />
+                      <Input 
+                        placeholder="e.g., R000258G" 
+                        {...field} 
+                        className="text-white dark:text-gray-900 bg-[#1A1F2C] dark:bg-white border-gray-700 dark:border-gray-300" 
+                      />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-gray-400 dark:text-gray-600">
                       Student's registration number.
                     </FormDescription>
                     <FormMessage />
@@ -127,11 +139,15 @@ export default function StudentRegistrationForm() {
               name="customerName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Student Name</FormLabel>
+                  <FormLabel className="text-white dark:text-gray-900">Student Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Full name" {...field} />
+                    <Input 
+                      placeholder="Full name" 
+                      {...field} 
+                      className="text-white dark:text-gray-900 bg-[#1A1F2C] dark:bg-white border-gray-700 dark:border-gray-300" 
+                    />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-gray-400 dark:text-gray-600">
                     Student's full name.
                   </FormDescription>
                   <FormMessage />
@@ -144,11 +160,15 @@ export default function StudentRegistrationForm() {
               name="customerAccountDetails1"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Academic Level</FormLabel>
+                  <FormLabel className="text-white dark:text-gray-900">Academic Level</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., LEVEL: 1.1" {...field} />
+                    <Input 
+                      placeholder="e.g., LEVEL: 1.1" 
+                      {...field} 
+                      className="text-white dark:text-gray-900 bg-[#1A1F2C] dark:bg-white border-gray-700 dark:border-gray-300" 
+                    />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-gray-400 dark:text-gray-600">
                     Student's academic level or year.
                   </FormDescription>
                   <FormMessage />
@@ -161,15 +181,15 @@ export default function StudentRegistrationForm() {
               name="customerAccountDetails2"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Program Details</FormLabel>
+                  <FormLabel className="text-white dark:text-gray-900">Program Details</FormLabel>
                   <FormControl>
                     <Textarea 
                       placeholder="e.g., Degree Program"
-                      className="resize-none"
+                      className="resize-none text-white dark:text-gray-900 bg-[#1A1F2C] dark:bg-white border-gray-700 dark:border-gray-300"
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-gray-400 dark:text-gray-600">
                     Details about the student's degree program.
                   </FormDescription>
                   <FormMessage />

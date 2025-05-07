@@ -2,7 +2,9 @@
 import Header from "@/components/Header";
 import StudentRegistrationForm from "@/components/StudentRegistrationForm";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Home } from "lucide-react";
 
 export default function StudentManagement() {
   const { user } = useAuth();
@@ -16,11 +18,19 @@ export default function StudentManagement() {
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Student Management</h1>
-          <p className="text-gray-400 dark:text-gray-600">
-            Add or update student registration records for payment validation
-          </p>
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">Student Management</h1>
+            <p className="text-gray-400 dark:text-gray-600">
+              Add or update student registration records for payment validation
+            </p>
+          </div>
+          <Button variant="outline" asChild>
+            <Link to="/dashboard" className="flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              Back to Dashboard
+            </Link>
+          </Button>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
