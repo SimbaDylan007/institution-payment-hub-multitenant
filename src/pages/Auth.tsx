@@ -93,7 +93,7 @@ const Auth = () => {
                   className="text-sm text-purple-400 hover:text-purple-300"
                   title="Hint: Administrator credentials"
                 >
-                  Forgot your password?
+
                 </button>
               </div>
               <div className="relative">

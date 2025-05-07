@@ -25,7 +25,10 @@ export default function StudentManagement() {
               Add or update student registration records for payment validation
             </p>
           </div>
-          <Button variant="outline" asChild>
+          <Button
+              className="bg-purple-500 text-white hover:bg-purple-600"
+              asChild
+          >
             <Link to="/dashboard" className="flex items-center gap-2">
               <Home className="h-4 w-4" />
               Back to Dashboard
