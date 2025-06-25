@@ -15,6 +15,14 @@ import StudentManagement from "./pages/StudentManagement";
 import Students from "./pages/Students";
 import Staff from "./pages/Staff";
 import Academics from "./pages/Academics";
+import Finance from "./pages/Finance";
+import Library from "./pages/Library";
+import Schedule from "./pages/Schedule";
+import Communication from "./pages/Communication";
+import Reports from "./pages/Reports";
+import Facilities from "./pages/Facilities";
+import Settings from "./pages/Settings";
+import StudentPortal from "./pages/StudentPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +43,14 @@ const App = () => (
               <Route path="/students" element={<Students />} />
               <Route path="/staff" element={<Staff />} />
               <Route path="/academics" element={<Academics />} />
+              <Route path="/finance" element={<Finance />} />
+              <Route path="/library" element={<Library />} />
+              <Route path="/schedule" element={<Schedule />} />
+              <Route path="/communication" element={<Communication />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/facilities" element={<Facilities />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/student-portal" element={<StudentPortal />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

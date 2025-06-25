@@ -82,9 +82,9 @@ export default function SchoolStats() {
               <p className={`text-xs ${
                 stat.changeType === 'increase' 
                   ? 'text-green-400 dark:text-green-600' 
-                  : stat.changeType === 'decrease' 
-                  ? 'text-red-400 dark:text-red-600' 
-                  : 'text-gray-400 dark:text-gray-600'
+                  : stat.changeType === 'neutral' 
+                  ? 'text-gray-400 dark:text-gray-600'
+                  : 'text-red-400 dark:text-red-600'
               }`}>
                 {stat.change} from last month
               </p>
