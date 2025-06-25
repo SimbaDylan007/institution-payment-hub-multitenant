@@ -3,13 +3,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import { PaymentAlert, SearchFilters as SearchFiltersType, PickPaymentRequest } from "@/types";
 import Header from "@/components/Header";
-import Stats from "@/components/Stats";
+import SchoolStats from "@/components/school/SchoolStats";
+import SchoolNavigation from "@/components/SchoolNavigation";
 import SearchFilters from "@/components/SearchFilters";
 import PaymentTable from "@/components/PaymentTable";
 import PickInstitutionPayments from "@/components/PickInstitutionPayments";
 import { fetchPayments } from "@/services/paymentService";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, UserPlus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -36,12 +38,10 @@ export default function Dashboard() {
   };
   
   const handlePaymentReset = (id: string) => {
-    // Refresh the payments list
     loadPayments(filters);
   };
   
   const handlePaymentsPicked = () => {
-    // Refresh the payments list
     loadPayments(filters);
   };
   
@@ -49,14 +49,12 @@ export default function Dashboard() {
     loadPayments(filters);
   };
   
-  // Store last successful credentials in localStorage
   const storeCredentials = (institutionId: string, password: string) => {
     const creds = { institutionId, password };
     setCredentials(creds);
     localStorage.setItem('paymentCredentials', JSON.stringify(creds));
   };
   
-  // Effect to load stored credentials on mount
   useEffect(() => {
     const storedCreds = localStorage.getItem('paymentCredentials');
     if (storedCreds) {
@@ -72,7 +70,6 @@ export default function Dashboard() {
     }
   }, []);
   
-  // Load payments when component mounts or credentials change
   useEffect(() => {
     if (user) {
       loadPayments(filters);
@@ -89,62 +86,75 @@ export default function Dashboard() {
       
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Payment Dashboard</h1>
-          <div className="flex gap-2">
+          <div>
+            <h1 className="text-2xl font-bold">School Management Dashboard</h1>
+            <p className="text-gray-400 dark:text-gray-600">
+              Welcome to your comprehensive school management system
+            </p>
+          </div>
+          <Link to="/student-management">
             <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                className="flex items-center gap-2 bg-purple-500 text-white hover:bg-purple-600 dark:bg-purple-500 dark:hover:bg-purple-600 border-white/20 dark:border-gray-300"
-                disabled={isLoading}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 border-white/20 dark:border-gray-300"
             >
-              <RefreshCw size={16} className={isLoading ? "animate-spin text-white" : "text-white"} />
-              <span className="text-white">Refresh</span>
+              <UserPlus size={16} className="text-white" />
+              <span className="text-white">Manage Students</span>
             </Button>
-            
-            <Link to="/student-management">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 border-white/20 dark:border-gray-300"
-              >
-                <UserPlus size={16} className="text-white" />
-                <span className="text-white">Manage Students</span>
-              </Button>
-            </Link>
-          </div>
+          </Link>
         </div>
         
-        <Stats payments={payments} />
+        <SchoolStats />
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-          <div className="lg:col-span-3">
-            <SearchFilters onSearch={handleSearch} />
-          </div>
-          <div className="lg:col-span-1">
-            <PickInstitutionPayments onPaymentsPicked={handlePaymentsPicked} />
-          </div>
+        <div className="mb-6">
+          <SchoolNavigation />
         </div>
         
-        <div className="bg-[#1A1F2C] dark:bg-white p-6 border border-gray-800 dark:border-gray-200 rounded-lg shadow-sm">
-          <h2 className="text-lg font-medium mb-4">Payment Records</h2>
-          
-          {isLoading ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200 mb-6">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Payment Management</CardTitle>
+              <div className="flex gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    className="flex items-center gap-2 bg-purple-500 text-white hover:bg-purple-600 dark:bg-purple-500 dark:hover:bg-purple-600 border-white/20 dark:border-gray-300"
+                    disabled={isLoading}
+                >
+                  <RefreshCw size={16} className={isLoading ? "animate-spin text-white" : "text-white"} />
+                  <span className="text-white">Refresh</span>
+                </Button>
+              </div>
             </div>
-          ) : (
-            <PaymentTable 
-              payments={payments} 
-              onPaymentReset={handlePaymentReset} 
-            />
-          )}
-        </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+              <div className="lg:col-span-3">
+                <SearchFilters onSearch={handleSearch} />
+              </div>
+              <div className="lg:col-span-1">
+                <PickInstitutionPayments onPaymentsPicked={handlePaymentsPicked} />
+              </div>
+            </div>
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+              </div>
+            ) : (
+              <PaymentTable 
+                payments={payments} 
+                onPaymentReset={handlePaymentReset} 
+              />
+            )}
+          </CardContent>
+        </Card>
       </main>
       
       <footer className="bg-[#1A1F2C] dark:bg-white border-t border-gray-800 dark:border-gray-200 py-4">
         <div className="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-600">
-          &copy; {new Date().getFullYear()} Institution Payment Hub
+          &copy; {new Date().getFullYear()} School Management System
         </div>
       </footer>
     </div>

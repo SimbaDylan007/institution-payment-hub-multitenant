@@ -1,5 +1,5 @@
 
-import React from "react"; // <-- Add this explicit import
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +12,9 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import StudentManagement from "./pages/StudentManagement";
+import Students from "./pages/Students";
+import Staff from "./pages/Staff";
+import Academics from "./pages/Academics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +32,9 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/student-management" element={<StudentManagement />} />
+              <Route path="/students" element={<Students />} />
+              <Route path="/staff" element={<Staff />} />
+              <Route path="/academics" element={<Academics />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
