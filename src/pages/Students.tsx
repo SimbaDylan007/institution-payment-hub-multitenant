@@ -1,54 +1,287 @@
 
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Plus, Search, Filter, Users, GraduationCap, Heart } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Home, Users, Search, Plus, Edit, Eye, Archive, UserPlus, FileText, Heart, GraduationCap } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Student {
+  id: number;
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  dateOfBirth: string;
+  gender: string;
+  address?: string;
+  enrollmentStatus: string;
+  enrollmentDate: string;
+  currentGrade?: string;
+  section?: string;
+}
+
+interface Guardian {
+  id: number;
+  firstName: string;
+  lastName: string;
+  relationship: string;
+  primaryPhone: string;
+  email: string;
+  isPrimary: boolean;
+  isEmergencyContact: boolean;
+}
+
+interface MedicalRecord {
+  id: number;
+  recordType: string;
+  title: string;
+  description: string;
+  recordDate: string;
+  doctorName?: string;
+}
+
+interface AcademicRecord {
+  id: number;
+  academicYear: string;
+  semester: string;
+  subject: string;
+  grade: number;
+  letterGrade: string;
+  attendancePercentage: number;
+}
 
 export default function Students() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [guardians, setGuardians] = useState<Guardian[]>([]);
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
+  const [academicRecords, setAcademicRecords] = useState<AcademicRecord[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [gradeFilter, setGradeFilter] = useState("ALL");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Mock data for demonstration
+  const mockStudents: Student[] = [
+    {
+      id: 1,
+      studentId: "STU001",
+      firstName: "John",
+      lastName: "Doe",
+      email: "john.doe@email.com",
+      phone: "+1234567890",
+      dateOfBirth: "2005-03-15",
+      gender: "Male",
+      address: "123 Main St, City",
+      enrollmentStatus: "ACTIVE",
+      enrollmentDate: "2020-09-01",
+      currentGrade: "Grade 12",
+      section: "A"
+    },
+    {
+      id: 2,
+      studentId: "STU002",
+      firstName: "Jane",
+      lastName: "Smith",
+      email: "jane.smith@email.com",
+      phone: "+1234567891",
+      dateOfBirth: "2004-07-22",
+      gender: "Female",
+      address: "456 Oak Ave, City",
+      enrollmentStatus: "ACTIVE",
+      enrollmentDate: "2019-09-01",
+      currentGrade: "Grade 11",
+      section: "B"
+    },
+    {
+      id: 3,
+      studentId: "STU003",
+      firstName: "Mike",
+      lastName: "Johnson",
+      email: "mike.johnson@email.com",
+      phone: "+1234567892",
+      dateOfBirth: "2006-01-10",
+      gender: "Male",
+      address: "789 Pine St, City",
+      enrollmentStatus: "GRADUATED",
+      enrollmentDate: "2021-09-01",
+      currentGrade: "Grade 10",
+      section: "A"
+    }
+  ];
+
+  const mockGuardians: Guardian[] = [
+    {
+      id: 1,
+      firstName: "Robert",
+      lastName: "Doe",
+      relationship: "FATHER",
+      primaryPhone: "+1234567800",
+      email: "robert.doe@email.com",
+      isPrimary: true,
+      isEmergencyContact: true
+    },
+    {
+      id: 2,
+      firstName: "Sarah",
+      lastName: "Doe",
+      relationship: "MOTHER",
+      primaryPhone: "+1234567801",
+      email: "sarah.doe@email.com",
+      isPrimary: false,
+      isEmergencyContact: true
+    }
+  ];
+
+  const mockMedicalRecords: MedicalRecord[] = [
+    {
+      id: 1,
+      recordType: "VACCINATION",
+      title: "COVID-19 Vaccination",
+      description: "Completed COVID-19 vaccination series",
+      recordDate: "2023-01-15",
+      doctorName: "Dr. Smith"
+    },
+    {
+      id: 2,
+      recordType: "ALLERGY",
+      title: "Peanut Allergy",
+      description: "Severe peanut allergy - EpiPen required",
+      recordDate: "2023-02-10",
+      doctorName: "Dr. Johnson"
+    }
+  ];
+
+  const mockAcademicRecords: AcademicRecord[] = [
+    {
+      id: 1,
+      academicYear: "2023-2024",
+      semester: "Fall",
+      subject: "Mathematics",
+      grade: 92,
+      letterGrade: "A",
+      attendancePercentage: 95
+    },
+    {
+      id: 2,
+      academicYear: "2023-2024",
+      semester: "Fall",
+      subject: "Physics",
+      grade: 88,
+      letterGrade: "B+",
+      attendancePercentage: 93
+    }
+  ];
+
+  useEffect(() => {
+    loadStudents();
+  }, []);
+
+  useEffect(() => {
+    filterStudents();
+  }, [students, searchTerm, statusFilter, gradeFilter]);
+
+  const loadStudents = async () => {
+    setIsLoading(true);
+    try {
+      // In a real app, this would be an API call
+      setStudents(mockStudents);
+      toast({
+        title: "Success",
+        description: "Students loaded successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load students",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filterStudents = () => {
+    let filtered = students;
+
+    if (searchTerm) {
+      filtered = filtered.filter(student =>
+        student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (statusFilter !== "ALL") {
+      filtered = filtered.filter(student => student.enrollmentStatus === statusFilter);
+    }
+
+    if (gradeFilter !== "ALL") {
+      filtered = filtered.filter(student => student.currentGrade === gradeFilter);
+    }
+
+    setFilteredStudents(filtered);
+  };
+
+  const handleViewStudent = (student: Student) => {
+    setSelectedStudent(student);
+    // Load related data
+    setGuardians(mockGuardians);
+    setMedicalRecords(mockMedicalRecords);
+    setAcademicRecords(mockAcademicRecords);
+  };
+
+  const handleDeleteStudent = async (studentId: number) => {
+    try {
+      setStudents(students.filter(s => s.id !== studentId));
+      toast({
+        title: "Success",
+        description: "Student archived successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to archive student",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusColors = {
+      ACTIVE: "bg-green-500",
+      INACTIVE: "bg-yellow-500",
+      GRADUATED: "bg-blue-500",
+      SUSPENDED: "bg-red-500"
+    };
+    return statusColors[status as keyof typeof statusColors] || "bg-gray-500";
+  };
+
+  const getStatusCounts = () => {
+    return {
+      total: students.length,
+      active: students.filter(s => s.enrollmentStatus === "ACTIVE").length,
+      inactive: students.filter(s => s.enrollmentStatus === "INACTIVE").length,
+      graduated: students.filter(s => s.enrollmentStatus === "GRADUATED").length
+    };
+  };
+
+  const statusCounts = getStatusCounts();
 
   if (!user) {
     return <Navigate to="/" replace />;
   }
-
-  const mockStudents = [
-    {
-      id: "R000258G",
-      name: "John Smith",
-      class: "Grade 12-A",
-      rollNumber: "2024001",
-      email: "john.smith@student.school.edu",
-      phone: "+1 234-567-8901",
-      status: "Active",
-      parentName: "Robert Smith",
-      parentPhone: "+1 234-567-8900"
-    },
-    {
-      id: "R000259G", 
-      name: "Emma Johnson",
-      class: "Grade 11-B",
-      rollNumber: "2024002",
-      email: "emma.johnson@student.school.edu",
-      phone: "+1 234-567-8902",
-      status: "Active",
-      parentName: "Mary Johnson",
-      parentPhone: "+1 234-567-8903"
-    },
-    {
-      id: "R000260G",
-      name: "Michael Brown",
-      class: "Grade 10-A",
-      rollNumber: "2024003",
-      email: "michael.brown@student.school.edu",
-      phone: "+1 234-567-8904",
-      status: "Active", 
-      parentName: "David Brown",
-      parentPhone: "+1 234-567-8905"
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-[#121828] text-white dark:bg-gray-100 dark:text-gray-900 flex flex-col">
@@ -59,18 +292,13 @@ export default function Students() {
           <div>
             <h1 className="text-2xl font-bold">Student Management</h1>
             <p className="text-gray-400 dark:text-gray-600">
-              Manage student information, enrollment, and records
+              Manage student records and enrollment
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              className="bg-blue-500 text-white hover:bg-blue-600"
-              asChild
-            >
-              <Link to="/student-management" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Student
-              </Link>
+            <Button className="bg-green-500 text-white hover:bg-green-600">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Student
             </Button>
             <Button
               className="bg-purple-500 text-white hover:bg-purple-600"
@@ -84,28 +312,29 @@ export default function Students() {
           </div>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-400">1,247</div>
+              <div className="text-2xl font-bold text-blue-400">{statusCounts.total}</div>
               <p className="text-sm text-gray-400">Total Students</p>
             </CardContent>
           </Card>
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-400">1,198</div>
-              <p className="text-sm text-gray-400">Active</p>
+              <div className="text-2xl font-bold text-green-400">{statusCounts.active}</div>
+              <p className="text-sm text-gray-400">Active Enrollment</p>
             </CardContent>
           </Card>
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-400">34</div>
-              <p className="text-sm text-gray-400">New Admissions</p>
+              <div className="text-2xl font-bold text-yellow-400">{statusCounts.inactive}</div>
+              <p className="text-sm text-gray-400">Inactive</p>
             </CardContent>
           </Card>
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-purple-400">15</div>
+              <div className="text-2xl font-bold text-purple-400">{statusCounts.graduated}</div>
               <p className="text-sm text-gray-400">Graduated</p>
             </CardContent>
           </Card>
@@ -114,103 +343,174 @@ export default function Students() {
         <Tabs defaultValue="directory" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="directory">Student Directory</TabsTrigger>
-            <TabsTrigger value="enrollment">Enrollment</TabsTrigger>
-            <TabsTrigger value="academic">Academic Records</TabsTrigger>
-            <TabsTrigger value="parents">Parent Info</TabsTrigger>
+            <TabsTrigger value="enrollment">Enrollment Tracking</TabsTrigger>
+            <TabsTrigger value="academic">Academic History</TabsTrigger>
+            <TabsTrigger value="guardians">Parent/Guardian</TabsTrigger>
             <TabsTrigger value="medical">Medical Records</TabsTrigger>
           </TabsList>
 
           <TabsContent value="directory">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-3">
-                <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Search className="h-5 w-5" />
-                      Student Directory
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {mockStudents.map((student) => (
-                        <div key={student.id} className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded border-gray-700 dark:border-gray-200">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-semibold text-lg">{student.name}</h3>
-                              <p className="text-gray-400 dark:text-gray-600">{student.class}</p>
-                              <p className="text-sm text-gray-500 dark:text-gray-500">Roll: {student.rollNumber} | ID: {student.id}</p>
-                              <div className="mt-2 space-y-1 text-sm">
-                                <p>📧 {student.email}</p>
-                                <p>📞 {student.phone}</p>
-                                <p>👨‍👩‍👧‍👦 {student.parentName} ({student.parentPhone})</p>
-                              </div>
+            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Student Directory
+                </CardTitle>
+                <div className="flex gap-4 items-center">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Search students..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300"
+                    />
+                  </div>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="bg-[#252e3e] dark:bg-gray-50 border border-gray-700 dark:border-gray-300 rounded px-3 py-2"
+                  >
+                    <option value="ALL">All Status</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                    <option value="GRADUATED">Graduated</option>
+                    <option value="SUSPENDED">Suspended</option>
+                  </select>
+                  <select
+                    value={gradeFilter}
+                    onChange={(e) => setGradeFilter(e.target.value)}
+                    className="bg-[#252e3e] dark:bg-gray-50 border border-gray-700 dark:border-gray-300 rounded px-3 py-2"
+                  >
+                    <option value="ALL">All Grades</option>
+                    <option value="Grade 9">Grade 9</option>
+                    <option value="Grade 10">Grade 10</option>
+                    <option value="Grade 11">Grade 11</option>
+                    <option value="Grade 12">Grade 12</option>
+                  </select>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredStudents.map((student) => (
+                      <div key={student.id} className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg border border-gray-700 dark:border-gray-200">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold text-lg">
+                                {student.firstName} {student.lastName}
+                              </h3>
+                              <Badge className={`${getStatusBadge(student.enrollmentStatus)} text-white`}>
+                                {student.enrollmentStatus}
+                              </Badge>
                             </div>
-                            <div className="text-right">
-                              <span className="px-2 py-1 rounded text-xs bg-green-500 text-white">
-                                {student.status}
-                              </span>
-                              <div className="mt-2 space-x-2">
-                                <Button size="sm" variant="outline">Edit</Button>
-                                <Button size="sm" variant="outline">View</Button>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-400">Student ID:</span>
+                                <p className="font-medium">{student.studentId}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Grade:</span>
+                                <p className="font-medium">{student.currentGrade} - {student.section}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Email:</span>
+                                <p className="font-medium">{student.email}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Phone:</span>
+                                <p className="font-medium">{student.phone}</p>
                               </div>
                             </div>
                           </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleViewStudent(student)}
+                              className="bg-blue-500 text-white hover:bg-blue-600"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="bg-green-500 text-white hover:bg-green-600"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteStudent(student.id)}
+                              className="bg-red-500 text-white hover:bg-red-600"
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div className="lg:col-span-1">
-                <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Filter className="h-5 w-5" />
-                      Quick Filters
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Button variant="outline" className="w-full justify-start">
-                      All Students
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      Active Enrollment
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      By Grade Level
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      Recent Admissions
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      Graduated
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="enrollment">
             <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Enrollment Management
+                  <UserPlus className="h-5 w-5" />
+                  Enrollment Tracking
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Enrollment tracking system will be implemented here.</p>
-                  <p className="mt-2">Features to include:</p>
-                  <ul className="mt-4 space-y-2 text-sm">
-                    <li>• Admission applications</li>
-                    <li>• Enrollment status tracking</li>
-                    <li>• Document verification</li>
-                    <li>• Fee payment status</li>
-                    <li>• Class assignment</li>
-                  </ul>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Admission Applications</h3>
+                    <div className="space-y-2">
+                      <div className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
+                        <div className="flex justify-between items-center">
+                          <span>New Applications</span>
+                          <Badge className="bg-blue-500 text-white">15</Badge>
+                        </div>
+                      </div>
+                      <div className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
+                        <div className="flex justify-between items-center">
+                          <span>Under Review</span>
+                          <Badge className="bg-yellow-500 text-white">8</Badge>
+                        </div>
+                      </div>
+                      <div className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
+                        <div className="flex justify-between items-center">
+                          <span>Approved</span>
+                          <Badge className="bg-green-500 text-white">23</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Document Verification</h3>
+                    <div className="space-y-2">
+                      <div className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
+                        <div className="flex justify-between items-center">
+                          <span>Pending Verification</span>
+                          <Badge className="bg-orange-500 text-white">12</Badge>
+                        </div>
+                      </div>
+                      <div className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
+                        <div className="flex justify-between items-center">
+                          <span>Verified</span>
+                          <Badge className="bg-green-500 text-white">34</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -221,26 +521,56 @@ export default function Students() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <GraduationCap className="h-5 w-5" />
-                  Academic Records
+                  Academic History
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Academic history tracking will be implemented here.</p>
-                  <p className="mt-2">Features to include:</p>
-                  <ul className="mt-4 space-y-2 text-sm">
-                    <li>• Grade history</li>
-                    <li>• Exam results</li>
-                    <li>• Attendance records</li>
-                    <li>• Assignment submissions</li>
-                    <li>• Progress reports</li>
-                  </ul>
-                </div>
+                {selectedStudent ? (
+                  <div className="space-y-6">
+                    <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-3">
+                        Academic Records - {selectedStudent.firstName} {selectedStudent.lastName}
+                      </h3>
+                      <div className="space-y-3">
+                        {academicRecords.map((record) => (
+                          <div key={record.id} className="bg-[#1A1F2C] dark:bg-white p-3 rounded border border-gray-700 dark:border-gray-200">
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-400">Subject:</span>
+                                <p className="font-medium">{record.subject}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Grade:</span>
+                                <p className="font-medium">{record.grade}% ({record.letterGrade})</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Attendance:</span>
+                                <p className="font-medium">{record.attendancePercentage}%</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Year:</span>
+                                <p className="font-medium">{record.academicYear}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Semester:</span>
+                                <p className="font-medium">{record.semester}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-600">
+                    <p>Select a student to view their academic history</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="parents">
+          <TabsContent value="guardians">
             <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -249,17 +579,53 @@ export default function Students() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Parent/Guardian management will be implemented here.</p>
-                  <p className="mt-2">Features to include:</p>
-                  <ul className="mt-4 space-y-2 text-sm">
-                    <li>• Contact information</li>
-                    <li>• Emergency contacts</li>
-                    <li>• Communication preferences</li>
-                    <li>• Meeting schedules</li>
-                    <li>• Authorization records</li>
-                  </ul>
-                </div>
+                {selectedStudent ? (
+                  <div className="space-y-6">
+                    <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-3">
+                        Guardians - {selectedStudent.firstName} {selectedStudent.lastName}
+                      </h3>
+                      <div className="space-y-3">
+                        {guardians.map((guardian) => (
+                          <div key={guardian.id} className="bg-[#1A1F2C] dark:bg-white p-3 rounded border border-gray-700 dark:border-gray-200">
+                            <div className="flex justify-between items-start">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm flex-1">
+                                <div>
+                                  <span className="text-gray-400">Name:</span>
+                                  <p className="font-medium">{guardian.firstName} {guardian.lastName}</p>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">Relationship:</span>
+                                  <p className="font-medium">{guardian.relationship}</p>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">Phone:</span>
+                                  <p className="font-medium">{guardian.primaryPhone}</p>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">Email:</span>
+                                  <p className="font-medium">{guardian.email}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                {guardian.isPrimary && (
+                                  <Badge className="bg-blue-500 text-white">Primary</Badge>
+                                )}
+                                {guardian.isEmergencyContact && (
+                                  <Badge className="bg-red-500 text-white">Emergency</Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-600">
+                    <p>Select a student to view their guardian information</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -273,17 +639,49 @@ export default function Students() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Medical records management will be implemented here.</p>
-                  <p className="mt-2">Features to include:</p>
-                  <ul className="mt-4 space-y-2 text-sm">
-                    <li>• Health information</li>
-                    <li>• Vaccination records</li>
-                    <li>• Allergies and medications</li>
-                    <li>• Emergency medical info</li>
-                    <li>• Health checkup reports</li>
-                  </ul>
-                </div>
+                {selectedStudent ? (
+                  <div className="space-y-6">
+                    <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-3">
+                        Medical Records - {selectedStudent.firstName} {selectedStudent.lastName}
+                      </h3>
+                      <div className="space-y-3">
+                        {medicalRecords.map((record) => (
+                          <div key={record.id} className="bg-[#1A1F2C] dark:bg-white p-3 rounded border border-gray-700 dark:border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-400">Type:</span>
+                                <p className="font-medium">{record.recordType}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Title:</span>
+                                <p className="font-medium">{record.title}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Date:</span>
+                                <p className="font-medium">{record.recordDate}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2">
+                              <span className="text-gray-400">Description:</span>
+                              <p className="font-medium">{record.description}</p>
+                            </div>
+                            {record.doctorName && (
+                              <div className="mt-2">
+                                <span className="text-gray-400">Doctor:</span>
+                                <p className="font-medium">{record.doctorName}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-600">
+                    <p>Select a student to view their medical records</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
