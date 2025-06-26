@@ -13,17 +13,21 @@ import java.util.List;
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
     
+    List<Event> findByEventDate(LocalDate eventDate);
+    
     List<Event> findByEventDateBetween(LocalDate startDate, LocalDate endDate);
     
-    List<Event> findByCategory(String category);
+    List<Event> findByEventType(String eventType);
+    
+    List<Event> findByTargetAudience(String targetAudience);
     
     List<Event> findByStatus(String status);
     
-    List<Event> findByOrganizer(String organizer);
+    List<Event> findByIsPublicTrue();
     
-    @Query("SELECT e FROM Event e WHERE e.eventDate >= :today ORDER BY e.eventDate ASC")
-    List<Event> findUpcomingEvents(@Param("today") LocalDate today);
+    @Query("SELECT e FROM Event e WHERE e.eventDate >= :date ORDER BY e.eventDate ASC")
+    List<Event> findUpcomingEvents(@Param("date") LocalDate date);
     
-    @Query("SELECT e FROM Event e WHERE e.eventDate = :date")
-    List<Event> findEventsByDate(@Param("date") LocalDate date);
+    @Query("SELECT e FROM Event e WHERE e.title LIKE %:keyword% OR e.description LIKE %:keyword%")
+    List<Event> searchEvents(@Param("keyword") String keyword);
 }

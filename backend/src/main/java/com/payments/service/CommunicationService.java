@@ -31,11 +31,11 @@ public class CommunicationService {
     }
     
     public List<Message> getReceivedMessages(Long receiverId) {
-        return messageRepository.findByReceiverId(receiverId);
+        return messageRepository.findByRecipientId(receiverId);
     }
     
     public List<Message> getUnreadMessages(Long receiverId) {
-        return messageRepository.findByReceiverIdAndIsReadFalse(receiverId);
+        return messageRepository.findByRecipientIdAndIsReadFalse(receiverId);
     }
     
     public List<Message> getConversation(Long senderId, Long receiverId) {
@@ -49,7 +49,7 @@ public class CommunicationService {
     @Transactional
     public Message sendMessage(Message message) {
         message.setSentAt(LocalDateTime.now());
-        message.setRead(false);
+        message.setIsRead(false);
         return messageRepository.save(message);
     }
     
@@ -58,7 +58,7 @@ public class CommunicationService {
         Optional<Message> optionalMessage = messageRepository.findById(messageId);
         if (optionalMessage.isPresent()) {
             Message message = optionalMessage.get();
-            message.setRead(true);
+            message.setIsRead(true);
             message.setReadAt(LocalDateTime.now());
             return messageRepository.save(message);
         }
@@ -67,9 +67,9 @@ public class CommunicationService {
     
     @Transactional
     public void markAllAsRead(Long receiverId) {
-        List<Message> unreadMessages = messageRepository.findByReceiverIdAndIsReadFalse(receiverId);
+        List<Message> unreadMessages = messageRepository.findByRecipientIdAndIsReadFalse(receiverId);
         for (Message message : unreadMessages) {
-            message.setRead(true);
+            message.setIsRead(true);
             message.setReadAt(LocalDateTime.now());
             messageRepository.save(message);
         }
@@ -82,8 +82,13 @@ public class CommunicationService {
         announcement.setContent(content);
         announcement.setMessageType("ANNOUNCEMENT");
         announcement.setSentAt(LocalDateTime.now());
-        announcement.setRead(false);
-        // For announcements, we might want to send to all users or specific groups
+        announcement.setIsRead(false);
+        announcement.setSenderId(senderId);
+        announcement.setSenderName("System");
+        announcement.setSenderType("SYSTEM");
+        announcement.setRecipientType("ALL");
+        announcement.setRecipientId(0L);
+        announcement.setRecipientName("All Users");
         return messageRepository.save(announcement);
     }
     
@@ -97,6 +102,6 @@ public class CommunicationService {
     }
     
     public long getUnreadMessageCount(Long userId) {
-        return messageRepository.findByReceiverIdAndIsReadFalse(userId).size();
+        return messageRepository.findByRecipientIdAndIsReadFalse(userId).size();
     }
 }

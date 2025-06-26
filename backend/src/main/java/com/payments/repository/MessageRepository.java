@@ -14,14 +14,14 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     
     List<Message> findBySenderId(Long senderId);
     
-    List<Message> findByReceiverId(Long receiverId);
+    List<Message> findByRecipientId(Long recipientId);
     
-    List<Message> findByReceiverIdAndIsReadFalse(Long receiverId);
+    List<Message> findByRecipientIdAndIsReadFalse(Long recipientId);
     
-    @Query("SELECT m FROM Message m WHERE (m.sender.id = :userId OR m.receiver.id = :userId) ORDER BY m.sentAt DESC")
+    @Query("SELECT m FROM Message m WHERE (m.senderId = :userId OR m.recipientId = :userId) ORDER BY m.sentAt DESC")
     List<Message> findMessagesByUser(@Param("userId") Long userId);
     
-    @Query("SELECT m FROM Message m WHERE m.sender.id = :senderId AND m.receiver.id = :receiverId ORDER BY m.sentAt DESC")
+    @Query("SELECT m FROM Message m WHERE (m.senderId = :senderId AND m.recipientId = :receiverId) OR (m.senderId = :receiverId AND m.recipientId = :senderId) ORDER BY m.sentAt DESC")
     List<Message> findConversation(@Param("senderId") Long senderId, @Param("receiverId") Long receiverId);
     
     List<Message> findByMessageTypeAndIsReadFalse(String messageType);

@@ -25,7 +25,7 @@ public interface FeeRepository extends JpaRepository<Fee, Long> {
     @Query("SELECT f FROM Fee f WHERE f.student.id = :studentId AND f.status = :status")
     List<Fee> findByStudentIdAndStatus(@Param("studentId") Long studentId, @Param("status") String status);
     
-    @Query("SELECT SUM(f.amount) FROM Fee f WHERE f.status = 'PAID' AND f.paymentDate BETWEEN :startDate AND :endDate")
+    @Query("SELECT SUM(f.paidAmount) FROM Fee f WHERE f.status = 'PAID' AND f.paidDate BETWEEN :startDate AND :endDate")
     BigDecimal getTotalCollectedBetweenDates(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
     
     @Query("SELECT SUM(f.amount) FROM Fee f WHERE f.status = 'PENDING'")

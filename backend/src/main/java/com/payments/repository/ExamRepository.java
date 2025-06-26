@@ -13,14 +13,20 @@ import java.util.List;
 @Repository
 public interface ExamRepository extends JpaRepository<Exam, Long> {
     
-    List<Exam> findByGradeAndSection(String grade, String section);
+    List<Exam> findByGrade(String grade);
+    
+    List<Exam> findBySubjectId(Long subjectId);
     
     List<Exam> findByExamDate(LocalDate examDate);
     
-    List<Exam> findByGradeAndSectionAndAcademicYear(String grade, String section, String academicYear);
-    
-    @Query("SELECT e FROM Exam e WHERE e.examDate BETWEEN :startDate AND :endDate")
-    List<Exam> findByExamDateBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    List<Exam> findByExamDateBetween(LocalDate startDate, LocalDate endDate);
     
     List<Exam> findByStatus(String status);
+    
+    List<Exam> findByExamType(String examType);
+    
+    @Query("SELECT e FROM Exam e WHERE e.grade = :grade AND e.examDate BETWEEN :startDate AND :endDate")
+    List<Exam> findByGradeAndDateRange(@Param("grade") String grade, 
+                                       @Param("startDate") LocalDate startDate, 
+                                       @Param("endDate") LocalDate endDate);
 }

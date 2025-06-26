@@ -64,8 +64,8 @@ public class FinanceService {
             fee.setDescription(feeDetails.getDescription());
             fee.setStatus(feeDetails.getStatus());
             
-            if ("PAID".equals(feeDetails.getStatus()) && fee.getPaymentDate() == null) {
-                fee.setPaymentDate(LocalDate.now());
+            if ("PAID".equals(feeDetails.getStatus()) && fee.getPaidDate() == null) {
+                fee.setPaidDate(LocalDate.now());
             }
             
             return feeRepository.save(fee);
@@ -79,9 +79,10 @@ public class FinanceService {
         if (optionalFee.isPresent()) {
             Fee fee = optionalFee.get();
             fee.setStatus("PAID");
-            fee.setPaymentDate(LocalDate.now());
+            fee.setPaidDate(LocalDate.now());
             fee.setPaymentMethod(paymentMethod);
             fee.setTransactionId(transactionId);
+            fee.setPaidAmount(fee.getAmount());
             return feeRepository.save(fee);
         }
         return null;

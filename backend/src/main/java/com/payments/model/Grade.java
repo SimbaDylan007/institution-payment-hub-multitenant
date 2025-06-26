@@ -2,6 +2,7 @@
 package com.payments.model;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -20,29 +21,34 @@ public class Grade {
     @JoinColumn(name = "subject_id", nullable = false)
     private Subject subject;
     
-    @Column(nullable = false)
-    private String assessmentType;
+    @ManyToOne
+    @JoinColumn(name = "exam_id")
+    private Exam exam;
     
     @Column(nullable = false)
-    private String assessmentName;
+    private String assessmentType; // EXAM, ASSIGNMENT, QUIZ, PROJECT
     
     @Column(nullable = false)
-    private Double score;
+    private BigDecimal marksObtained;
     
     @Column(nullable = false)
-    private Double maxScore;
-    
-    private String letterGrade;
+    private BigDecimal maxMarks;
     
     @Column(nullable = false)
-    private LocalDate assessmentDate;
+    private String letterGrade; // A+, A, B+, B, C+, C, D, F
     
-    @Column(name = "academic_year")
-    private String academicYear;
+    private BigDecimal gpa;
     
-    private String semester;
+    @Column(nullable = false)
+    private LocalDate recordedDate;
     
     private String comments;
+    
+    @Column(nullable = false)
+    private String academicYear;
+    
+    @Column(nullable = false)
+    private String semester;
     
     // Constructors
     public Grade() {}
@@ -57,30 +63,33 @@ public class Grade {
     public Subject getSubject() { return subject; }
     public void setSubject(Subject subject) { this.subject = subject; }
     
+    public Exam getExam() { return exam; }
+    public void setExam(Exam exam) { this.exam = exam; }
+    
     public String getAssessmentType() { return assessmentType; }
     public void setAssessmentType(String assessmentType) { this.assessmentType = assessmentType; }
     
-    public String getAssessmentName() { return assessmentName; }
-    public void setAssessmentName(String assessmentName) { this.assessmentName = assessmentName; }
+    public BigDecimal getMarksObtained() { return marksObtained; }
+    public void setMarksObtained(BigDecimal marksObtained) { this.marksObtained = marksObtained; }
     
-    public Double getScore() { return score; }
-    public void setScore(Double score) { this.score = score; }
-    
-    public Double getMaxScore() { return maxScore; }
-    public void setMaxScore(Double maxScore) { this.maxScore = maxScore; }
+    public BigDecimal getMaxMarks() { return maxMarks; }
+    public void setMaxMarks(BigDecimal maxMarks) { this.maxMarks = maxMarks; }
     
     public String getLetterGrade() { return letterGrade; }
     public void setLetterGrade(String letterGrade) { this.letterGrade = letterGrade; }
     
-    public LocalDate getAssessmentDate() { return assessmentDate; }
-    public void setAssessmentDate(LocalDate assessmentDate) { this.assessmentDate = assessmentDate; }
+    public BigDecimal getGpa() { return gpa; }
+    public void setGpa(BigDecimal gpa) { this.gpa = gpa; }
+    
+    public LocalDate getRecordedDate() { return recordedDate; }
+    public void setRecordedDate(LocalDate recordedDate) { this.recordedDate = recordedDate; }
+    
+    public String getComments() { return comments; }
+    public void setComments(String comments) { this.comments = comments; }
     
     public String getAcademicYear() { return academicYear; }
     public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
     
     public String getSemester() { return semester; }
     public void setSemester(String semester) { this.semester = semester; }
-    
-    public String getComments() { return comments; }
-    public void setComments(String comments) { this.comments = comments; }
 }

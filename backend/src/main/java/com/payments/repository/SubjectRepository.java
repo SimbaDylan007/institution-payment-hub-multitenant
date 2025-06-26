@@ -12,9 +12,9 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
     
     List<Subject> findByGrade(String grade);
     
-    List<Subject> findByIsActive(Boolean isActive);
+    List<Subject> findByCode(String code);
     
-    List<Subject> findByGradeAndIsActive(String grade, Boolean isActive);
+    List<Subject> findByIsActiveTrue();
     
-    Subject findByCode(String code);
+    List<Subject> findByNameContainingIgnoreCase(String name);
 }

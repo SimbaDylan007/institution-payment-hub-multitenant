@@ -13,20 +13,12 @@ public class Exam {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne
-    @JoinColumn(name = "subject_id", nullable = false)
-    private Subject subject;
-    
-    @Column(nullable = false)
-    private String examType;
-    
     @Column(nullable = false)
     private String title;
     
-    @Column(nullable = false)
-    private String grade;
-    
-    private String section;
+    @ManyToOne
+    @JoinColumn(name = "subject_id", nullable = false)
+    private Subject subject;
     
     @Column(nullable = false)
     private LocalDate examDate;
@@ -37,20 +29,18 @@ public class Exam {
     @Column(nullable = false)
     private LocalTime endTime;
     
-    private String room;
+    @Column(nullable = false)
+    private String grade;
     
-    private Integer duration;
-    
-    private Integer maxMarks;
-    
-    @Column(name = "academic_year")
-    private String academicYear;
-    
-    private String semester;
+    private String venue;
     
     private String instructions;
     
-    private String status = "SCHEDULED";
+    private Integer maxMarks;
+    
+    private String examType; // MIDTERM, FINAL, QUIZ, ASSIGNMENT
+    
+    private String status; // SCHEDULED, ONGOING, COMPLETED, CANCELLED
     
     // Constructors
     public Exam() {}
@@ -59,20 +49,11 @@ public class Exam {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
-    public Subject getSubject() { return subject; }
-    public void setSubject(Subject subject) { this.subject = subject; }
-    
-    public String getExamType() { return examType; }
-    public void setExamType(String examType) { this.examType = examType; }
-    
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     
-    public String getGrade() { return grade; }
-    public void setGrade(String grade) { this.grade = grade; }
-    
-    public String getSection() { return section; }
-    public void setSection(String section) { this.section = section; }
+    public Subject getSubject() { return subject; }
+    public void setSubject(Subject subject) { this.subject = subject; }
     
     public LocalDate getExamDate() { return examDate; }
     public void setExamDate(LocalDate examDate) { this.examDate = examDate; }
@@ -83,23 +64,20 @@ public class Exam {
     public LocalTime getEndTime() { return endTime; }
     public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
     
-    public String getRoom() { return room; }
-    public void setRoom(String room) { this.room = room; }
+    public String getGrade() { return grade; }
+    public void setGrade(String grade) { this.grade = grade; }
     
-    public Integer getDuration() { return duration; }
-    public void setDuration(Integer duration) { this.duration = duration; }
+    public String getVenue() { return venue; }
+    public void setVenue(String venue) { this.venue = venue; }
+    
+    public String getInstructions() { return instructions; }
+    public void setInstructions(String instructions) { this.instructions = instructions; }
     
     public Integer getMaxMarks() { return maxMarks; }
     public void setMaxMarks(Integer maxMarks) { this.maxMarks = maxMarks; }
     
-    public String getAcademicYear() { return academicYear; }
-    public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
-    
-    public String getSemester() { return semester; }
-    public void setSemester(String semester) { this.semester = semester; }
-    
-    public String getInstructions() { return instructions; }
-    public void setInstructions(String instructions) { this.instructions = instructions; }
+    public String getExamType() { return examType; }
+    public void setExamType(String examType) { this.examType = examType; }
     
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

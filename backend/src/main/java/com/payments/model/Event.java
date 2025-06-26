@@ -8,6 +8,7 @@ import java.time.LocalTime;
 @Entity
 @Table(name = "events")
 public class Event {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,13 +25,20 @@ public class Event {
     
     private LocalTime endTime;
     
-    private String location;
+    private String venue;
     
-    private String category; // ACADEMIC, SPORTS, CULTURAL, MEETING
+    @Column(nullable = false)
+    private String eventType; // ACADEMIC, SPORTS, CULTURAL, MEETING, EXAMINATION
     
-    private String status; // SCHEDULED, ONGOING, COMPLETED, CANCELLED
+    private String targetAudience; // STUDENTS, STAFF, PARENTS, ALL
     
     private String organizer;
+    
+    private String status; // PLANNED, ONGOING, COMPLETED, CANCELLED
+    
+    private Boolean isPublic = true;
+    
+    private String imageUrl;
     
     // Constructors
     public Event() {}
@@ -54,15 +62,24 @@ public class Event {
     public LocalTime getEndTime() { return endTime; }
     public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
     
-    public String getLocation() { return location; }
-    public void setLocation(String location) { this.location = location; }
+    public String getVenue() { return venue; }
+    public void setVenue(String venue) { this.venue = venue; }
     
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
+    public String getEventType() { return eventType; }
+    public void setEventType(String eventType) { this.eventType = eventType; }
+    
+    public String getTargetAudience() { return targetAudience; }
+    public void setTargetAudience(String targetAudience) { this.targetAudience = targetAudience; }
+    
+    public String getOrganizer() { return organizer; }
+    public void setOrganizer(String organizer) { this.organizer = organizer; }
     
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     
-    public String getOrganizer() { return organizer; }
-    public void setOrganizer(String organizer) { this.organizer = organizer; }
+    public Boolean getIsPublic() { return isPublic; }
+    public void setIsPublic(Boolean isPublic) { this.isPublic = isPublic; }
+    
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }
