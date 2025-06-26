@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Home, Users, Plus, Edit, Eye, Archive, Calendar, FileText, DollarSign, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import AddStaffModal from "@/components/forms/AddStaffModal";
 import {
   getAllStaff,
   getStaffById,
-  createStaff,
   updateStaff,
   deleteStaff,
   getStaffByDepartment,
@@ -79,6 +79,7 @@ export default function Staff() {
   const [departmentFilter, setDepartmentFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [isLoading, setIsLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     loadStaff();
@@ -249,7 +250,10 @@ export default function Staff() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button className="bg-green-500 text-white hover:bg-green-600">
+            <Button 
+              className="bg-green-500 text-white hover:bg-green-600"
+              onClick={() => setShowAddModal(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Staff Member
             </Button>
@@ -629,6 +633,12 @@ export default function Staff() {
           </TabsContent>
         </Tabs>
       </main>
+      
+      <AddStaffModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={loadStaff}
+      />
       
       <footer className="bg-[#1A1F2C] dark:bg-white border-t border-gray-800 dark:border-gray-200 py-4">
         <div className="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-600">
