@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -9,9 +8,87 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Home, Settings as SettingsIcon, Users, Shield, Bell, School, Globe, Palette } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export default function Settings() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const handleSaveSchoolInfo = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast({
+        title: "Success",
+        description: "School information saved successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save school information.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast({
+        title: "Success",
+        description: "Preferences saved successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save preferences.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUserManagement = (action: string) => {
+    toast({
+      title: "User Management",
+      description: `${action} functionality will be implemented.`,
+    });
+  };
+
+  const handleSecurityAction = (action: string) => {
+    toast({
+      title: "Security",
+      description: `${action} functionality will be implemented.`,
+    });
+  };
+
+  const handleSaveNotifications = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast({
+        title: "Success",
+        description: "Notification preferences saved successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save notification preferences.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -90,8 +167,12 @@ export default function Settings() {
                           className="bg-[#1A1F2C] dark:bg-white border-gray-600 dark:border-gray-300"
                         />
                       </div>
-                      <Button className="w-full bg-green-500 hover:bg-green-600">
-                        Save School Info
+                      <Button 
+                        className="w-full bg-green-500 hover:bg-green-600"
+                        onClick={handleSaveSchoolInfo}
+                        disabled={loading}
+                      >
+                        {loading ? "Saving..." : "Save School Info"}
                       </Button>
                     </CardContent>
                   </Card>
@@ -144,8 +225,12 @@ export default function Settings() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <Button className="w-full bg-blue-500 hover:bg-blue-600">
-                        Save Preferences
+                      <Button 
+                        className="w-full bg-blue-500 hover:bg-blue-600"
+                        onClick={handleSavePreferences}
+                        disabled={loading}
+                      >
+                        {loading ? "Saving..." : "Save Preferences"}
                       </Button>
                     </CardContent>
                   </Card>
@@ -217,16 +302,28 @@ export default function Settings() {
                     <CardContent className="p-4">
                       <h3 className="font-semibold mb-4">User Management</h3>
                       <div className="space-y-2">
-                        <Button className="w-full bg-green-500 hover:bg-green-600">
+                        <Button 
+                          className="w-full bg-green-500 hover:bg-green-600"
+                          onClick={() => handleUserManagement('Add New User')}
+                        >
                           Add New User
                         </Button>
-                        <Button className="w-full bg-blue-500 hover:bg-blue-600">
+                        <Button 
+                          className="w-full bg-blue-500 hover:bg-blue-600"
+                          onClick={() => handleUserManagement('Manage Roles')}
+                        >
                           Manage Roles
                         </Button>
-                        <Button className="w-full bg-purple-500 hover:bg-purple-600">
+                        <Button 
+                          className="w-full bg-purple-500 hover:bg-purple-600"
+                          onClick={() => handleUserManagement('User Permissions')}
+                        >
                           User Permissions
                         </Button>
-                        <Button className="w-full bg-orange-500 hover:bg-orange-600">
+                        <Button 
+                          className="w-full bg-orange-500 hover:bg-orange-600"
+                          onClick={() => handleUserManagement('Bulk User Import')}
+                        >
                           Bulk User Import
                         </Button>
                       </div>
@@ -279,16 +376,28 @@ export default function Settings() {
                     <CardContent className="p-4">
                       <h3 className="font-semibold mb-4">Security Features</h3>
                       <div className="space-y-2">
-                        <Button className="w-full bg-blue-500 hover:bg-blue-600">
+                        <Button 
+                          className="w-full bg-blue-500 hover:bg-blue-600"
+                          onClick={() => handleSecurityAction('Two-Factor Authentication')}
+                        >
                           Two-Factor Authentication
                         </Button>
-                        <Button className="w-full bg-purple-500 hover:bg-purple-600">
+                        <Button 
+                          className="w-full bg-purple-500 hover:bg-purple-600"
+                          onClick={() => handleSecurityAction('Session Management')}
+                        >
                           Session Management
                         </Button>
-                        <Button className="w-full bg-orange-500 hover:bg-orange-600">
+                        <Button 
+                          className="w-full bg-orange-500 hover:bg-orange-600"
+                          onClick={() => handleSecurityAction('Security Audit Log')}
+                        >
                           Security Audit Log
                         </Button>
-                        <Button className="w-full bg-red-500 hover:bg-red-600">
+                        <Button 
+                          className="w-full bg-red-500 hover:bg-red-600"
+                          onClick={() => handleSecurityAction('Backup & Recovery')}
+                        >
                           Backup & Recovery
                         </Button>
                       </div>
@@ -359,8 +468,12 @@ export default function Settings() {
                 </div>
                 
                 <div className="mt-6">
-                  <Button className="w-full bg-green-500 hover:bg-green-600">
-                    Save Notification Preferences
+                  <Button 
+                    className="w-full bg-green-500 hover:bg-green-600"
+                    onClick={handleSaveNotifications}
+                    disabled={loading}
+                  >
+                    {loading ? "Saving..." : "Save Notification Preferences"}
                   </Button>
                 </div>
               </CardContent>

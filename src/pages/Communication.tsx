@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Home, MessageSquare, Mail, Bell, Send, Plus, Users, FileText } from "lucide-react";
+import NewMessageModal from "@/components/forms/NewMessageModal";
 
 export default function Communication() {
   const { user } = useAuth();
@@ -27,10 +27,7 @@ export default function Communication() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button className="bg-green-500 text-white hover:bg-green-600">
-              <Send className="h-4 w-4 mr-2" />
-              New Message
-            </Button>
+            <NewMessageModal />
             <Button
               className="bg-purple-500 text-white hover:bg-purple-600"
               asChild
@@ -59,10 +56,7 @@ export default function Communication() {
                   Internal Messaging System
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button className="bg-green-500 hover:bg-green-600">
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Message
-                  </Button>
+                  <NewMessageModal />
                 </div>
               </CardHeader>
               <CardContent>

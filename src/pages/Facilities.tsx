@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Home, Building, Wrench, MapPin, Plus } from "lucide-react";
+import AddFacilityModal from "@/components/forms/AddFacilityModal";
 
 export default function Facilities() {
   const { user } = useAuth();
@@ -27,10 +27,7 @@ export default function Facilities() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button className="bg-green-500 text-white hover:bg-green-600">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Facility
-            </Button>
+            <AddFacilityModal />
             <Button
               className="bg-purple-500 text-white hover:bg-purple-600"
               asChild

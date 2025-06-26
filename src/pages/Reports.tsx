@@ -6,9 +6,41 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Home, BarChart3, FileText, TrendingUp, Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Reports() {
   const { user } = useAuth();
+  const { toast } = useToast();
+
+  const handleGenerateReport = async (reportType: string) => {
+    try {
+      toast({
+        title: "Generating Report",
+        description: `${reportType} report is being generated...`,
+      });
+      
+      // Simulate report generation
+      setTimeout(() => {
+        toast({
+          title: "Success",
+          description: `${reportType} report generated successfully!`,
+        });
+      }, 2000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportReport = () => {
+    toast({
+      title: "Exporting Report",
+      description: "Report is being exported to PDF...",
+    });
+  };
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -27,7 +59,10 @@ export default function Reports() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button className="bg-green-500 text-white hover:bg-green-600">
+            <Button 
+              className="bg-green-500 text-white hover:bg-green-600"
+              onClick={handleExportReport}
+            >
               <Download className="h-4 w-4 mr-2" />
               Export Report
             </Button>
@@ -65,21 +100,39 @@ export default function Reports() {
                     <CardContent className="p-4">
                       <div className="text-lg font-semibold">Grade Analysis</div>
                       <p className="text-sm text-gray-400">Class-wise performance</p>
-                      <Button size="sm" className="mt-2 w-full">Generate</Button>
+                      <Button 
+                        size="sm" 
+                        className="mt-2 w-full"
+                        onClick={() => handleGenerateReport('Grade Analysis')}
+                      >
+                        Generate
+                      </Button>
                     </CardContent>
                   </Card>
                   <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
                     <CardContent className="p-4">
                       <div className="text-lg font-semibold">Subject Reports</div>
                       <p className="text-sm text-gray-400">Subject-wise analysis</p>
-                      <Button size="sm" className="mt-2 w-full">Generate</Button>
+                      <Button 
+                        size="sm" 
+                        className="mt-2 w-full"
+                        onClick={() => handleGenerateReport('Subject Reports')}
+                      >
+                        Generate
+                      </Button>
                     </CardContent>
                   </Card>
                   <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
                     <CardContent className="p-4">
                       <div className="text-lg font-semibold">Progress Cards</div>
                       <p className="text-sm text-gray-400">Student progress</p>
-                      <Button size="sm" className="mt-2 w-full">Generate</Button>
+                      <Button 
+                        size="sm" 
+                        className="mt-2 w-full"
+                        onClick={() => handleGenerateReport('Progress Cards')}
+                      >
+                        Generate
+                      </Button>
                     </CardContent>
                   </Card>
                 </div>
@@ -96,8 +149,46 @@ export default function Reports() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Attendance reporting will be implemented here.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="text-lg font-semibold">Daily Attendance</div>
+                      <p className="text-sm text-gray-400">Daily attendance summary</p>
+                      <Button 
+                        size="sm" 
+                        className="mt-2 w-full"
+                        onClick={() => handleGenerateReport('Daily Attendance')}
+                      >
+                        Generate
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="text-lg font-semibold">Monthly Report</div>
+                      <p className="text-sm text-gray-400">Monthly attendance trends</p>
+                      <Button 
+                        size="sm" 
+                        className="mt-2 w-full"
+                        onClick={() => handleGenerateReport('Monthly Attendance')}
+                      >
+                        Generate
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="text-lg font-semibold">Absenteeism</div>
+                      <p className="text-sm text-gray-400">Chronic absenteeism report</p>
+                      <Button 
+                        size="sm" 
+                        className="mt-2 w-full"
+                        onClick={() => handleGenerateReport('Absenteeism Report')}
+                      >
+                        Generate
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </div>
               </CardContent>
             </Card>
@@ -112,8 +203,46 @@ export default function Reports() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Financial reporting will be implemented here.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="text-lg font-semibold">Fee Collection</div>
+                      <p className="text-sm text-gray-400">Fee collection summary</p>
+                      <Button 
+                        size="sm" 
+                        className="mt-2 w-full"
+                        onClick={() => handleGenerateReport('Fee Collection')}
+                      >
+                        Generate
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="text-lg font-semibold">Outstanding Dues</div>
+                      <p className="text-sm text-gray-400">Pending payments report</p>
+                      <Button 
+                        size="sm" 
+                        className="mt-2 w-full"
+                        onClick={() => handleGenerateReport('Outstanding Dues')}
+                      >
+                        Generate
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="text-lg font-semibold">Revenue Analysis</div>
+                      <p className="text-sm text-gray-400">Monthly revenue trends</p>
+                      <Button 
+                        size="sm" 
+                        className="mt-2 w-full"
+                        onClick={() => handleGenerateReport('Revenue Analysis')}
+                      >
+                        Generate
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </div>
               </CardContent>
             </Card>
@@ -123,10 +252,24 @@ export default function Reports() {
             <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
               <CardHeader>
                 <CardTitle>Custom Report Builder</CardTitle>
+                <Button 
+                  className="bg-green-500 hover:bg-green-600"
+                  onClick={() => handleGenerateReport('Custom Report')}
+                >
+                  Build Custom Report
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Custom report builder will be implemented here.</p>
+                  <p>Advanced report builder for creating custom reports with filters and parameters.</p>
+                  <div className="mt-4 space-y-2">
+                    <Button className="w-full max-w-xs bg-blue-500 hover:bg-blue-600">
+                      Create New Report
+                    </Button>
+                    <Button className="w-full max-w-xs bg-purple-500 hover:bg-purple-600">
+                      Saved Templates
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
