@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
@@ -10,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Home, Users, Search, Plus, Edit, Eye, Archive, UserPlus, FileText, Heart, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import * as studentApi from "@/services/studentApiService";
 
 interface Student {
   id: number;
@@ -194,13 +194,14 @@ export default function Students() {
   const loadStudents = async () => {
     setIsLoading(true);
     try {
-      // In a real app, this would be an API call
-      setStudents(mockStudents);
+      const data = await studentApi.getAllStudents();
+      setStudents(data);
       toast({
         title: "Success",
         description: "Students loaded successfully",
       });
     } catch (error) {
+      console.error("Failed to load students:", error);
       toast({
         title: "Error",
         description: "Failed to load students",
@@ -211,39 +212,68 @@ export default function Students() {
     }
   };
 
-  const filterStudents = () => {
+  const filterStudents = async () => {
     let filtered = students;
 
     if (searchTerm) {
-      filtered = filtered.filter(student =>
-        student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      try {
+        filtered = await studentApi.searchStudents(searchTerm);
+      } catch (error) {
+        // Fallback to local filtering if search API fails
+        filtered = students.filter(student =>
+          student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          student.email.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
     }
 
     if (statusFilter !== "ALL") {
-      filtered = filtered.filter(student => student.enrollmentStatus === statusFilter);
+      try {
+        const statusFiltered = await studentApi.getStudentsByStatus(statusFilter);
+        filtered = searchTerm ? filtered.filter(s => statusFiltered.some(sf => sf.id === s.id)) : statusFiltered;
+      } catch (error) {
+        filtered = filtered.filter(student => student.enrollmentStatus === statusFilter);
+      }
     }
 
     if (gradeFilter !== "ALL") {
-      filtered = filtered.filter(student => student.currentGrade === gradeFilter);
+      try {
+        const gradeFiltered = await studentApi.getStudentsByGrade(gradeFilter);
+        filtered = filtered.filter(s => gradeFiltered.some(gf => gf.id === s.id));
+      } catch (error) {
+        filtered = filtered.filter(student => student.currentGrade === gradeFilter);
+      }
     }
 
     setFilteredStudents(filtered);
   };
 
-  const handleViewStudent = (student: Student) => {
+  const handleViewStudent = async (student: Student) => {
     setSelectedStudent(student);
-    // Load related data
-    setGuardians(mockGuardians);
-    setMedicalRecords(mockMedicalRecords);
-    setAcademicRecords(mockAcademicRecords);
+    try {
+      const [guardianData, medicalData, academicData] = await Promise.all([
+        studentApi.getStudentGuardians(student.id),
+        studentApi.getStudentMedicalRecords(student.id),
+        studentApi.getStudentAcademicRecords(student.id)
+      ]);
+      setGuardians(guardianData);
+      setMedicalRecords(medicalData);
+      setAcademicRecords(academicData);
+    } catch (error) {
+      console.error("Failed to load student details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load student details",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteStudent = async (studentId: number) => {
     try {
+      await studentApi.deleteStudent(studentId);
       setStudents(students.filter(s => s.id !== studentId));
       toast({
         title: "Success",
@@ -256,6 +286,22 @@ export default function Students() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleCreateStudent = async () => {
+    // This would open a form modal in a real implementation
+    toast({
+      title: "Info",
+      description: "Student creation form will be implemented",
+    });
+  };
+
+  const handleEditStudent = async (student: Student) => {
+    // This would open an edit form modal in a real implementation
+    toast({
+      title: "Info",
+      description: "Student edit form will be implemented",
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -296,7 +342,10 @@ export default function Students() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button className="bg-green-500 text-white hover:bg-green-600">
+            <Button 
+              className="bg-green-500 text-white hover:bg-green-600"
+              onClick={handleCreateStudent}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Student
             </Button>
@@ -312,28 +361,28 @@ export default function Students() {
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - now clickable */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-            <CardContent className="p-4">
+          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200 cursor-pointer hover:bg-[#252e3e] dark:hover:bg-gray-50 transition-colors">
+            <CardContent className="p-4" onClick={() => setStatusFilter("ALL")}>
               <div className="text-2xl font-bold text-blue-400">{statusCounts.total}</div>
               <p className="text-sm text-gray-400">Total Students</p>
             </CardContent>
           </Card>
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-            <CardContent className="p-4">
+          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200 cursor-pointer hover:bg-[#252e3e] dark:hover:bg-gray-50 transition-colors">
+            <CardContent className="p-4" onClick={() => setStatusFilter("ACTIVE")}>
               <div className="text-2xl font-bold text-green-400">{statusCounts.active}</div>
               <p className="text-sm text-gray-400">Active Enrollment</p>
             </CardContent>
           </Card>
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-            <CardContent className="p-4">
+          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200 cursor-pointer hover:bg-[#252e3e] dark:hover:bg-gray-50 transition-colors">
+            <CardContent className="p-4" onClick={() => setStatusFilter("INACTIVE")}>
               <div className="text-2xl font-bold text-yellow-400">{statusCounts.inactive}</div>
               <p className="text-sm text-gray-400">Inactive</p>
             </CardContent>
           </Card>
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-            <CardContent className="p-4">
+          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200 cursor-pointer hover:bg-[#252e3e] dark:hover:bg-gray-50 transition-colors">
+            <CardContent className="p-4" onClick={() => setStatusFilter("GRADUATED")}>
               <div className="text-2xl font-bold text-purple-400">{statusCounts.graduated}</div>
               <p className="text-sm text-gray-400">Graduated</p>
             </CardContent>
@@ -439,6 +488,7 @@ export default function Students() {
                             <Button
                               size="sm"
                               variant="outline"
+                              onClick={() => handleEditStudent(student)}
                               className="bg-green-500 text-white hover:bg-green-600"
                             >
                               <Edit className="h-4 w-4" />
