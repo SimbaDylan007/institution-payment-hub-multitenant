@@ -26,10 +26,10 @@ import {
 export default function Academic() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [subjects, setSubjects] = useState([]);
-  const [timetables, setTimetables] = useState([]);
-  const [grades, setGrades] = useState([]);
-  const [exams, setExams] = useState([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [timetables, setTimetables] = useState<any[]>([]);
+  const [grades, setGrades] = useState<any[]>([]);
+  const [exams, setExams] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -43,8 +43,8 @@ export default function Academic() {
         getAllSubjects(),
         getUpcomingExams()
       ]);
-      setSubjects(subjectsData);
-      setExams(upcomingExamsData);
+      setSubjects(Array.isArray(subjectsData) ? subjectsData : []);
+      setExams(Array.isArray(upcomingExamsData) ? upcomingExamsData : []);
     } catch (error) {
       console.error("Error loading academic data:", error);
       toast({
