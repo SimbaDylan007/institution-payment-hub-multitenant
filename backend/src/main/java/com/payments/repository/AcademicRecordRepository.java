@@ -3,8 +3,6 @@ package com.payments.repository;
 
 import com.payments.model.AcademicRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,8 +14,7 @@ public interface AcademicRecordRepository extends JpaRepository<AcademicRecord, 
     
     List<AcademicRecord> findByStudentIdAndAcademicYear(Long studentId, String academicYear);
     
-    @Query("SELECT ar FROM AcademicRecord ar WHERE ar.student.id = :studentId AND ar.academicYear = :year AND ar.semester = :semester")
-    List<AcademicRecord> findByStudentIdAndAcademicYearAndSemester(@Param("studentId") Long studentId, 
-                                                                  @Param("year") String academicYear, 
-                                                                  @Param("semester") String semester);
+    List<AcademicRecord> findByStudentIdAndGrade(Long studentId, String grade);
+    
+    AcademicRecord findByStudentIdAndAcademicYearAndTerm(Long studentId, String academicYear, String term);
 }

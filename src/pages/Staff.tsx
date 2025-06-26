@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
@@ -10,6 +9,21 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Home, Users, Plus, Edit, Eye, Archive, Calendar, FileText, DollarSign, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  getAllStaff,
+  getStaffById,
+  createStaff,
+  updateStaff,
+  deleteStaff,
+  getStaffByDepartment,
+  getStaffByStatus,
+  getStaffAttendance,
+  markAttendance,
+  getStaffLeaveRequests,
+  submitLeaveRequest,
+  approveLeaveRequest,
+  getLeaveRequestsByStatus
+} from "@/services/staffApiService";
 
 interface Staff {
   id: number;
@@ -49,6 +63,8 @@ interface LeaveRequest {
   reason: string;
   status: string;
   applicationDate: string;
+  approvedBy?: string;
+  approvalDate?: string;
 }
 
 export default function Staff() {
@@ -64,108 +80,6 @@ export default function Staff() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Mock data for demonstration
-  const mockStaff: Staff[] = [
-    {
-      id: 1,
-      employeeId: "EMP001",
-      firstName: "Sarah",
-      lastName: "Johnson",
-      email: "sarah.johnson@school.edu",
-      phone: "+1234567890",
-      dateOfBirth: "1985-03-15",
-      gender: "Female",
-      address: "123 Teacher Lane, City",
-      hireDate: "2020-08-15",
-      department: "Mathematics",
-      position: "Senior Teacher",
-      employmentStatus: "ACTIVE",
-      salary: 65000,
-      qualifications: "M.Ed Mathematics, B.Sc Mathematics",
-      specializations: "Calculus, Statistics"
-    },
-    {
-      id: 2,
-      employeeId: "EMP002",
-      firstName: "Michael",
-      lastName: "Chen",
-      email: "michael.chen@school.edu",
-      phone: "+1234567891",
-      dateOfBirth: "1982-07-22",
-      gender: "Male",
-      address: "456 Science Ave, City",
-      hireDate: "2019-09-01",
-      department: "Science",
-      position: "Department Head",
-      employmentStatus: "ACTIVE",
-      salary: 75000,
-      qualifications: "Ph.D Physics, M.Sc Physics",
-      specializations: "Quantum Physics, Laboratory Management"
-    },
-    {
-      id: 3,
-      employeeId: "EMP003",
-      firstName: "Emily",
-      lastName: "Davis",
-      email: "emily.davis@school.edu",
-      phone: "+1234567892",
-      dateOfBirth: "1990-01-10",
-      gender: "Female",
-      address: "789 Literature St, City",
-      hireDate: "2021-01-15",
-      department: "English",
-      position: "Teacher",
-      employmentStatus: "ON_LEAVE",
-      salary: 55000,
-      qualifications: "M.A English Literature, B.A English",
-      specializations: "Creative Writing, Literature Analysis"
-    }
-  ];
-
-  const mockAttendance: StaffAttendance[] = [
-    {
-      id: 1,
-      attendanceDate: "2024-03-10",
-      timeIn: "08:00",
-      timeOut: "16:30",
-      status: "PRESENT",
-      hoursWorked: 8.5,
-      overtimeHours: 0.5
-    },
-    {
-      id: 2,
-      attendanceDate: "2024-03-09",
-      timeIn: "08:15",
-      timeOut: "16:00",
-      status: "LATE",
-      hoursWorked: 7.75,
-      overtimeHours: 0
-    }
-  ];
-
-  const mockLeaveRequests: LeaveRequest[] = [
-    {
-      id: 1,
-      leaveType: "SICK",
-      startDate: "2024-03-15",
-      endDate: "2024-03-17",
-      totalDays: 3,
-      reason: "Medical appointment and recovery",
-      status: "APPROVED",
-      applicationDate: "2024-03-10"
-    },
-    {
-      id: 2,
-      leaveType: "ANNUAL",
-      startDate: "2024-04-01",
-      endDate: "2024-04-05",
-      totalDays: 5,
-      reason: "Family vacation",
-      status: "PENDING",
-      applicationDate: "2024-03-08"
-    }
-  ];
-
   useEffect(() => {
     loadStaff();
   }, []);
@@ -177,12 +91,56 @@ export default function Staff() {
   const loadStaff = async () => {
     setIsLoading(true);
     try {
-      setStaffMembers(mockStaff);
+      const data = await getAllStaff() as Staff[];
+      setStaffMembers(data);
       toast({
         title: "Success",
         description: "Staff members loaded successfully",
       });
     } catch (error) {
+      console.error("Error loading staff:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load staff members",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadStaffByDepartment = async (department: string) => {
+    setIsLoading(true);
+    try {
+      if (department === "ALL") {
+        await loadStaff();
+      } else {
+        const data = await getStaffByDepartment(department) as Staff[];
+        setStaffMembers(data);
+      }
+    } catch (error) {
+      console.error("Error loading staff by department:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load staff members",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadStaffByStatus = async (status: string) => {
+    setIsLoading(true);
+    try {
+      if (status === "ALL") {
+        await loadStaff();
+      } else {
+        const data = await getStaffByStatus(status) as Staff[];
+        setStaffMembers(data);
+      }
+    } catch (error) {
+      console.error("Error loading staff by status:", error);
       toast({
         title: "Error",
         description: "Failed to load staff members",
@@ -216,20 +174,35 @@ export default function Staff() {
     setFilteredStaff(filtered);
   };
 
-  const handleViewStaff = (staff: Staff) => {
+  const handleViewStaff = async (staff: Staff) => {
     setSelectedStaff(staff);
-    setAttendance(mockAttendance);
-    setLeaveRequests(mockLeaveRequests);
+    try {
+      const [attendanceData, leaveData] = await Promise.all([
+        getStaffAttendance(staff.id) as Promise<StaffAttendance[]>,
+        getStaffLeaveRequests(staff.id) as Promise<LeaveRequest[]>
+      ]);
+      setAttendance(attendanceData);
+      setLeaveRequests(leaveData);
+    } catch (error) {
+      console.error("Error loading staff details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load staff details",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteStaff = async (staffId: number) => {
     try {
+      await deleteStaff(staffId);
       setStaffMembers(staffMembers.filter(s => s.id !== staffId));
       toast({
         title: "Success",
         description: "Staff member archived successfully",
       });
     } catch (error) {
+      console.error("Error archiving staff:", error);
       toast({
         title: "Error",
         description: "Failed to archive staff member",
@@ -347,7 +320,10 @@ export default function Staff() {
                   </div>
                   <select
                     value={departmentFilter}
-                    onChange={(e) => setDepartmentFilter(e.target.value)}
+                    onChange={(e) => {
+                      setDepartmentFilter(e.target.value);
+                      loadStaffByDepartment(e.target.value);
+                    }}
                     className="bg-[#252e3e] dark:bg-gray-50 border border-gray-700 dark:border-gray-300 rounded px-3 py-2"
                   >
                     <option value="ALL">All Departments</option>
@@ -359,7 +335,10 @@ export default function Staff() {
                   </select>
                   <select
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      loadStaffByStatus(e.target.value);
+                    }}
                     className="bg-[#252e3e] dark:bg-gray-50 border border-gray-700 dark:border-gray-300 rounded px-3 py-2"
                   >
                     <option value="ALL">All Status</option>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
@@ -7,9 +8,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Home, Users, Search, Plus, Edit, Eye, Archive, UserPlus, FileText, Heart, GraduationCap } from "lucide-react";
+import { Home, Users, Plus, Edit, Eye, Archive, GraduationCap, Heart, FileText, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import * as studentApi from "@/services/studentApiService";
+import { 
+  getAllStudents, 
+  getStudentById,
+  createStudent,
+  updateStudent,
+  deleteStudent,
+  getStudentsByStatus,
+  getStudentsByGrade,
+  searchStudents,
+  getStudentGuardians,
+  addGuardian,
+  getStudentMedicalRecords,
+  addMedicalRecord,
+  getStudentAcademicRecords,
+  addAcademicRecord
+} from "@/services/studentApiService";
 
 interface Student {
   id: number;
@@ -21,10 +37,14 @@ interface Student {
   dateOfBirth: string;
   gender: string;
   address?: string;
-  enrollmentStatus: string;
   enrollmentDate: string;
-  currentGrade?: string;
+  enrollmentStatus: string;
+  currentGrade: string;
   section?: string;
+  parentContact?: string;
+  emergencyContact?: string;
+  medicalConditions?: string;
+  specialNeeds?: string;
 }
 
 interface Guardian {
@@ -33,7 +53,10 @@ interface Guardian {
   lastName: string;
   relationship: string;
   primaryPhone: string;
-  email: string;
+  secondaryPhone?: string;
+  email?: string;
+  occupation?: string;
+  address?: string;
   isPrimary: boolean;
   isEmergencyContact: boolean;
 }
@@ -41,20 +64,23 @@ interface Guardian {
 interface MedicalRecord {
   id: number;
   recordType: string;
-  title: string;
   description: string;
   recordDate: string;
   doctorName?: string;
+  medications?: string;
+  allergies?: string;
+  notes?: string;
 }
 
 interface AcademicRecord {
   id: number;
   academicYear: string;
-  semester: string;
-  subject: string;
-  grade: number;
-  letterGrade: string;
-  attendancePercentage: number;
+  term: string;
+  grade: string;
+  gpa?: number;
+  totalCredits?: number;
+  status: string;
+  notes?: string;
 }
 
 export default function Students() {
@@ -67,121 +93,9 @@ export default function Students() {
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [academicRecords, setAcademicRecords] = useState<AcademicRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
   const [gradeFilter, setGradeFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [isLoading, setIsLoading] = useState(false);
-
-  // Mock data for demonstration
-  const mockStudents: Student[] = [
-    {
-      id: 1,
-      studentId: "STU001",
-      firstName: "John",
-      lastName: "Doe",
-      email: "john.doe@email.com",
-      phone: "+1234567890",
-      dateOfBirth: "2005-03-15",
-      gender: "Male",
-      address: "123 Main St, City",
-      enrollmentStatus: "ACTIVE",
-      enrollmentDate: "2020-09-01",
-      currentGrade: "Grade 12",
-      section: "A"
-    },
-    {
-      id: 2,
-      studentId: "STU002",
-      firstName: "Jane",
-      lastName: "Smith",
-      email: "jane.smith@email.com",
-      phone: "+1234567891",
-      dateOfBirth: "2004-07-22",
-      gender: "Female",
-      address: "456 Oak Ave, City",
-      enrollmentStatus: "ACTIVE",
-      enrollmentDate: "2019-09-01",
-      currentGrade: "Grade 11",
-      section: "B"
-    },
-    {
-      id: 3,
-      studentId: "STU003",
-      firstName: "Mike",
-      lastName: "Johnson",
-      email: "mike.johnson@email.com",
-      phone: "+1234567892",
-      dateOfBirth: "2006-01-10",
-      gender: "Male",
-      address: "789 Pine St, City",
-      enrollmentStatus: "GRADUATED",
-      enrollmentDate: "2021-09-01",
-      currentGrade: "Grade 10",
-      section: "A"
-    }
-  ];
-
-  const mockGuardians: Guardian[] = [
-    {
-      id: 1,
-      firstName: "Robert",
-      lastName: "Doe",
-      relationship: "FATHER",
-      primaryPhone: "+1234567800",
-      email: "robert.doe@email.com",
-      isPrimary: true,
-      isEmergencyContact: true
-    },
-    {
-      id: 2,
-      firstName: "Sarah",
-      lastName: "Doe",
-      relationship: "MOTHER",
-      primaryPhone: "+1234567801",
-      email: "sarah.doe@email.com",
-      isPrimary: false,
-      isEmergencyContact: true
-    }
-  ];
-
-  const mockMedicalRecords: MedicalRecord[] = [
-    {
-      id: 1,
-      recordType: "VACCINATION",
-      title: "COVID-19 Vaccination",
-      description: "Completed COVID-19 vaccination series",
-      recordDate: "2023-01-15",
-      doctorName: "Dr. Smith"
-    },
-    {
-      id: 2,
-      recordType: "ALLERGY",
-      title: "Peanut Allergy",
-      description: "Severe peanut allergy - EpiPen required",
-      recordDate: "2023-02-10",
-      doctorName: "Dr. Johnson"
-    }
-  ];
-
-  const mockAcademicRecords: AcademicRecord[] = [
-    {
-      id: 1,
-      academicYear: "2023-2024",
-      semester: "Fall",
-      subject: "Mathematics",
-      grade: 92,
-      letterGrade: "A",
-      attendancePercentage: 95
-    },
-    {
-      id: 2,
-      academicYear: "2023-2024",
-      semester: "Fall",
-      subject: "Physics",
-      grade: 88,
-      letterGrade: "B+",
-      attendancePercentage: 93
-    }
-  ];
 
   useEffect(() => {
     loadStudents();
@@ -189,19 +103,19 @@ export default function Students() {
 
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, statusFilter, gradeFilter]);
+  }, [students, searchTerm, gradeFilter, statusFilter]);
 
   const loadStudents = async () => {
     setIsLoading(true);
     try {
-      const data = await studentApi.getAllStudents();
+      const data = await getAllStudents() as Student[];
       setStudents(data);
       toast({
         title: "Success",
         description: "Students loaded successfully",
       });
     } catch (error) {
-      console.error("Failed to load students:", error);
+      console.error("Error loading students:", error);
       toast({
         title: "Error",
         description: "Failed to load students",
@@ -212,39 +126,87 @@ export default function Students() {
     }
   };
 
-  const filterStudents = async () => {
+  const loadStudentsByStatus = async (status: string) => {
+    setIsLoading(true);
+    try {
+      if (status === "ALL") {
+        await loadStudents();
+      } else {
+        const data = await getStudentsByStatus(status) as Student[];
+        setStudents(data);
+      }
+    } catch (error) {
+      console.error("Error loading students by status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load students",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadStudentsByGrade = async (grade: string) => {
+    setIsLoading(true);
+    try {
+      if (grade === "ALL") {
+        await loadStudents();
+      } else {
+        const data = await getStudentsByGrade(grade) as Student[];
+        setStudents(data);
+      }
+    } catch (error) {
+      console.error("Error loading students by grade:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load students",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = async (query: string) => {
+    if (query.trim()) {
+      setIsLoading(true);
+      try {
+        const data = await searchStudents(query) as Student[];
+        setStudents(data);
+      } catch (error) {
+        console.error("Error searching students:", error);
+        toast({
+          title: "Error",
+          description: "Failed to search students",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      loadStudents();
+    }
+  };
+
+  const filterStudents = () => {
     let filtered = students;
 
     if (searchTerm) {
-      try {
-        filtered = await studentApi.searchStudents(searchTerm);
-      } catch (error) {
-        // Fallback to local filtering if search API fails
-        filtered = students.filter(student =>
-          student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          student.email.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      }
-    }
-
-    if (statusFilter !== "ALL") {
-      try {
-        const statusFiltered = await studentApi.getStudentsByStatus(statusFilter);
-        filtered = searchTerm ? filtered.filter(s => statusFiltered.some(sf => sf.id === s.id)) : statusFiltered;
-      } catch (error) {
-        filtered = filtered.filter(student => student.enrollmentStatus === statusFilter);
-      }
+      filtered = filtered.filter(student =>
+        student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
 
     if (gradeFilter !== "ALL") {
-      try {
-        const gradeFiltered = await studentApi.getStudentsByGrade(gradeFilter);
-        filtered = filtered.filter(s => gradeFiltered.some(gf => gf.id === s.id));
-      } catch (error) {
-        filtered = filtered.filter(student => student.currentGrade === gradeFilter);
-      }
+      filtered = filtered.filter(student => student.currentGrade === gradeFilter);
+    }
+
+    if (statusFilter !== "ALL") {
+      filtered = filtered.filter(student => student.enrollmentStatus === statusFilter);
     }
 
     setFilteredStudents(filtered);
@@ -253,16 +215,16 @@ export default function Students() {
   const handleViewStudent = async (student: Student) => {
     setSelectedStudent(student);
     try {
-      const [guardianData, medicalData, academicData] = await Promise.all([
-        studentApi.getStudentGuardians(student.id),
-        studentApi.getStudentMedicalRecords(student.id),
-        studentApi.getStudentAcademicRecords(student.id)
+      const [guardiansData, medicalData, academicData] = await Promise.all([
+        getStudentGuardians(student.id) as Promise<Guardian[]>,
+        getStudentMedicalRecords(student.id) as Promise<MedicalRecord[]>,
+        getStudentAcademicRecords(student.id) as Promise<AcademicRecord[]>
       ]);
-      setGuardians(guardianData);
+      setGuardians(guardiansData);
       setMedicalRecords(medicalData);
       setAcademicRecords(academicData);
     } catch (error) {
-      console.error("Failed to load student details:", error);
+      console.error("Error loading student details:", error);
       toast({
         title: "Error",
         description: "Failed to load student details",
@@ -273,13 +235,14 @@ export default function Students() {
 
   const handleDeleteStudent = async (studentId: number) => {
     try {
-      await studentApi.deleteStudent(studentId);
+      await deleteStudent(studentId);
       setStudents(students.filter(s => s.id !== studentId));
       toast({
         title: "Success",
         description: "Student archived successfully",
       });
     } catch (error) {
+      console.error("Error archiving student:", error);
       toast({
         title: "Error",
         description: "Failed to archive student",
@@ -288,28 +251,13 @@ export default function Students() {
     }
   };
 
-  const handleCreateStudent = async () => {
-    // This would open a form modal in a real implementation
-    toast({
-      title: "Info",
-      description: "Student creation form will be implemented",
-    });
-  };
-
-  const handleEditStudent = async (student: Student) => {
-    // This would open an edit form modal in a real implementation
-    toast({
-      title: "Info",
-      description: "Student edit form will be implemented",
-    });
-  };
-
   const getStatusBadge = (status: string) => {
     const statusColors = {
       ACTIVE: "bg-green-500",
       INACTIVE: "bg-yellow-500",
       GRADUATED: "bg-blue-500",
-      SUSPENDED: "bg-red-500"
+      WITHDRAWN: "bg-red-500",
+      SUSPENDED: "bg-orange-500"
     };
     return statusColors[status as keyof typeof statusColors] || "bg-gray-500";
   };
@@ -338,14 +286,11 @@ export default function Students() {
           <div>
             <h1 className="text-2xl font-bold">Student Management</h1>
             <p className="text-gray-400 dark:text-gray-600">
-              Manage student records and enrollment
+              Manage student records and academic information
             </p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              className="bg-green-500 text-white hover:bg-green-600"
-              onClick={handleCreateStudent}
-            >
+            <Button className="bg-green-500 text-white hover:bg-green-600">
               <Plus className="h-4 w-4 mr-2" />
               Add Student
             </Button>
@@ -361,28 +306,28 @@ export default function Students() {
           </div>
         </div>
 
-        {/* Stats Cards - now clickable */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200 cursor-pointer hover:bg-[#252e3e] dark:hover:bg-gray-50 transition-colors">
-            <CardContent className="p-4" onClick={() => setStatusFilter("ALL")}>
+          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+            <CardContent className="p-4">
               <div className="text-2xl font-bold text-blue-400">{statusCounts.total}</div>
               <p className="text-sm text-gray-400">Total Students</p>
             </CardContent>
           </Card>
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200 cursor-pointer hover:bg-[#252e3e] dark:hover:bg-gray-50 transition-colors">
-            <CardContent className="p-4" onClick={() => setStatusFilter("ACTIVE")}>
+          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+            <CardContent className="p-4">
               <div className="text-2xl font-bold text-green-400">{statusCounts.active}</div>
               <p className="text-sm text-gray-400">Active Enrollment</p>
             </CardContent>
           </Card>
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200 cursor-pointer hover:bg-[#252e3e] dark:hover:bg-gray-50 transition-colors">
-            <CardContent className="p-4" onClick={() => setStatusFilter("INACTIVE")}>
+          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+            <CardContent className="p-4">
               <div className="text-2xl font-bold text-yellow-400">{statusCounts.inactive}</div>
               <p className="text-sm text-gray-400">Inactive</p>
             </CardContent>
           </Card>
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200 cursor-pointer hover:bg-[#252e3e] dark:hover:bg-gray-50 transition-colors">
-            <CardContent className="p-4" onClick={() => setStatusFilter("GRADUATED")}>
+          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+            <CardContent className="p-4">
               <div className="text-2xl font-bold text-purple-400">{statusCounts.graduated}</div>
               <p className="text-sm text-gray-400">Graduated</p>
             </CardContent>
@@ -392,9 +337,9 @@ export default function Students() {
         <Tabs defaultValue="directory" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="directory">Student Directory</TabsTrigger>
-            <TabsTrigger value="enrollment">Enrollment Tracking</TabsTrigger>
-            <TabsTrigger value="academic">Academic History</TabsTrigger>
-            <TabsTrigger value="guardians">Parent/Guardian</TabsTrigger>
+            <TabsTrigger value="enrollment">Enrollment</TabsTrigger>
+            <TabsTrigger value="academic">Academic Records</TabsTrigger>
+            <TabsTrigger value="guardians">Parents/Guardians</TabsTrigger>
             <TabsTrigger value="medical">Medical Records</TabsTrigger>
           </TabsList>
 
@@ -410,31 +355,52 @@ export default function Students() {
                     <Input
                       placeholder="Search students..."
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        if (e.target.value.trim()) {
+                          handleSearch(e.target.value);
+                        }
+                      }}
                       className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300"
                     />
                   </div>
                   <select
+                    value={gradeFilter}
+                    onChange={(e) => {
+                      setGradeFilter(e.target.value);
+                      loadStudentsByGrade(e.target.value);
+                    }}
+                    className="bg-[#252e3e] dark:bg-gray-50 border border-gray-700 dark:border-gray-300 rounded px-3 py-2"
+                  >
+                    <option value="ALL">All Grades</option>
+                    <option value="KG">Kindergarten</option>
+                    <option value="1">Grade 1</option>
+                    <option value="2">Grade 2</option>
+                    <option value="3">Grade 3</option>
+                    <option value="4">Grade 4</option>
+                    <option value="5">Grade 5</option>
+                    <option value="6">Grade 6</option>
+                    <option value="7">Grade 7</option>
+                    <option value="8">Grade 8</option>
+                    <option value="9">Grade 9</option>
+                    <option value="10">Grade 10</option>
+                    <option value="11">Grade 11</option>
+                    <option value="12">Grade 12</option>
+                  </select>
+                  <select
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      loadStudentsByStatus(e.target.value);
+                    }}
                     className="bg-[#252e3e] dark:bg-gray-50 border border-gray-700 dark:border-gray-300 rounded px-3 py-2"
                   >
                     <option value="ALL">All Status</option>
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
                     <option value="GRADUATED">Graduated</option>
+                    <option value="WITHDRAWN">Withdrawn</option>
                     <option value="SUSPENDED">Suspended</option>
-                  </select>
-                  <select
-                    value={gradeFilter}
-                    onChange={(e) => setGradeFilter(e.target.value)}
-                    className="bg-[#252e3e] dark:bg-gray-50 border border-gray-700 dark:border-gray-300 rounded px-3 py-2"
-                  >
-                    <option value="ALL">All Grades</option>
-                    <option value="Grade 9">Grade 9</option>
-                    <option value="Grade 10">Grade 10</option>
-                    <option value="Grade 11">Grade 11</option>
-                    <option value="Grade 12">Grade 12</option>
                   </select>
                 </div>
               </CardHeader>
@@ -464,15 +430,15 @@ export default function Students() {
                               </div>
                               <div>
                                 <span className="text-gray-400">Grade:</span>
-                                <p className="font-medium">{student.currentGrade} - {student.section}</p>
+                                <p className="font-medium">{student.currentGrade}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Section:</span>
+                                <p className="font-medium">{student.section || 'N/A'}</p>
                               </div>
                               <div>
                                 <span className="text-gray-400">Email:</span>
                                 <p className="font-medium">{student.email}</p>
-                              </div>
-                              <div>
-                                <span className="text-gray-400">Phone:</span>
-                                <p className="font-medium">{student.phone}</p>
                               </div>
                             </div>
                           </div>
@@ -488,7 +454,6 @@ export default function Students() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleEditStudent(student)}
                               className="bg-green-500 text-white hover:bg-green-600"
                             >
                               <Edit className="h-4 w-4" />
@@ -515,53 +480,40 @@ export default function Students() {
             <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <UserPlus className="h-5 w-5" />
+                  <UserCheck className="h-5 w-5" />
                   Enrollment Tracking
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Admission Applications</h3>
-                    <div className="space-y-2">
-                      <div className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
-                        <div className="flex justify-between items-center">
-                          <span>New Applications</span>
-                          <Badge className="bg-blue-500 text-white">15</Badge>
+                {selectedStudent ? (
+                  <div className="space-y-6">
+                    <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-3">
+                        Enrollment Details - {selectedStudent.firstName} {selectedStudent.lastName}
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-400">Enrollment Date:</span>
+                          <p className="font-medium">{selectedStudent.enrollmentDate}</p>
                         </div>
-                      </div>
-                      <div className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
-                        <div className="flex justify-between items-center">
-                          <span>Under Review</span>
-                          <Badge className="bg-yellow-500 text-white">8</Badge>
+                        <div>
+                          <span className="text-gray-400">Current Grade:</span>
+                          <p className="font-medium">{selectedStudent.currentGrade}</p>
                         </div>
-                      </div>
-                      <div className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
-                        <div className="flex justify-between items-center">
-                          <span>Approved</span>
-                          <Badge className="bg-green-500 text-white">23</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Document Verification</h3>
-                    <div className="space-y-2">
-                      <div className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
-                        <div className="flex justify-between items-center">
-                          <span>Pending Verification</span>
-                          <Badge className="bg-orange-500 text-white">12</Badge>
-                        </div>
-                      </div>
-                      <div className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
-                        <div className="flex justify-between items-center">
-                          <span>Verified</span>
-                          <Badge className="bg-green-500 text-white">34</Badge>
+                        <div>
+                          <span className="text-gray-400">Status:</span>
+                          <Badge className={`${getStatusBadge(selectedStudent.enrollmentStatus)} text-white`}>
+                            {selectedStudent.enrollmentStatus}
+                          </Badge>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-600">
+                    <p>Select a student to view enrollment details</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -571,7 +523,7 @@ export default function Students() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <GraduationCap className="h-5 w-5" />
-                  Academic History
+                  Academic Records
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -579,31 +531,27 @@ export default function Students() {
                   <div className="space-y-6">
                     <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
                       <h3 className="font-semibold mb-3">
-                        Academic Records - {selectedStudent.firstName} {selectedStudent.lastName}
+                        Academic History - {selectedStudent.firstName} {selectedStudent.lastName}
                       </h3>
                       <div className="space-y-3">
                         {academicRecords.map((record) => (
                           <div key={record.id} className="bg-[#1A1F2C] dark:bg-white p-3 rounded border border-gray-700 dark:border-gray-200">
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                              <div>
-                                <span className="text-gray-400">Subject:</span>
-                                <p className="font-medium">{record.subject}</p>
-                              </div>
-                              <div>
-                                <span className="text-gray-400">Grade:</span>
-                                <p className="font-medium">{record.grade}% ({record.letterGrade})</p>
-                              </div>
-                              <div>
-                                <span className="text-gray-400">Attendance:</span>
-                                <p className="font-medium">{record.attendancePercentage}%</p>
-                              </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                               <div>
                                 <span className="text-gray-400">Year:</span>
                                 <p className="font-medium">{record.academicYear}</p>
                               </div>
                               <div>
-                                <span className="text-gray-400">Semester:</span>
-                                <p className="font-medium">{record.semester}</p>
+                                <span className="text-gray-400">Term:</span>
+                                <p className="font-medium">{record.term}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Grade:</span>
+                                <p className="font-medium">{record.grade}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">GPA:</span>
+                                <p className="font-medium">{record.gpa || 'N/A'}</p>
                               </div>
                             </div>
                           </div>
@@ -613,7 +561,7 @@ export default function Students() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                    <p>Select a student to view their academic history</p>
+                    <p>Select a student to view academic records</p>
                   </div>
                 )}
               </CardContent>
@@ -625,7 +573,7 @@ export default function Students() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Parent/Guardian Information
+                  Parents/Guardians
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -633,38 +581,36 @@ export default function Students() {
                   <div className="space-y-6">
                     <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
                       <h3 className="font-semibold mb-3">
-                        Guardians - {selectedStudent.firstName} {selectedStudent.lastName}
+                        Guardian Information - {selectedStudent.firstName} {selectedStudent.lastName}
                       </h3>
                       <div className="space-y-3">
                         {guardians.map((guardian) => (
                           <div key={guardian.id} className="bg-[#1A1F2C] dark:bg-white p-3 rounded border border-gray-700 dark:border-gray-200">
-                            <div className="flex justify-between items-start">
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm flex-1">
-                                <div>
-                                  <span className="text-gray-400">Name:</span>
-                                  <p className="font-medium">{guardian.firstName} {guardian.lastName}</p>
-                                </div>
-                                <div>
-                                  <span className="text-gray-400">Relationship:</span>
-                                  <p className="font-medium">{guardian.relationship}</p>
-                                </div>
-                                <div>
-                                  <span className="text-gray-400">Phone:</span>
-                                  <p className="font-medium">{guardian.primaryPhone}</p>
-                                </div>
-                                <div>
-                                  <span className="text-gray-400">Email:</span>
-                                  <p className="font-medium">{guardian.email}</p>
-                                </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-400">Name:</span>
+                                <p className="font-medium">{guardian.firstName} {guardian.lastName}</p>
                               </div>
-                              <div className="flex gap-2">
-                                {guardian.isPrimary && (
-                                  <Badge className="bg-blue-500 text-white">Primary</Badge>
-                                )}
-                                {guardian.isEmergencyContact && (
-                                  <Badge className="bg-red-500 text-white">Emergency</Badge>
-                                )}
+                              <div>
+                                <span className="text-gray-400">Relationship:</span>
+                                <p className="font-medium">{guardian.relationship}</p>
                               </div>
+                              <div>
+                                <span className="text-gray-400">Phone:</span>
+                                <p className="font-medium">{guardian.primaryPhone}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Email:</span>
+                                <p className="font-medium">{guardian.email || 'N/A'}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 flex gap-2">
+                              {guardian.isPrimary && (
+                                <Badge className="bg-blue-500 text-white">Primary</Badge>
+                              )}
+                              {guardian.isEmergencyContact && (
+                                <Badge className="bg-red-500 text-white">Emergency Contact</Badge>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -673,7 +619,7 @@ export default function Students() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                    <p>Select a student to view their guardian information</p>
+                    <p>Select a student to view guardian information</p>
                   </div>
                 )}
               </CardContent>
@@ -693,33 +639,33 @@ export default function Students() {
                   <div className="space-y-6">
                     <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
                       <h3 className="font-semibold mb-3">
-                        Medical Records - {selectedStudent.firstName} {selectedStudent.lastName}
+                        Medical History - {selectedStudent.firstName} {selectedStudent.lastName}
                       </h3>
                       <div className="space-y-3">
                         {medicalRecords.map((record) => (
                           <div key={record.id} className="bg-[#1A1F2C] dark:bg-white p-3 rounded border border-gray-700 dark:border-gray-200">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                               <div>
                                 <span className="text-gray-400">Type:</span>
                                 <p className="font-medium">{record.recordType}</p>
                               </div>
                               <div>
-                                <span className="text-gray-400">Title:</span>
-                                <p className="font-medium">{record.title}</p>
-                              </div>
-                              <div>
                                 <span className="text-gray-400">Date:</span>
                                 <p className="font-medium">{record.recordDate}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Doctor:</span>
+                                <p className="font-medium">{record.doctorName || 'N/A'}</p>
                               </div>
                             </div>
                             <div className="mt-2">
                               <span className="text-gray-400">Description:</span>
                               <p className="font-medium">{record.description}</p>
                             </div>
-                            {record.doctorName && (
+                            {record.allergies && (
                               <div className="mt-2">
-                                <span className="text-gray-400">Doctor:</span>
-                                <p className="font-medium">{record.doctorName}</p>
+                                <span className="text-gray-400">Allergies:</span>
+                                <p className="font-medium text-red-400">{record.allergies}</p>
                               </div>
                             )}
                           </div>
@@ -729,7 +675,7 @@ export default function Students() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                    <p>Select a student to view their medical records</p>
+                    <p>Select a student to view medical records</p>
                   </div>
                 )}
               </CardContent>

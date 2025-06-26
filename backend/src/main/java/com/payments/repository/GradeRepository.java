@@ -16,11 +16,14 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
     
     List<Grade> findByStudentIdAndAcademicYear(Long studentId, String academicYear);
     
-    List<Grade> findBySubjectId(Long subjectId);
+    List<Grade> findBySubjectIdAndAcademicYear(Long subjectId, String academicYear);
     
-    @Query("SELECT g FROM Grade g WHERE g.student.id = :studentId AND g.subject.id = :subjectId")
-    List<Grade> findByStudentIdAndSubjectId(@Param("studentId") Long studentId, @Param("subjectId") Long subjectId);
+    @Query("SELECT g FROM Grade g WHERE g.student.id = :studentId AND g.academicYear = :academicYear AND g.term = :term")
+    List<Grade> findByStudentIdAndAcademicYearAndTerm(@Param("studentId") Long studentId, 
+                                                     @Param("academicYear") String academicYear, 
+                                                     @Param("term") String term);
     
     @Query("SELECT AVG(g.score) FROM Grade g WHERE g.student.id = :studentId AND g.academicYear = :academicYear")
-    Double getAverageScoreByStudentAndYear(@Param("studentId") Long studentId, @Param("academicYear") String academicYear);
+    Double calculateAverageGradeByStudentAndYear(@Param("studentId") Long studentId, 
+                                               @Param("academicYear") String academicYear);
 }
