@@ -1,299 +1,250 @@
-import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, Link } from "react-router-dom";
-import Header from "@/components/Header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Settings as SettingsIcon, Users, Shield, Database, Bell, School, Save } from "lucide-react";
-import AddUserModal from "@/components/forms/AddUserModal";
-import BulkUserImportModal from "@/components/forms/BulkUserImportModal";
-import ManageRolesModal from "@/components/forms/ManageRolesModal";
-import { Input } from "@/components/ui/input";
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Toggle } from "@/components/ui/toggle";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { Users, UserPlus, Settings as SettingsIcon } from "lucide-react";
+import { AddUserModal } from "@/components/forms/AddUserModal";
+import { BulkUserImportModal } from "@/components/forms/BulkUserImportModal";
+import { ManageRolesModal } from "@/components/forms/ManageRolesModal";
 
-export default function Settings() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [schoolSettings, setSchoolSettings] = useState({
-    schoolName: "ABC International School",
-    address: "123 Education Street, Learning City",
-    phone: "+1-234-567-8900",
-    email: "admin@abcschool.edu",
-    website: "www.abcschool.edu"
+const data = [
+  { name: "Jan", Students: 4000, Teachers: 2400, Admins: 2400 },
+  { name: "Feb", Students: 3000, Teachers: 1398, Admins: 2210 },
+  { name: "Mar", Students: 2000, Teachers: 9800, Admins: 2290 },
+  { name: "Apr", Students: 2780, Teachers: 3908, Admins: 2000 },
+  { name: "May", Students: 1890, Teachers: 4800, Admins: 2181 },
+  { name: "Jun", Students: 2390, Teachers: 3800, Admins: 2500 },
+  { name: "Jul", Students: 3490, Teachers: 4300, Admins: 2100 },
+  { name: "Aug", Students: 4000, Teachers: 2400, Admins: 2400 },
+  { name: "Sep", Students: 3000, Teachers: 1398, Admins: 2210 },
+  { name: "Oct", Students: 2000, Teachers: 9800, Admins: 2290 },
+  { name: "Nov", Students: 2780, Teachers: 3908, Admins: 2000 },
+  { name: "Dec", Students: 1890, Teachers: 4800, Admins: 2181 },
+];
+
+const tableData = [
+  { name: "John Doe", role: "Student", status: "Active", lastLogin: "2024-03-15" },
+  { name: "Jane Smith", role: "Teacher", status: "Active", lastLogin: "2024-03-14" },
+  { name: "Alice Johnson", role: "Admin", status: "Inactive", lastLogin: "2024-03-10" },
+  { name: "Bob Williams", role: "Librarian", status: "Active", lastLogin: "2024-03-16" },
+];
+
+const Settings = () => {
+  const [userStats, setUserStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    administrators: 0,
+    teachers: 0,
   });
 
-  const handleSaveSettings = () => {
-    toast({
-      title: "Settings Saved",
-      description: "School settings have been updated successfully.",
-    });
+  useEffect(() => {
+    fetchUserStats();
+  }, []);
+
+  const fetchUserStats = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/users/statistics');
+      if (response.ok) {
+        const data = await response.json();
+        setUserStats(data);
+      } else {
+        console.error('Failed to fetch user statistics');
+      }
+    } catch (error) {
+      console.error('Error fetching user statistics:', error);
+    }
   };
 
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
   return (
-    <div className="min-h-screen bg-[#121828] text-white dark:bg-gray-100 dark:text-gray-900 flex flex-col">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">System Settings</h1>
-            <p className="text-gray-400 dark:text-gray-600">
-              Configure system preferences and manage users
-            </p>
-          </div>
-          <Button
-            className="bg-purple-500 text-white hover:bg-purple-600"
-            asChild
-          >
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <Home className="h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
-        </div>
+    <div className="container mx-auto py-10">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your institution settings and configurations.
+        </p>
+      </div>
 
-        <Tabs defaultValue="school" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="school">School Info</TabsTrigger>
-            <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="system">System</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="database">Database</TabsTrigger>
-          </TabsList>
+      <div className="grid gap-6">
+        {/* General Settings Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SettingsIcon className="h-5 w-5" />
+              General Settings
+            </CardTitle>
+            <CardDescription>
+              Configure basic settings for your institution.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="maintenanceMode">Maintenance Mode</Label>
+              <Toggle id="maintenanceMode" />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="allowRegistrations">Allow New Registrations</Label>
+              <Toggle id="allowRegistrations" defaultChecked />
+            </div>
+            <div>
+              <Label htmlFor="defaultLanguage">Default Language</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="fr">French</SelectItem>
+                  <SelectItem value="es">Spanish</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="school">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <School className="h-5 w-5" />
-                  School Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="schoolName">School Name</Label>
-                    <Input
-                      id="schoolName"
-                      value={schoolSettings.schoolName}
-                      onChange={(e) => setSchoolSettings({...schoolSettings, schoolName: e.target.value})}
-                      className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={schoolSettings.email}
-                      onChange={(e) => setSchoolSettings({...schoolSettings, email: e.target.value})}
-                      className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea
-                    id="address"
-                    value={schoolSettings.address}
-                    onChange={(e) => setSchoolSettings({...schoolSettings, address: e.target.value})}
-                    className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={schoolSettings.phone}
-                      onChange={(e) => setSchoolSettings({...schoolSettings, phone: e.target.value})}
-                      className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="website">Website</Label>
-                    <Input
-                      id="website"
-                      value={schoolSettings.website}
-                      onChange={(e) => setSchoolSettings({...schoolSettings, website: e.target.value})}
-                      className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                    />
-                  </div>
-                </div>
-                <Button onClick={handleSaveSettings} className="bg-green-500 hover:bg-green-600">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Settings
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+        {/* User Management Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              User Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <AddUserModal onUserAdded={fetchUserStats} />
+              <BulkUserImportModal onUsersImported={fetchUserStats} />
+              <ManageRolesModal onRolesUpdated={fetchUserStats} />
+            </div>
+            <div>
+              <p>Total Users: {userStats.totalUsers}</p>
+              <p>Active Users: {userStats.activeUsers}</p>
+              <p>Administrators: {userStats.administrators}</p>
+              <p>Teachers: {userStats.teachers}</p>
+            </div>
+            <Table>
+              <TableCaption>A list of your institution users.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Login</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tableData.map((row, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell>{row.role}</TableCell>
+                    <TableCell>{row.status}</TableCell>
+                    <TableCell>{row.lastLogin}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={4}>
+                    {tableData.length} users in total
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="users">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  User Management
-                </CardTitle>
-                <div className="flex gap-2">
-                  <AddUserModal />
-                  <BulkUserImportModal />
-                  <ManageRolesModal />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Manage system users, roles, and permissions</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+        {/* Security Settings Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SettingsIcon className="h-5 w-5" />
+              Security Settings
+            </CardTitle>
+            <CardDescription>
+              Configure security settings for your institution.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="twoFactorAuth">Two-Factor Authentication</Label>
+              <Toggle id="twoFactorAuth" />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="sessionTimeout">Session Timeout</Label>
+              <Input type="number" id="sessionTimeout" className="w-24" defaultValue="30" />
+            </div>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="system">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <SettingsIcon className="h-5 w-5" />
-                  System Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="maintenanceMode">Maintenance Mode</Label>
-                  <div className="flex items-center justify-between">
-                    <p className="text-gray-400 dark:text-gray-600">Enable maintenance mode to temporarily disable the system for updates.</p>
-                    <Switch id="maintenanceMode" />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="logLevel">Log Level</Label>
-                  <Input
-                    id="logLevel"
-                    defaultValue="INFO"
-                    className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                  />
-                </div>
-                <Button className="bg-green-500 hover:bg-green-600">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save System Settings
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
-                  Notification Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="emailNotifications">Email Notifications</Label>
-                  <div className="flex items-center justify-between">
-                    <p className="text-gray-400 dark:text-gray-600">Enable email notifications for important events.</p>
-                    <Switch id="emailNotifications" />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="smsNotifications">SMS Notifications</Label>
-                  <div className="flex items-center justify-between">
-                    <p className="text-gray-400 dark:text-gray-600">Enable SMS notifications for urgent alerts.</p>
-                    <Switch id="smsNotifications" />
-                  </div>
-                </div>
-                <Button className="bg-green-500 hover:bg-green-600">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Notification Settings
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="security">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Security Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="passwordPolicy">Password Policy</Label>
-                  <Input
-                    id="passwordPolicy"
-                    defaultValue="Strong"
-                    className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="ipWhitelist">IP Whitelist</Label>
-                  <Textarea
-                    id="ipWhitelist"
-                    placeholder="Enter whitelisted IPs"
-                    className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                  />
-                </div>
-                <Button className="bg-green-500 hover:bg-green-600">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Security Settings
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="database">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Database Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="backupSchedule">Backup Schedule</Label>
-                  <Input
-                    id="backupSchedule"
-                    defaultValue="Daily"
-                    className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="storageLocation">Storage Location</Label>
-                  <Input
-                    id="storageLocation"
-                    defaultValue="/var/backups"
-                    className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                  />
-                </div>
-                <Button className="bg-blue-500 hover:bg-blue-600">
-                  <Database className="h-4 w-4 mr-2" />
-                  Backup Database
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
-      
-      <footer className="bg-[#1A1F2C] dark:bg-white border-t border-gray-800 dark:border-gray-200 py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-600">
-          &copy; {new Date().getFullYear()} School Management System
-        </div>
-      </footer>
+        {/* Analytics and Reporting Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SettingsIcon className="h-5 w-5" />
+              Analytics and Reporting
+            </CardTitle>
+            <CardDescription>
+              View analytics and reporting data for your institution.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="Students" stroke="#8884d8" name="Students" />
+                <Line type="monotone" dataKey="Teachers" stroke="#82ca9d" name="Teachers" />
+                <Line type="monotone" dataKey="Admins" stroke="#ffc658" name="Admins" />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
-}
+};
+
+export default Settings;

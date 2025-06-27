@@ -39,31 +39,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  // Mock login function (replace with actual API call in production)
+  // Real login function using your backend
   const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // First, get all users from your backend
+      const usersResponse = await fetch('http://localhost:8080/api/users');
       
-      // Use username instead of email
-      if (credentials.username?.toLowerCase() === "admin" && credentials.password === "admin") {
-        const mockUser: User = {
-          id: "1",
-          email: "admin@example.com",
-          name: "Admin User",
-          role: "admin",
-          username: "admin"
-        };
-        
-        setUser(mockUser);
-        localStorage.setItem("user", JSON.stringify(mockUser));
-        toast.success("Login successful!");
-        return true;
-      } else {
-        toast.error("Invalid username or password. Try username: admin / password: admin");
+      if (!usersResponse.ok) {
+        toast.error("Unable to connect to authentication server");
         return false;
       }
+
+      const users = await usersResponse.json();
+      
+      // Find user by username
+      const foundUser = users.find((u: any) => 
+        u.username === credentials.username && u.enabled
+      );
+
+      if (!foundUser) {
+        toast.error("Invalid username or user is disabled");
+        return false;
+      }
+
+      // In a real application, you would verify the password hash
+      // For now, we'll use a simple password check
+      if (credentials.password !== foundUser.password) {
+        toast.error("Invalid password");
+        return false;
+      }
+
+      // Convert backend user to frontend user format
+      const authUser: User = {
+        id: foundUser.id.toString(),
+        email: foundUser.email || `${foundUser.username}@school.edu`,
+        name: foundUser.username,
+        role: foundUser.roles && foundUser.roles.length > 0 
+          ? foundUser.roles[0].name.replace('ROLE_', '').toLowerCase()
+          : "user",
+        username: foundUser.username
+      };
+      
+      setUser(authUser);
+      localStorage.setItem("user", JSON.stringify(authUser));
+      toast.success("Login successful!");
+      return true;
     } catch (error) {
       console.error("Login error:", error);
       toast.error("An error occurred during login");
@@ -73,26 +94,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Mock register function (replace with actual API call in production)
+  // Register function using your backend
   const register = async (data: RegisterData) => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock registration - replace with actual API call
-      const mockUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        email: data.email,
-        name: data.name,
-        role: "user",
-        username: data.username || data.email.split('@')[0]
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem("user", JSON.stringify(mockUser));
-      toast.success("Registration successful!");
-      return true;
+      const response = await fetch('http://localhost:8080/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: data.username || data.email.split('@')[0],
+          email: data.email,
+          password: data.password,
+          enabled: true,
+          roleNames: ['ROLE_STUDENT'] // Default role for new registrations
+        })
+      });
+
+      if (response.ok) {
+        const createdUser = await response.json();
+        
+        // Convert backend user to frontend user format
+        const authUser: User = {
+          id: createdUser.id.toString(),
+          email: createdUser.email || data.email,
+          name: data.name,
+          role: "student",
+          username: createdUser.username
+        };
+        
+        setUser(authUser);
+        localStorage.setItem("user", JSON.stringify(authUser));
+        toast.success("Registration successful!");
+        return true;
+      } else {
+        toast.error("Registration failed. Username may already exist.");
+        return false;
+      }
     } catch (error) {
       console.error("Registration error:", error);
       toast.error("An error occurred during registration");

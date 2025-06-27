@@ -1,4 +1,3 @@
-
 package com.payments.service;
 
 import com.payments.dto.UserStatisticsDto;
@@ -173,5 +172,39 @@ public class UserService {
     public Role createRole(String roleName) {
         Role role = new Role(roleName);
         return roleRepository.save(role);
+    }
+
+    public Optional<User> authenticateUser(String username, String password) {
+        // In a real application, you would hash the password and compare hashes
+        // For now, we'll do a simple comparison
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .filter(user -> user.getUsername().equals(username) && 
+                               user.getPassword().equals(password) &&
+                               user.isEnabled())
+                .findFirst();
+    }
+
+    public Optional<User> getUserByUsername(String username) {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .filter(user -> user.getUsername().equals(username))
+                .findFirst();
+    }
+
+    @Transactional
+    public User registerUser(String username, String password, String email) {
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(password); // In real app, hash this password
+        user.setEnabled(true);
+
+        // Assign default student role
+        Role studentRole = roleRepository.findByName(ROLE_NAME_STUDENT).orElse(null);
+        if (studentRole != null) {
+            user.addRole(studentRole);
+        }
+
+        return userRepository.save(user);
     }
 }

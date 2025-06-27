@@ -1,80 +1,71 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
-export default function AddSubjectModal() {
+interface AddSubjectModalProps {
+  onSubjectAdded: () => void;
+}
+
+export const AddSubjectModal: React.FC<AddSubjectModalProps> = ({ onSubjectAdded }) => {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-  
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     code: "",
     description: "",
-    grade: "",
-    credits: ""
+    credits: "",
+    department: "",
+    semester: ""
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
+    setIsLoading(true);
+    
     try {
-      const response = await fetch('/api/academic/subjects', {
+      const response = await fetch('/api/subjects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          credits: parseInt(formData.credits) || 0,
-          isActive: true
-        }),
+        body: JSON.stringify(formData)
       });
 
       if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Subject added successfully!",
-        });
+        toast.success("Subject added successfully");
         setFormData({
           name: "",
           code: "",
           description: "",
-          grade: "",
-          credits: ""
+          credits: "",
+          department: "",
+          semester: ""
         });
         setOpen(false);
+        onSubjectAdded();
       } else {
-        throw new Error('Failed to add subject');
+        toast.error("Failed to add subject");
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add subject. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error adding subject:', error);
+      toast.error("Error adding subject");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-green-500 hover:bg-green-600">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Subject
-        </Button>
+        <Button>Add Subject</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Subject</DialogTitle>
         </DialogHeader>
@@ -88,7 +79,6 @@ export default function AddSubjectModal() {
               required
             />
           </div>
-          
           <div>
             <Label htmlFor="code">Subject Code</Label>
             <Input
@@ -98,30 +88,14 @@ export default function AddSubjectModal() {
               required
             />
           </div>
-
           <div>
-            <Label htmlFor="grade">Grade</Label>
-            <Select value={formData.grade} onValueChange={(value) => setFormData({ ...formData, grade: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select grade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">Grade 1</SelectItem>
-                <SelectItem value="2">Grade 2</SelectItem>
-                <SelectItem value="3">Grade 3</SelectItem>
-                <SelectItem value="4">Grade 4</SelectItem>
-                <SelectItem value="5">Grade 5</SelectItem>
-                <SelectItem value="6">Grade 6</SelectItem>
-                <SelectItem value="7">Grade 7</SelectItem>
-                <SelectItem value="8">Grade 8</SelectItem>
-                <SelectItem value="9">Grade 9</SelectItem>
-                <SelectItem value="10">Grade 10</SelectItem>
-                <SelectItem value="11">Grade 11</SelectItem>
-                <SelectItem value="12">Grade 12</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
           </div>
-
           <div>
             <Label htmlFor="credits">Credits</Label>
             <Input
@@ -129,30 +103,40 @@ export default function AddSubjectModal() {
               type="number"
               value={formData.credits}
               onChange={(e) => setFormData({ ...formData, credits: e.target.value })}
-              min="0"
+              required
             />
           </div>
-
           <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Subject description..."
+            <Label htmlFor="department">Department</Label>
+            <Input
+              id="department"
+              value={formData.department}
+              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+              required
             />
           </div>
-
+          <div>
+            <Label htmlFor="semester">Semester</Label>
+            <Select value={formData.semester} onValueChange={(value) => setFormData({ ...formData, semester: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select semester" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Semester 1</SelectItem>
+                <SelectItem value="2">Semester 2</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Adding..." : "Add Subject"}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Adding..." : "Add Subject"}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
   );
-}
+};
