@@ -12,9 +12,9 @@ public interface AcademicRecordRepository extends JpaRepository<AcademicRecord, 
     
     List<AcademicRecord> findByStudentId(Long studentId);
     
+    List<AcademicRecord> findByAcademicYear(String academicYear);
+    
     List<AcademicRecord> findByStudentIdAndAcademicYear(Long studentId, String academicYear);
     
-    List<AcademicRecord> findByStudentIdAndGrade(Long studentId, String grade);
-    
-    AcademicRecord findByStudentIdAndAcademicYearAndSemester(Long studentId, String academicYear, String semester);
+    List<AcademicRecord> findByGradeAndSection(String grade, String section);
 }

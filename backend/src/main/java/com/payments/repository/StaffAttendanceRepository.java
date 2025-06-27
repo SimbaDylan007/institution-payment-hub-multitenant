@@ -15,7 +15,9 @@ public interface StaffAttendanceRepository extends JpaRepository<StaffAttendance
     
     List<StaffAttendance> findByStaffId(Long staffId);
     
-    List<StaffAttendance> findByAttendanceDate(LocalDate date);
+    List<StaffAttendance> findByAttendanceDate(LocalDate attendanceDate);
+    
+    List<StaffAttendance> findByStatus(String status);
     
     @Query("SELECT sa FROM StaffAttendance sa WHERE sa.staff.id = :staffId AND sa.attendanceDate BETWEEN :startDate AND :endDate")
     List<StaffAttendance> findByStaffIdAndDateRange(@Param("staffId") Long staffId, 

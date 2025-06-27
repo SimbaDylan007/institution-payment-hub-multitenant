@@ -12,7 +12,11 @@ public interface GuardianRepository extends JpaRepository<Guardian, Long> {
     
     List<Guardian> findByStudentId(Long studentId);
     
-    List<Guardian> findByStudentIdAndIsPrimary(Long studentId, boolean isPrimary);
+    List<Guardian> findByRelationship(String relationship);
     
-    List<Guardian> findByStudentIdAndIsEmergencyContact(Long studentId, boolean isEmergencyContact);
+    List<Guardian> findByIsPrimaryTrue();
+    
+    List<Guardian> findByIsEmergencyContactTrue();
+    
+    List<Guardian> findByStudentIdAndIsPrimaryTrue(Long studentId);
 }

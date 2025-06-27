@@ -16,7 +16,7 @@ public class LeaveRequest {
     private Staff staff;
     
     @Column(nullable = false)
-    private String leaveType; // SICK, ANNUAL, MATERNITY, PATERNITY, EMERGENCY, OTHER
+    private String leaveType; // SICK, VACATION, PERSONAL, EMERGENCY, MATERNITY, PATERNITY
     
     @Column(nullable = false)
     private LocalDate startDate;
@@ -25,19 +25,19 @@ public class LeaveRequest {
     private LocalDate endDate;
     
     @Column(nullable = false)
-    private Integer totalDays;
-    
-    @Column(columnDefinition = "TEXT")
     private String reason;
     
-    @Column(nullable = false)
-    private String status; // PENDING, APPROVED, REJECTED, CANCELLED
+    private String notes;
     
+    @Column(nullable = false)
+    private String status; // PENDING, APPROVED, REJECTED
+    
+    @Column(nullable = false)
     private LocalDate applicationDate;
     
-    private String approvedBy;
-    
     private LocalDate approvalDate;
+    
+    private String approvedBy;
     
     private String rejectionReason;
     
@@ -60,11 +60,11 @@ public class LeaveRequest {
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
     
-    public Integer getTotalDays() { return totalDays; }
-    public void setTotalDays(Integer totalDays) { this.totalDays = totalDays; }
-    
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
+    
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
     
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -72,11 +72,11 @@ public class LeaveRequest {
     public LocalDate getApplicationDate() { return applicationDate; }
     public void setApplicationDate(LocalDate applicationDate) { this.applicationDate = applicationDate; }
     
-    public String getApprovedBy() { return approvedBy; }
-    public void setApprovedBy(String approvedBy) { this.approvedBy = approvedBy; }
-    
     public LocalDate getApprovalDate() { return approvalDate; }
     public void setApprovalDate(LocalDate approvalDate) { this.approvalDate = approvalDate; }
+    
+    public String getApprovedBy() { return approvedBy; }
+    public void setApprovedBy(String approvedBy) { this.approvedBy = approvedBy; }
     
     public String getRejectionReason() { return rejectionReason; }
     public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }

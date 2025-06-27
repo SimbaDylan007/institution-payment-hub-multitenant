@@ -2,7 +2,7 @@
 package com.payments.model;
 
 import javax.persistence.*;
-import java.time.LocalDate;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "academic_records")
@@ -19,23 +19,19 @@ public class AcademicRecord {
     private String academicYear;
     
     @Column(nullable = false)
-    private String semester;
+    private String grade;
     
-    @Column(nullable = false)
-    private String subject;
+    private String section;
     
-    private Double grade;
+    private BigDecimal gpa;
     
-    private String letterGrade;
+    private String overallGrade;
     
-    private Double attendancePercentage;
+    private Integer totalCredits;
     
-    @Column(nullable = false)
-    private LocalDate recordDate;
+    private String remarks;
     
-    private String examType; // MIDTERM, FINAL, ASSIGNMENT, QUIZ
-    
-    private String comments;
+    private String promotionStatus; // PROMOTED, DETAINED, REPEAT
     
     // Constructors
     public AcademicRecord() {}
@@ -50,27 +46,24 @@ public class AcademicRecord {
     public String getAcademicYear() { return academicYear; }
     public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
     
-    public String getSemester() { return semester; }
-    public void setSemester(String semester) { this.semester = semester; }
+    public String getGrade() { return grade; }
+    public void setGrade(String grade) { this.grade = grade; }
     
-    public String getSubject() { return subject; }
-    public void setSubject(String subject) { this.subject = subject; }
+    public String getSection() { return section; }
+    public void setSection(String section) { this.section = section; }
     
-    public Double getGrade() { return grade; }
-    public void setGrade(Double grade) { this.grade = grade; }
+    public BigDecimal getGpa() { return gpa; }
+    public void setGpa(BigDecimal gpa) { this.gpa = gpa; }
     
-    public String getLetterGrade() { return letterGrade; }
-    public void setLetterGrade(String letterGrade) { this.letterGrade = letterGrade; }
+    public String getOverallGrade() { return overallGrade; }
+    public void setOverallGrade(String overallGrade) { this.overallGrade = overallGrade; }
     
-    public Double getAttendancePercentage() { return attendancePercentage; }
-    public void setAttendancePercentage(Double attendancePercentage) { this.attendancePercentage = attendancePercentage; }
+    public Integer getTotalCredits() { return totalCredits; }
+    public void setTotalCredits(Integer totalCredits) { this.totalCredits = totalCredits; }
     
-    public LocalDate getRecordDate() { return recordDate; }
-    public void setRecordDate(LocalDate recordDate) { this.recordDate = recordDate; }
+    public String getRemarks() { return remarks; }
+    public void setRemarks(String remarks) { this.remarks = remarks; }
     
-    public String getExamType() { return examType; }
-    public void setExamType(String examType) { this.examType = examType; }
-    
-    public String getComments() { return comments; }
-    public void setComments(String comments) { this.comments = comments; }
+    public String getPromotionStatus() { return promotionStatus; }
+    public void setPromotionStatus(String promotionStatus) { this.promotionStatus = promotionStatus; }
 }

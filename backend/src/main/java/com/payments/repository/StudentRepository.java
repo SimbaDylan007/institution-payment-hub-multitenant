@@ -19,12 +19,12 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     
     List<Student> findByCurrentGrade(String currentGrade);
     
-    @Query("SELECT s FROM Student s WHERE s.firstName LIKE %:name% OR s.lastName LIKE %:name%")
+    List<Student> findByCurrentGradeAndSection(String currentGrade, String section);
+    
+    @Query("SELECT s FROM Student s WHERE LOWER(s.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(s.lastName) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<Student> findByNameContaining(@Param("name") String name);
     
-    @Query("SELECT s FROM Student s WHERE s.currentGrade = :grade AND s.section = :section")
-    List<Student> findByGradeAndSection(@Param("grade") String grade, @Param("section") String section);
+    Long countByEnrollmentStatus(String enrollmentStatus);
     
-    @Query("SELECT COUNT(s) FROM Student s WHERE s.enrollmentStatus = :status")
-    Long countByEnrollmentStatus(@Param("status") String status);
+    Optional<Student> findByEmail(String email);
 }
