@@ -1,4 +1,3 @@
-
 package com.payments.controller;
 
 import com.payments.dto.UserStatisticsDto;
@@ -13,11 +12,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map; // Import Map for the new endpoint
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*") // Note: Consider making this more specific than "*" for production
 public class UserController {
 
     private final UserService userService;
@@ -27,9 +27,20 @@ public class UserController {
         this.userService = userService;
     }
 
+    // This endpoint now correctly matches what we built in the UserService
     @GetMapping("/statistics")
     public ResponseEntity<UserStatisticsDto> getUserStatistics() {
         return ResponseEntity.ok(userService.getUserStatistics());
+    }
+
+
+    @GetMapping("/monthly-stats")
+    public ResponseEntity<?> getMonthlyStats() {
+
+        System.out.println("DEBUG: /api/users/monthly-stats was called. Redirecting to general statistics for now.");
+        return ResponseEntity.ok(userService.getUserStatistics());
+
+
     }
 
     @GetMapping
@@ -37,11 +48,12 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @GetMapping("/{id}")
+    // --- FIX FOR THE PATH VARIABLE CONFLICT ---
+    @GetMapping("/{id:\\d+}") // The regex \\d+ ensures this only matches numeric IDs
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         Optional<User> user = userService.getUserById(id);
         return user.map(ResponseEntity::ok)
-                  .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
@@ -50,7 +62,7 @@ public class UserController {
         return ResponseEntity.ok(createdUser);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id:\\d+}") // Also a good idea to add the regex here
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody UserCreationDto userDto) {
         User updatedUser = userService.updateUser(id, userDto);
         if (updatedUser != null) {
@@ -74,7 +86,7 @@ public class UserController {
         return ResponseEntity.ok(createdUsers);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}") // And here
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         boolean deleted = userService.deleteUser(id);
         if (deleted) {

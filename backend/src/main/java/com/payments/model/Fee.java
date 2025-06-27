@@ -42,11 +42,22 @@ public class Fee {
     private String semester;
     
     private String description;
-    
+
+    @Column(nullable = false)
+    private BigDecimal amountDue;
+
+    @Column(nullable = false)
+    private BigDecimal amountPaid;
+
     // Constructors
     public Fee() {}
-    
+
     // Getters and Setters
+
+    public BigDecimal getAmountPaid() { return amountPaid; }
+    public void setAmountPaid(BigDecimal amountPaid) { this.amountPaid = amountPaid; }
+
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
@@ -85,4 +96,8 @@ public class Fee {
     
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public BigDecimal getAmountDue() { return amountDue; }
+    public void setAmountDue(BigDecimal amountDue) { this.amountDue = amountDue; }
+
 }

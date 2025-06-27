@@ -32,7 +32,13 @@ public class AcademicRecord {
     private String remarks;
     
     private String promotionStatus; // PROMOTED, DETAINED, REPEAT
-    
+
+    private Double attendancePercentage;
+
+    @Column(nullable = false)
+    private String subject;
+
+
     // Constructors
     public AcademicRecord() {}
     
@@ -66,4 +72,11 @@ public class AcademicRecord {
     
     public String getPromotionStatus() { return promotionStatus; }
     public void setPromotionStatus(String promotionStatus) { this.promotionStatus = promotionStatus; }
+
+    public Double getAttendancePercentage() { return attendancePercentage; }
+    public void setAttendancePercentage(Double attendancePercentage) { this.attendancePercentage = attendancePercentage; }
+
+    public String getSubject() { return subject; }
+    public void setSubject(String subject) { this.subject = subject; }
+
 }

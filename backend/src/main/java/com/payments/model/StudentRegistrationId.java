@@ -1,4 +1,3 @@
-
 package com.payments.model;
 
 import lombok.AllArgsConstructor;
