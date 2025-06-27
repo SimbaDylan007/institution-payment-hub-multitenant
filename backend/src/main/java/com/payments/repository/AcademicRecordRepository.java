@@ -16,5 +16,5 @@ public interface AcademicRecordRepository extends JpaRepository<AcademicRecord, 
     
     List<AcademicRecord> findByStudentIdAndGrade(Long studentId, String grade);
     
-    AcademicRecord findByStudentIdAndAcademicYearAndTerm(Long studentId, String academicYear, String term);
+    AcademicRecord findByStudentIdAndAcademicYearAndSemester(Long studentId, String academicYear, String semester);
 }
