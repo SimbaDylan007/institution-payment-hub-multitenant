@@ -5,7 +5,9 @@ import com.payments.model.Student;
 import com.payments.model.Guardian;
 import com.payments.model.MedicalRecord;
 import com.payments.model.AcademicRecord;
+import com.payments.model.Enrollment;
 import com.payments.service.StudentService;
+import com.payments.service.EnrollmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +22,9 @@ public class StudentManagementController {
     
     @Autowired
     private StudentService studentService;
+    
+    @Autowired
+    private EnrollmentService enrollmentService;
     
     @GetMapping
     public ResponseEntity<List<Student>> getAllStudents() {
@@ -142,6 +147,24 @@ public class StudentManagementController {
             academicRecord.setStudent(student.get());
             AcademicRecord createdRecord = studentService.addAcademicRecord(academicRecord);
             return ResponseEntity.ok(createdRecord);
+        }
+        return ResponseEntity.notFound().build();
+    }
+    
+    // Enrollment endpoints
+    @GetMapping("/{studentId}/enrollments")
+    public ResponseEntity<List<Enrollment>> getStudentEnrollments(@PathVariable Long studentId) {
+        List<Enrollment> enrollments = enrollmentService.getEnrollmentsByStudent(studentId);
+        return ResponseEntity.ok(enrollments);
+    }
+    
+    @PostMapping("/{studentId}/enrollments")
+    public ResponseEntity<Enrollment> addEnrollment(@PathVariable Long studentId, @RequestBody Enrollment enrollment) {
+        Optional<Student> student = studentService.getStudentById(studentId);
+        if (student.isPresent()) {
+            enrollment.setStudent(student.get());
+            Enrollment createdEnrollment = enrollmentService.createEnrollment(enrollment);
+            return ResponseEntity.ok(createdEnrollment);
         }
         return ResponseEntity.notFound().build();
     }

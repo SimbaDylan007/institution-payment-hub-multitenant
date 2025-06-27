@@ -1,11 +1,23 @@
+
 package com.payments.service;
 
 import com.payments.dto.UserStatisticsDto;
+import com.payments.dto.UserCreationDto;
+import com.payments.dto.BulkUserImportDto;
+import com.payments.dto.UserRoleAssignmentDto;
 import com.payments.model.Role;
+import com.payments.model.User;
 import com.payments.repository.RoleRepository;
 import com.payments.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class UserService {
@@ -14,9 +26,9 @@ public class UserService {
     private final RoleRepository roleRepository;
 
     // Define your role names (these should match what's in your DB or Role entity)
-    public static final String ROLE_NAME_ADMIN = "ROLE_ADMIN"; // Or just "ADMIN"
-    public static final String ROLE_NAME_TEACHER = "ROLE_TEACHER"; // Or just "TEACHER"
-
+    public static final String ROLE_NAME_ADMIN = "ROLE_ADMIN";
+    public static final String ROLE_NAME_TEACHER = "ROLE_TEACHER";
+    public static final String ROLE_NAME_STUDENT = "ROLE_STUDENT";
 
     @Autowired
     public UserService(UserRepository userRepository, RoleRepository roleRepository) {
@@ -35,19 +47,131 @@ public class UserService {
         long administrators = 0;
         if (adminRole != null) {
             administrators = userRepository.countByRolesContaining(adminRole);
-            // If using String role: administrators = userRepository.countByRole(ROLE_NAME_ADMIN);
         }
 
         long teachers = 0;
         if (teacherRole != null) {
             teachers = userRepository.countByRolesContaining(teacherRole);
-            // If using String role: teachers = userRepository.countByRole(ROLE_NAME_TEACHER);
         }
 
         return new UserStatisticsDto(totalUsers, activeUsers, administrators, teachers);
     }
 
-    // Placeholder for other user management methods that would be called by more specific actions
-    // public User addUser(UserCreationDto dto) { /* ... */ return null;}
-    // public User updateUserRoles(Long userId, List<String> roleNames) { /* ... */ return null;}
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public Optional<User> getUserById(Long id) {
+        return userRepository.findById(id);
+    }
+
+    @Transactional
+    public User createUser(UserCreationDto dto) {
+        User user = new User();
+        user.setUsername(dto.getUsername());
+        user.setPassword(dto.getPassword()); // In real app, hash this password
+        user.setEnabled(dto.isEnabled());
+
+        // Assign roles
+        Set<Role> roles = new HashSet<>();
+        if (dto.getRoleNames() != null) {
+            for (String roleName : dto.getRoleNames()) {
+                Role role = roleRepository.findByName(roleName).orElse(null);
+                if (role != null) {
+                    roles.add(role);
+                }
+            }
+        }
+        user.setRoles(roles);
+
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User updateUser(Long id, UserCreationDto dto) {
+        Optional<User> optionalUser = userRepository.findById(id);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            user.setUsername(dto.getUsername());
+            if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
+                user.setPassword(dto.getPassword()); // Hash in real app
+            }
+            user.setEnabled(dto.isEnabled());
+
+            // Update roles
+            Set<Role> roles = new HashSet<>();
+            if (dto.getRoleNames() != null) {
+                for (String roleName : dto.getRoleNames()) {
+                    Role role = roleRepository.findByName(roleName).orElse(null);
+                    if (role != null) {
+                        roles.add(role);
+                    }
+                }
+            }
+            user.setRoles(roles);
+
+            return userRepository.save(user);
+        }
+        return null;
+    }
+
+    @Transactional
+    public User assignRoles(UserRoleAssignmentDto dto) {
+        Optional<User> optionalUser = userRepository.findById(dto.getUserId());
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            Set<Role> roles = new HashSet<>();
+            
+            for (String roleName : dto.getRoleNames()) {
+                Role role = roleRepository.findByName(roleName).orElse(null);
+                if (role != null) {
+                    roles.add(role);
+                }
+            }
+            user.setRoles(roles);
+            return userRepository.save(user);
+        }
+        return null;
+    }
+
+    @Transactional
+    public List<User> bulkImportUsers(BulkUserImportDto dto) {
+        List<User> createdUsers = new ArrayList<>();
+        
+        for (UserCreationDto userDto : dto.getUsers()) {
+            try {
+                User user = createUser(userDto);
+                createdUsers.add(user);
+                
+                // In a real application, you might send welcome emails here
+                if (dto.isSendWelcomeEmail()) {
+                    // sendWelcomeEmail(user);
+                }
+            } catch (Exception e) {
+                // Log error but continue with other users
+                System.err.println("Failed to create user: " + userDto.getUsername() + " - " + e.getMessage());
+            }
+        }
+        
+        return createdUsers;
+    }
+
+    @Transactional
+    public boolean deleteUser(Long id) {
+        if (userRepository.existsById(id)) {
+            userRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
+    public List<Role> getAllRoles() {
+        return roleRepository.findAll();
+    }
+
+    @Transactional
+    public Role createRole(String roleName) {
+        Role role = new Role(roleName);
+        return roleRepository.save(role);
+    }
 }

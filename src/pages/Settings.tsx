@@ -1,92 +1,266 @@
+
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Home, Settings as SettingsIcon, Users, Shield, Bell, School, Globe, Palette } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { toast } from "sonner";
+import { Save, Users, Shield, Database, Bell, School, Settings as SettingsIcon } from "lucide-react";
+import AddUserModal from "@/components/forms/AddUserModal";
+import BulkUserImportModal from "@/components/forms/BulkUserImportModal";
+import ManageRolesModal from "@/components/forms/ManageRolesModal";
 
 export default function Settings() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [userStats, setUserStats] = useState<any>({});
+  
+  // Settings state
+  const [schoolInfo, setSchoolInfo] = useState({
+    schoolName: "",
+    schoolAddress: "",
+    schoolPhone: ""
+  });
+  
+  const [systemPrefs, setSystemPrefs] = useState({
+    academicYear: "",
+    timeZone: "",
+    language: ""
+  });
+  
+  const [notifications, setNotifications] = useState({
+    newStudentEmail: false,
+    gradeUpdatesEmail: false,
+    attendanceEmail: false,
+    emergencyEmail: false,
+    emergencySMS: false,
+    attendanceSMS: false,
+    eventReminderSMS: false,
+    gradeSMS: false
+  });
+  
+  const [passwordPolicy, setPasswordPolicy] = useState({
+    minLength: 8,
+    requireSpecialChars: false,
+    requireNumbers: false,
+    requireUppercase: false,
+    requireLowercase: false
+  });
+  
+  const [securityFeatures, setSecurityFeatures] = useState({
+    enableTwoFactorAuth: false,
+    enableSessionTimeout: false,
+    logSecurityEvents: false
+  });
 
-  const handleSaveSchoolInfo = async () => {
-    setLoading(true);
+  useEffect(() => {
+    if (user) {
+      fetchAllSettings();
+      fetchUsers();
+      fetchUserStats();
+    }
+  }, [user]);
+
+  const fetchAllSettings = async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast({
-        title: "Success",
-        description: "School information saved successfully!",
-      });
+      // Fetch school information
+      const schoolResponse = await fetch("http://localhost:8080/api/settings/school-info");
+      if (schoolResponse.ok) {
+        const schoolData = await schoolResponse.json();
+        setSchoolInfo(schoolData);
+      }
+
+      // Fetch system preferences
+      const systemResponse = await fetch("http://localhost:8080/api/settings/system-preferences");
+      if (systemResponse.ok) {
+        const systemData = await systemResponse.json();
+        setSystemPrefs(systemData);
+      }
+
+      // Fetch notification preferences
+      const notificationResponse = await fetch("http://localhost:8080/api/settings/notification-preferences");
+      if (notificationResponse.ok) {
+        const notificationData = await notificationResponse.json();
+        setNotifications(notificationData);
+      }
+
+      // Fetch password policy
+      const passwordResponse = await fetch("http://localhost:8080/api/settings/security/password-policy");
+      if (passwordResponse.ok) {
+        const passwordData = await passwordResponse.json();
+        setPasswordPolicy(passwordData);
+      }
+
+      // Fetch security features
+      const securityResponse = await fetch("http://localhost:8080/api/settings/security/features");
+      if (securityResponse.ok) {
+        const securityData = await securityResponse.json();
+        setSecurityFeatures(securityData);
+      }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save school information.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      console.error("Error fetching settings:", error);
     }
   };
 
-  const handleSavePreferences = async () => {
-    setLoading(true);
+  const fetchUsers = async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast({
-        title: "Success",
-        description: "Preferences saved successfully!",
-      });
+      const response = await fetch("http://localhost:8080/api/users");
+      if (response.ok) {
+        const userData = await response.json();
+        setUsers(userData);
+      }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save preferences.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      console.error("Error fetching users:", error);
     }
   };
 
-  const handleUserManagement = (action: string) => {
-    toast({
-      title: "User Management",
-      description: `${action} functionality will be implemented.`,
-    });
-  };
-
-  const handleSecurityAction = (action: string) => {
-    toast({
-      title: "Security",
-      description: `${action} functionality will be implemented.`,
-    });
-  };
-
-  const handleSaveNotifications = async () => {
-    setLoading(true);
+  const fetchUserStats = async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast({
-        title: "Success",
-        description: "Notification preferences saved successfully!",
-      });
+      const response = await fetch("http://localhost:8080/api/users/statistics");
+      if (response.ok) {
+        const statsData = await response.json();
+        setUserStats(statsData);
+      }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save notification preferences.",
-        variant: "destructive",
+      console.error("Error fetching user statistics:", error);
+    }
+  };
+
+  const saveSchoolInfo = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/settings/school-info", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(schoolInfo)
       });
+      
+      if (response.ok) {
+        toast.success("School information saved successfully");
+      } else {
+        toast.error("Failed to save school information");
+      }
+    } catch (error) {
+      console.error("Error saving school info:", error);
+      toast.error("Error saving school information");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  const saveSystemPrefs = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/settings/system-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(systemPrefs)
+      });
+      
+      if (response.ok) {
+        toast.success("System preferences saved successfully");
+      } else {
+        toast.error("Failed to save system preferences");
+      }
+    } catch (error) {
+      console.error("Error saving system preferences:", error);
+      toast.error("Error saving system preferences");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveNotifications = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/settings/notification-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(notifications)
+      });
+      
+      if (response.ok) {
+        toast.success("Notification preferences saved successfully");
+      } else {
+        toast.error("Failed to save notification preferences");
+      }
+    } catch (error) {
+      console.error("Error saving notifications:", error);
+      toast.error("Error saving notification preferences");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const savePasswordPolicy = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/settings/security/password-policy", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(passwordPolicy)
+      });
+      
+      if (response.ok) {
+        toast.success("Password policy saved successfully");
+      } else {
+        toast.error("Failed to save password policy");
+      }
+    } catch (error) {
+      console.error("Error saving password policy:", error);
+      toast.error("Error saving password policy");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveSecurityFeatures = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/settings/security/features", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(securityFeatures)
+      });
+      
+      if (response.ok) {
+        toast.success("Security features saved successfully");
+      } else {
+        toast.error("Failed to save security features");
+      }
+    } catch (error) {
+      console.error("Error saving security features:", error);
+      toast.error("Error saving security features");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteUser = async (userId: number) => {
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      try {
+        const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
+          method: "DELETE"
+        });
+        
+        if (response.ok) {
+          toast.success("User deleted successfully");
+          fetchUsers();
+          fetchUserStats();
+        } else {
+          toast.error("Failed to delete user");
+        }
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        toast.error("Error deleting user");
+      }
     }
   };
 
@@ -95,398 +269,379 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-[#121828] text-white dark:bg-gray-100 dark:text-gray-900 flex flex-col">
+    <div className="min-h-screen bg-[#121828] text-white">
       <Header />
       
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">System Settings</h1>
-            <p className="text-gray-400 dark:text-gray-600">
-              Configure school management system settings
-            </p>
-          </div>
-          <Button
-            className="bg-purple-500 text-white hover:bg-purple-600"
-            asChild
-          >
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <Home className="h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
+      <main className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <SettingsIcon className="h-6 w-6" />
+            School Settings
+          </h1>
+          <p className="text-gray-400">Configure your school management system</p>
         </div>
 
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="general">General</TabsTrigger>
+        <Tabs defaultValue="school" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="school">School Info</TabsTrigger>
+            <TabsTrigger value="system">System</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="database">Database</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+          <TabsContent value="school">
+            <Card className="bg-[#1A1F2C] border-gray-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <SettingsIcon className="h-5 w-5" />
-                  General System Configuration
+                  <School className="h-5 w-5" />
+                  School Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <School className="h-5 w-5" />
-                        School Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label htmlFor="schoolName">School Name</Label>
-                        <Input
-                          id="schoolName"
-                          defaultValue="Springfield Elementary School"
-                          className="bg-[#1A1F2C] dark:bg-white border-gray-600 dark:border-gray-300"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="schoolAddress">Address</Label>
-                        <Input
-                          id="schoolAddress"
-                          defaultValue="123 Education Street, Learning City"
-                          className="bg-[#1A1F2C] dark:bg-white border-gray-600 dark:border-gray-300"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="schoolPhone">Phone</Label>
-                        <Input
-                          id="schoolPhone"
-                          defaultValue="+1 (555) 123-4567"
-                          className="bg-[#1A1F2C] dark:bg-white border-gray-600 dark:border-gray-300"
-                        />
-                      </div>
-                      <Button 
-                        className="w-full bg-green-500 hover:bg-green-600"
-                        onClick={handleSaveSchoolInfo}
-                        disabled={loading}
-                      >
-                        {loading ? "Saving..." : "Save School Info"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Globe className="h-5 w-5" />
-                        System Preferences
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label htmlFor="academicYear">Academic Year</Label>
-                        <Select defaultValue="2023-2024">
-                          <SelectTrigger className="bg-[#1A1F2C] dark:bg-white border-gray-600 dark:border-gray-300">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="2023-2024">2023-2024</SelectItem>
-                            <SelectItem value="2024-2025">2024-2025</SelectItem>
-                            <SelectItem value="2025-2026">2025-2026</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="timezone">Time Zone</Label>
-                        <Select defaultValue="UTC-5">
-                          <SelectTrigger className="bg-[#1A1F2C] dark:bg-white border-gray-600 dark:border-gray-300">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="UTC-5">Eastern Time (UTC-5)</SelectItem>
-                            <SelectItem value="UTC-6">Central Time (UTC-6)</SelectItem>
-                            <SelectItem value="UTC-7">Mountain Time (UTC-7)</SelectItem>
-                            <SelectItem value="UTC-8">Pacific Time (UTC-8)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="language">Language</Label>
-                        <Select defaultValue="en">
-                          <SelectTrigger className="bg-[#1A1F2C] dark:bg-white border-gray-600 dark:border-gray-300">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="en">English</SelectItem>
-                            <SelectItem value="es">Spanish</SelectItem>
-                            <SelectItem value="fr">French</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button 
-                        className="w-full bg-blue-500 hover:bg-blue-600"
-                        onClick={handleSavePreferences}
-                        disabled={loading}
-                      >
-                        {loading ? "Saving..." : "Save Preferences"}
-                      </Button>
-                    </CardContent>
-                  </Card>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="schoolName">School Name</Label>
+                    <Input
+                      id="schoolName"
+                      value={schoolInfo.schoolName}
+                      onChange={(e) => setSchoolInfo(prev => ({ ...prev, schoolName: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="schoolPhone">Phone Number</Label>
+                    <Input
+                      id="schoolPhone"
+                      value={schoolInfo.schoolPhone}
+                      onChange={(e) => setSchoolInfo(prev => ({ ...prev, schoolPhone: e.target.value }))}
+                    />
+                  </div>
                 </div>
+                <div>
+                  <Label htmlFor="schoolAddress">School Address</Label>
+                  <Input
+                    id="schoolAddress"
+                    value={schoolInfo.schoolAddress}
+                    onChange={(e) => setSchoolInfo(prev => ({ ...prev, schoolAddress: e.target.value }))}
+                  />
+                </div>
+                <Button onClick={saveSchoolInfo} disabled={isLoading}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save School Information
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Palette className="h-5 w-5" />
-                      System Themes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="p-4 border border-gray-600 dark:border-gray-300 rounded-lg cursor-pointer hover:bg-[#1A1F2C] dark:hover:bg-gray-100">
-                        <div className="w-full h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded mb-2"></div>
-                        <p className="text-center text-sm">Default Theme</p>
-                      </div>
-                      <div className="p-4 border border-gray-600 dark:border-gray-300 rounded-lg cursor-pointer hover:bg-[#1A1F2C] dark:hover:bg-gray-100">
-                        <div className="w-full h-20 bg-gradient-to-r from-green-500 to-teal-600 rounded mb-2"></div>
-                        <p className="text-center text-sm">Nature Theme</p>
-                      </div>
-                      <div className="p-4 border border-gray-600 dark:border-gray-300 rounded-lg cursor-pointer hover:bg-[#1A1F2C] dark:hover:bg-gray-100">
-                        <div className="w-full h-20 bg-gradient-to-r from-orange-500 to-red-600 rounded mb-2"></div>
-                        <p className="text-center text-sm">Warm Theme</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+          <TabsContent value="system">
+            <Card className="bg-[#1A1F2C] border-gray-800">
+              <CardHeader>
+                <CardTitle>System Preferences</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="academicYear">Academic Year</Label>
+                    <Input
+                      id="academicYear"
+                      value={systemPrefs.academicYear}
+                      onChange={(e) => setSystemPrefs(prev => ({ ...prev, academicYear: e.target.value }))}
+                      placeholder="e.g., 2024-2025"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="timeZone">Time Zone</Label>
+                    <Select value={systemPrefs.timeZone} onValueChange={(value) => setSystemPrefs(prev => ({ ...prev, timeZone: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select timezone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UTC">UTC</SelectItem>
+                        <SelectItem value="America/New_York">Eastern Time</SelectItem>
+                        <SelectItem value="America/Chicago">Central Time</SelectItem>
+                        <SelectItem value="America/Denver">Mountain Time</SelectItem>
+                        <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="language">Language</Label>
+                    <Select value={systemPrefs.language} onValueChange={(value) => setSystemPrefs(prev => ({ ...prev, language: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="es">Spanish</SelectItem>
+                        <SelectItem value="fr">French</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button onClick={saveSystemPrefs} disabled={isLoading}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save System Preferences
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="users">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  User Account Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4">User Statistics</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>Total Users:</span>
-                          <span className="font-bold text-blue-400">2,456</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Active Users:</span>
-                          <span className="font-bold text-green-400">2,289</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Administrators:</span>
-                          <span className="font-bold text-purple-400">12</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Teachers:</span>
-                          <span className="font-bold text-orange-400">84</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+            <div className="space-y-6">
+              <Card className="bg-[#1A1F2C] border-gray-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    User Management
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-4 mb-6">
+                    <AddUserModal onUserAdded={() => { fetchUsers(); fetchUserStats(); }} />
+                    <BulkUserImportModal onUsersImported={() => { fetchUsers(); fetchUserStats(); }} />
+                    <ManageRolesModal onRolesUpdated={() => { fetchUsers(); fetchUserStats(); }} />
+                  </div>
                   
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4">User Management</h3>
-                      <div className="space-y-2">
-                        <Button 
-                          className="w-full bg-green-500 hover:bg-green-600"
-                          onClick={() => handleUserManagement('Add New User')}
-                        >
-                          Add New User
-                        </Button>
-                        <Button 
-                          className="w-full bg-blue-500 hover:bg-blue-600"
-                          onClick={() => handleUserManagement('Manage Roles')}
-                        >
-                          Manage Roles
-                        </Button>
-                        <Button 
-                          className="w-full bg-purple-500 hover:bg-purple-600"
-                          onClick={() => handleUserManagement('User Permissions')}
-                        >
-                          User Permissions
-                        </Button>
-                        <Button 
-                          className="w-full bg-orange-500 hover:bg-orange-600"
-                          onClick={() => handleUserManagement('Bulk User Import')}
-                        >
-                          Bulk User Import
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-blue-500/10 p-4 rounded-lg">
+                      <h3 className="font-medium text-blue-400">Total Users</h3>
+                      <p className="text-2xl font-bold">{userStats.totalUsers || 0}</p>
+                    </div>
+                    <div className="bg-green-500/10 p-4 rounded-lg">
+                      <h3 className="font-medium text-green-400">Active Users</h3>
+                      <p className="text-2xl font-bold">{userStats.activeUsers || 0}</p>
+                    </div>
+                    <div className="bg-purple-500/10 p-4 rounded-lg">
+                      <h3 className="font-medium text-purple-400">Administrators</h3>
+                      <p className="text-2xl font-bold">{userStats.administrators || 0}</p>
+                    </div>
+                    <div className="bg-orange-500/10 p-4 rounded-lg">
+                      <h3 className="font-medium text-orange-400">Teachers</h3>
+                      <p className="text-2xl font-bold">{userStats.teachers || 0}</p>
+                    </div>
+                  </div>
 
-          <TabsContent value="security">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Security Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4">Password Policy</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="minLength">Minimum Length</Label>
-                          <Input
-                            id="minLength"
-                            type="number"
-                            defaultValue="8"
-                            className="bg-[#1A1F2C] dark:bg-white border-gray-600 dark:border-gray-300"
-                          />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input type="checkbox" id="requireSpecialChars" defaultChecked />
-                          <Label htmlFor="requireSpecialChars">Require special characters</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input type="checkbox" id="requireNumbers" defaultChecked />
-                          <Label htmlFor="requireNumbers">Require numbers</Label>
-                        </div>
-                        <Button className="w-full bg-green-500 hover:bg-green-600">
-                          Update Policy
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4">Security Features</h3>
-                      <div className="space-y-2">
-                        <Button 
-                          className="w-full bg-blue-500 hover:bg-blue-600"
-                          onClick={() => handleSecurityAction('Two-Factor Authentication')}
-                        >
-                          Two-Factor Authentication
-                        </Button>
-                        <Button 
-                          className="w-full bg-purple-500 hover:bg-purple-600"
-                          onClick={() => handleSecurityAction('Session Management')}
-                        >
-                          Session Management
-                        </Button>
-                        <Button 
-                          className="w-full bg-orange-500 hover:bg-orange-600"
-                          onClick={() => handleSecurityAction('Security Audit Log')}
-                        >
-                          Security Audit Log
-                        </Button>
-                        <Button 
-                          className="w-full bg-red-500 hover:bg-red-600"
-                          onClick={() => handleSecurityAction('Backup & Recovery')}
-                        >
-                          Backup & Recovery
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-700">
+                          <th className="text-left p-2">Username</th>
+                          <th className="text-left p-2">Email</th>
+                          <th className="text-left p-2">Status</th>
+                          <th className="text-left p-2">Roles</th>
+                          <th className="text-left p-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map(user => (
+                          <tr key={user.id} className="border-b border-gray-800">
+                            <td className="p-2">{user.username}</td>
+                            <td className="p-2">{user.email || 'N/A'}</td>
+                            <td className="p-2">
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                user.enabled ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                {user.enabled ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="p-2">
+                              {user.roles?.map((role: any) => (
+                                <span key={role.id} className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs mr-1">
+                                  {role.name.replace('ROLE_', '')}
+                                </span>
+                              ))}
+                            </td>
+                            <td className="p-2">
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                onClick={() => deleteUser(user.id)}
+                              >
+                                Delete
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="notifications">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+            <Card className="bg-[#1A1F2C] border-gray-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Bell className="h-5 w-5" />
                   Notification Preferences
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4">Email Notifications</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="newStudentEmail">New Student Registration</Label>
-                          <input type="checkbox" id="newStudentEmail" defaultChecked />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="gradeUpdatesEmail">Grade Updates</Label>
-                          <input type="checkbox" id="gradeUpdatesEmail" defaultChecked />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="attendanceEmail">Attendance Alerts</Label>
-                          <input type="checkbox" id="attendanceEmail" />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="emergencyEmail">Emergency Notifications</Label>
-                          <input type="checkbox" id="emergencyEmail" defaultChecked />
-                        </div>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Email Notifications</h3>
+                  <div className="space-y-4">
+                    {[
+                      { key: 'newStudentEmail', label: 'New Student Registration' },
+                      { key: 'gradeUpdatesEmail', label: 'Grade Updates' },
+                      { key: 'attendanceEmail', label: 'Attendance Alerts' },
+                      { key: 'emergencyEmail', label: 'Emergency Notifications' }
+                    ].map(({ key, label }) => (
+                      <div key={key} className="flex items-center justify-between">
+                        <Label htmlFor={key}>{label}</Label>
+                        <Switch
+                          id={key}
+                          checked={notifications[key as keyof typeof notifications] as boolean}
+                          onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, [key]: checked }))}
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4">SMS Notifications</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="emergencySMS">Emergency Alerts</Label>
-                          <input type="checkbox" id="emergencySMS" defaultChecked />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="attendanceSMS">Attendance Alerts</Label>
-                          <input type="checkbox" id="attendanceSMS" defaultChecked />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="reminderSMS">Event Reminders</Label>
-                          <input type="checkbox" id="reminderSMS" />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="gradeSMS">Grade Notifications</Label>
-                          <input type="checkbox" id="gradeSMS" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    ))}
+                  </div>
                 </div>
-                
-                <div className="mt-6">
-                  <Button 
-                    className="w-full bg-green-500 hover:bg-green-600"
-                    onClick={handleSaveNotifications}
-                    disabled={loading}
-                  >
-                    {loading ? "Saving..." : "Save Notification Preferences"}
+
+                <div>
+                  <h3 className="text-lg font-medium mb-4">SMS Notifications</h3>
+                  <div className="space-y-4">
+                    {[
+                      { key: 'emergencySMS', label: 'Emergency Alerts' },
+                      { key: 'attendanceSMS', label: 'Attendance Alerts' },
+                      { key: 'eventReminderSMS', label: 'Event Reminders' },
+                      { key: 'gradeSMS', label: 'Grade Notifications' }
+                    ].map(({ key, label }) => (
+                      <div key={key} className="flex items-center justify-between">
+                        <Label htmlFor={key}>{label}</Label>
+                        <Switch
+                          id={key}
+                          checked={notifications[key as keyof typeof notifications] as boolean}
+                          onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, [key]: checked }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button onClick={saveNotifications} disabled={isLoading}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Notification Preferences
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="security">
+            <div className="space-y-6">
+              <Card className="bg-[#1A1F2C] border-gray-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Password Policy
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="minLength">Minimum Password Length</Label>
+                    <Input
+                      id="minLength"
+                      type="number"
+                      value={passwordPolicy.minLength}
+                      onChange={(e) => setPasswordPolicy(prev => ({ ...prev, minLength: parseInt(e.target.value) }))}
+                      min="4"
+                      max="20"
+                    />
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {[
+                      { key: 'requireSpecialChars', label: 'Require Special Characters' },
+                      { key: 'requireNumbers', label: 'Require Numbers' },
+                      { key: 'requireUppercase', label: 'Require Uppercase Letters' },
+                      { key: 'requireLowercase', label: 'Require Lowercase Letters' }
+                    ].map(({ key, label }) => (
+                      <div key={key} className="flex items-center justify-between">
+                        <Label htmlFor={key}>{label}</Label>
+                        <Switch
+                          id={key}
+                          checked={passwordPolicy[key as keyof typeof passwordPolicy] as boolean}
+                          onCheckedChange={(checked) => setPasswordPolicy(prev => ({ ...prev, [key]: checked }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button onClick={savePasswordPolicy} disabled={isLoading}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Password Policy
                   </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#1A1F2C] border-gray-800">
+                <CardHeader>
+                  <CardTitle>Security Features</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    {[
+                      { key: 'enableTwoFactorAuth', label: 'Enable Two-Factor Authentication' },
+                      { key: 'enableSessionTimeout', label: 'Enable Session Timeout' },
+                      { key: 'logSecurityEvents', label: 'Log Security Events' }
+                    ].map(({ key, label }) => (
+                      <div key={key} className="flex items-center justify-between">
+                        <Label htmlFor={key}>{label}</Label>
+                        <Switch
+                          id={key}
+                          checked={securityFeatures[key as keyof typeof securityFeatures] as boolean}
+                          onCheckedChange={(checked) => setSecurityFeatures(prev => ({ ...prev, [key]: checked }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button onClick={saveSecurityFeatures} disabled={isLoading}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Security Features
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="database">
+            <Card className="bg-[#1A1F2C] border-gray-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  Database Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Button variant="outline">
+                    Backup Database
+                  </Button>
+                  <Button variant="outline">
+                    Restore Database
+                  </Button>
+                  <Button variant="outline">
+                    Export Data
+                  </Button>
+                  <Button variant="outline">
+                    Import Data
+                  </Button>
+                </div>
+                <div className="bg-yellow-500/10 p-4 rounded-lg">
+                  <h3 className="font-medium text-yellow-400 mb-2">Database Status</h3>
+                  <p className="text-sm">Connection: Active</p>
+                  <p className="text-sm">Last Backup: Today at 2:00 AM</p>
+                  <p className="text-sm">Storage Used: 2.4 GB</p>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </main>
-      
-      <footer className="bg-[#1A1F2C] dark:bg-white border-t border-gray-800 dark:border-gray-200 py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-600">
-          &copy; {new Date().getFullYear()} School Management System
-        </div>
-      </footer>
     </div>
   );
 }
