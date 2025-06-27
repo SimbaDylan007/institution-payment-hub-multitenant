@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -43,32 +44,12 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Users, UserPlus, Settings as SettingsIcon } from "lucide-react";
+import { Users, UserPlus, Settings as SettingsIcon, Home } from "lucide-react";
 import { AddUserModal } from "@/components/forms/AddUserModal";
 import { BulkUserImportModal } from "@/components/forms/BulkUserImportModal";
 import { ManageRolesModal } from "@/components/forms/ManageRolesModal";
-
-const data = [
-  { name: "Jan", Students: 4000, Teachers: 2400, Admins: 2400 },
-  { name: "Feb", Students: 3000, Teachers: 1398, Admins: 2210 },
-  { name: "Mar", Students: 2000, Teachers: 9800, Admins: 2290 },
-  { name: "Apr", Students: 2780, Teachers: 3908, Admins: 2000 },
-  { name: "May", Students: 1890, Teachers: 4800, Admins: 2181 },
-  { name: "Jun", Students: 2390, Teachers: 3800, Admins: 2500 },
-  { name: "Jul", Students: 3490, Teachers: 4300, Admins: 2100 },
-  { name: "Aug", Students: 4000, Teachers: 2400, Admins: 2400 },
-  { name: "Sep", Students: 3000, Teachers: 1398, Admins: 2210 },
-  { name: "Oct", Students: 2000, Teachers: 9800, Admins: 2290 },
-  { name: "Nov", Students: 2780, Teachers: 3908, Admins: 2000 },
-  { name: "Dec", Students: 1890, Teachers: 4800, Admins: 2181 },
-];
-
-const tableData = [
-  { name: "John Doe", role: "Student", status: "Active", lastLogin: "2024-03-15" },
-  { name: "Jane Smith", role: "Teacher", status: "Active", lastLogin: "2024-03-14" },
-  { name: "Alice Johnson", role: "Admin", status: "Inactive", lastLogin: "2024-03-10" },
-  { name: "Bob Williams", role: "Librarian", status: "Active", lastLogin: "2024-03-16" },
-];
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 const Settings = () => {
   const [userStats, setUserStats] = useState({
@@ -77,9 +58,13 @@ const Settings = () => {
     administrators: 0,
     teachers: 0,
   });
+  const [users, setUsers] = useState([]);
+  const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
     fetchUserStats();
+    fetchUsers();
+    fetchChartData();
   }, []);
 
   const fetchUserStats = async () => {
@@ -96,13 +81,55 @@ const Settings = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/users');
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      } else {
+        console.error('Failed to fetch users');
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const fetchChartData = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/users/monthly-stats');
+      if (response.ok) {
+        const data = await response.json();
+        setChartData(data);
+      } else {
+        console.error('Failed to fetch chart data');
+        // Fallback to empty array if API fails
+        setChartData([]);
+      }
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+      setChartData([]);
+    }
+  };
+
   return (
     <div className="container mx-auto py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your institution settings and configurations.
-        </p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your institution settings and configurations.
+          </p>
+        </div>
+        <Button
+          className="bg-purple-500 text-white hover:bg-purple-600"
+          asChild
+        >
+          <Link to="/dashboard" className="flex items-center gap-2">
+            <Home className="h-4 w-4" />
+            Dashboard
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-6">
@@ -169,23 +196,23 @@ const Settings = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Last Login</TableHead>
+                  <TableHead>Created Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tableData.map((row, index) => (
+                {users.slice(0, 10).map((user: any, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">{row.name}</TableCell>
-                    <TableCell>{row.role}</TableCell>
-                    <TableCell>{row.status}</TableCell>
-                    <TableCell>{row.lastLogin}</TableCell>
+                    <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell>{user.roles?.map((role: any) => role.name).join(', ') || 'No roles'}</TableCell>
+                    <TableCell>{user.enabled ? 'Active' : 'Inactive'}</TableCell>
+                    <TableCell>{new Date(user.createdAt || Date.now()).toLocaleDateString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={4}>
-                    {tableData.length} users in total
+                    {users.length} users in total
                   </TableCell>
                 </TableRow>
               </TableFooter>
@@ -228,18 +255,24 @@ const Settings = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="Students" stroke="#8884d8" name="Students" />
-                <Line type="monotone" dataKey="Teachers" stroke="#82ca9d" name="Teachers" />
-                <Line type="monotone" dataKey="Admins" stroke="#ffc658" name="Admins" />
-              </LineChart>
-            </ResponsiveContainer>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="Students" stroke="#8884d8" name="Students" />
+                  <Line type="monotone" dataKey="Teachers" stroke="#82ca9d" name="Teachers" />
+                  <Line type="monotone" dataKey="Admins" stroke="#ffc658" name="Admins" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-gray-500">
+                No chart data available
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

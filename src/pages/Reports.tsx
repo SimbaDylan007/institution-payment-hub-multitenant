@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -7,12 +6,67 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Home, BarChart3, FileText, TrendingUp, Download, Calendar, Users, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Reports() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [reportStats, setReportStats] = useState({
+    totalReports: 0,
+    monthlyReports: 0,
+    completionRate: 0,
+    scheduledReports: 0
+  });
+  const [academicData, setAcademicData] = useState({
+    subjects: [],
+    grades: [],
+    exams: []
+  });
+
+  useEffect(() => {
+    fetchReportStats();
+    fetchAcademicData();
+  }, []);
+
+  const fetchReportStats = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/reports/statistics');
+      if (response.ok) {
+        const data = await response.json();
+        setReportStats(data);
+      } else {
+        console.error('Failed to fetch report statistics');
+      }
+    } catch (error) {
+      console.error('Error fetching report statistics:', error);
+      // Use fallback data if API fails
+      setReportStats({
+        totalReports: 156,
+        monthlyReports: 24,
+        completionRate: 89,
+        scheduledReports: 12
+      });
+    }
+  };
+
+  const fetchAcademicData = async () => {
+    try {
+      const [subjectsRes, gradesRes, examsRes] = await Promise.all([
+        fetch('http://localhost:8080/api/academic/subjects'),
+        fetch('http://localhost:8080/api/academic/grades'),
+        fetch('http://localhost:8080/api/academic/exams')
+      ]);
+
+      const subjects = subjectsRes.ok ? await subjectsRes.json() : [];
+      const grades = gradesRes.ok ? await gradesRes.json() : [];
+      const exams = examsRes.ok ? await examsRes.json() : [];
+
+      setAcademicData({ subjects, grades, exams });
+    } catch (error) {
+      console.error('Error fetching academic data:', error);
+    }
+  };
 
   const handleGenerateReport = async (reportType: string) => {
     setLoading(true);
@@ -22,20 +76,38 @@ export default function Reports() {
         description: `${reportType} report is being generated...`,
       });
       
-      // Simulate API call
-      setTimeout(() => {
+      const response = await fetch('http://localhost:8080/api/reports/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: reportType,
+          format: 'PDF',
+          includeCharts: true
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
         toast({
           title: "Success",
           description: `${reportType} report generated successfully!`,
         });
-        setLoading(false);
-      }, 2000);
+        
+        // Refresh report stats
+        fetchReportStats();
+      } else {
+        throw new Error('Failed to generate report');
+      }
     } catch (error) {
+      console.error('Error generating report:', error);
       toast({
         title: "Error",
         description: "Failed to generate report. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
     }
   };
@@ -47,14 +119,37 @@ export default function Reports() {
         description: "Report is being exported to PDF...",
       });
       
-      // Simulate export
-      setTimeout(() => {
+      const response = await fetch('http://localhost:8080/api/reports/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          format: 'PDF',
+          reportIds: ['latest']
+        })
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'report.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
         toast({
           title: "Success",
           description: "Report exported successfully!",
         });
-      }, 1500);
+      } else {
+        throw new Error('Failed to export report');
+      }
     } catch (error) {
+      console.error('Error exporting report:', error);
       toast({
         title: "Error",
         description: "Failed to export report. Please try again.",
@@ -70,13 +165,20 @@ export default function Reports() {
         description: `Loading ${analyticsType} analytics...`,
       });
       
-      setTimeout(() => {
+      const response = await fetch(`http://localhost:8080/api/analytics/${analyticsType.toLowerCase().replace(' ', '-')}`);
+      
+      if (response.ok) {
+        const data = await response.json();
         toast({
           title: "Success",
           description: `${analyticsType} analytics loaded successfully!`,
         });
-      }, 1000);
+        console.log('Analytics data:', data);
+      } else {
+        throw new Error('Failed to load analytics');
+      }
     } catch (error) {
+      console.error('Error loading analytics:', error);
       toast({
         title: "Error",
         description: "Failed to load analytics. Please try again.",
@@ -125,25 +227,25 @@ export default function Reports() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-6">
-              <div className="text-3xl font-bold text-blue-400">156</div>
+              <div className="text-3xl font-bold text-blue-400">{reportStats.totalReports}</div>
               <p className="text-gray-400 dark:text-gray-600">Total Reports</p>
             </CardContent>
           </Card>
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-6">
-              <div className="text-3xl font-bold text-green-400">24</div>
+              <div className="text-3xl font-bold text-green-400">{reportStats.monthlyReports}</div>
               <p className="text-gray-400 dark:text-gray-600">This Month</p>
             </CardContent>
           </Card>
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-6">
-              <div className="text-3xl font-bold text-purple-400">89%</div>
+              <div className="text-3xl font-bold text-purple-400">{reportStats.completionRate}%</div>
               <p className="text-gray-400 dark:text-gray-600">Completion Rate</p>
             </CardContent>
           </Card>
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-6">
-              <div className="text-3xl font-bold text-orange-400">12</div>
+              <div className="text-3xl font-bold text-orange-400">{reportStats.scheduledReports}</div>
               <p className="text-gray-400 dark:text-gray-600">Scheduled</p>
             </CardContent>
           </Card>
