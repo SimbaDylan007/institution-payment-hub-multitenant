@@ -6,9 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;  //Import
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/timetables")
@@ -24,7 +26,6 @@ public class TimetableController {
             List<Timetable> timetables = timetableService.getAllTimetables();
             return ResponseEntity.ok(timetables);
         } catch (Exception e) {
-            //Log the error appropriately
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables", e);
         }
     }
@@ -36,10 +37,8 @@ public class TimetableController {
             return timetable.map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            //Log the error appropriately
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetable with id: " + id, e);
         }
-
     }
 
     @GetMapping("/grade/{grade}")
@@ -48,7 +47,6 @@ public class TimetableController {
             List<Timetable> timetables = timetableService.getTimetablesByGrade(grade);
             return ResponseEntity.ok(timetables);
         } catch (Exception e) {
-            //Log the error appropriately
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables for grade: " + grade, e);
         }
     }
@@ -60,7 +58,6 @@ public class TimetableController {
             List<Timetable> timetables = timetableService.getTimetablesByGradeAndSection(grade, section);
             return ResponseEntity.ok(timetables);
         } catch (Exception e) {
-            //Log the error appropriately
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables for grade: " + grade + " and section: " + section, e);
         }
     }
@@ -71,7 +68,6 @@ public class TimetableController {
             List<Timetable> timetables = timetableService.getTimetablesByDay(dayOfWeek);
             return ResponseEntity.ok(timetables);
         } catch (Exception e) {
-            //Log the error appropriately
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables for day: " + dayOfWeek, e);
         }
     }
@@ -82,7 +78,6 @@ public class TimetableController {
             List<Timetable> timetables = timetableService.getTimetablesByTeacher(teacherId);
             return ResponseEntity.ok(timetables);
         } catch (Exception e) {
-            //Log the error appropriately
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables for teacher: " + teacherId, e);
         }
     }
@@ -93,10 +88,8 @@ public class TimetableController {
             Timetable createdTimetable = timetableService.createTimetable(timetable);
             return new ResponseEntity<>(createdTimetable, HttpStatus.CREATED); //Return a 201
         } catch (IllegalArgumentException e) {
-            //Log the error
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid timetable data", e);
         } catch (Exception e) {
-            //Log the error
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create timetable", e);
         }
     }
@@ -110,10 +103,8 @@ public class TimetableController {
             }
             return ResponseEntity.notFound().build();
         } catch (IllegalArgumentException e) {
-            //Log the error
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid timetable data", e);
         } catch (Exception e) {
-            //Log the error
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update timetable with id: " + id, e);
         }
     }
@@ -127,8 +118,31 @@ public class TimetableController {
             }
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            //Log the error
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete timetable with id: " + id, e);
+        }
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getTimetableStats() {
+        try {
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("totalClasses", timetableService.getTotalClassCount());
+            stats.put("activePeriods", timetableService.getActivePeriodCount());
+            stats.put("conflicts", timetableService.getConflictCount());
+            stats.put("freeSlots", timetableService.getFreeSlotCount());
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetable stats", e);
+        }
+    }
+
+    @GetMapping("/classes/count")
+    public ResponseEntity<Integer> getClassCount() {
+        try {
+            int count = timetableService.getTotalClassCount();
+            return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve class count", e);
         }
     }
 }

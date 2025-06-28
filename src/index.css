@@ -5,55 +5,13 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-
-    --primary: 267 70% 65%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 5.9% 90%;
-    --border-light: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 267 70% 65%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 267 70% 65%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 240 5.9% 90%;
-    --sidebar-ring: 267 70% 65%;
-  }
-
-  .dark {
-    --background: 240 10% 9%;
+    --background: 0 0% 5%;
     --foreground: 0 0% 98%;
 
-    --card: 240 10% 12%;
+    --card: 267 70% 15%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 240 10% 12%;
+    --popover: 267 70% 15%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 267 70% 65%;
@@ -76,6 +34,8 @@
     --input: 240 5% 22%;
     --ring: 267 70% 65%;
 
+    --radius: 0.5rem;
+
     --sidebar-background: 240 10% 9%;
     --sidebar-foreground: 240 5% 84.9%;
     --sidebar-primary: 267 70% 65%;
@@ -93,14 +53,10 @@
   }
 
   body {
-    @apply bg-background text-foreground;
-  }
-  
-  .dropdown-content-dark {
-    @apply dark:bg-[#1A1F2C] dark:border-gray-800;
+    @apply bg-gradient-to-br from-black via-purple-900 to-blue-900 text-foreground min-h-screen;
   }
   
   .card-container-dark {
-    @apply bg-[#1A1F2C] dark:bg-[#2a2a2a] border border-gray-800 dark:border-gray-700;
+    @apply bg-gradient-to-br from-purple-900/50 to-blue-900/50 border border-purple-700;
   }
 }

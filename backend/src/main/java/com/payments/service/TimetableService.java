@@ -1,4 +1,3 @@
-
 package com.payments.service;
 
 import com.payments.model.Timetable;
@@ -71,5 +70,24 @@ public class TimetableService {
             return true;
         }
         return false;
+    }
+    
+    public int getTotalClassCount() {
+        return (int) timetableRepository.countDistinctByGradeAndSection();
+    }
+    
+    public int getActivePeriodCount() {
+        return (int) timetableRepository.count();
+    }
+    
+    public int getConflictCount() {
+        return timetableRepository.findConflictCount();
+    }
+    
+    public int getFreeSlotCount() {
+        // Calculate free slots based on total possible slots minus occupied
+        int totalPossibleSlots = 5 * 8; // 5 days * 8 periods per day
+        int occupiedSlots = getActivePeriodCount();
+        return Math.max(0, totalPossibleSlots - occupiedSlots);
     }
 }
