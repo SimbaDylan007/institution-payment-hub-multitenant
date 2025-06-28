@@ -66,24 +66,14 @@ export default function Academic() {
   const handleCreateClass = async () => {
     setLoading(true);
     try {
-      toast({
-        title: "Creating Class",
-        description: "New class is being created...",
-      });
+      toast("Creating Class - New class is being created...");
       
       setTimeout(() => {
-        toast({
-          title: "Success",
-          description: "Class created successfully!",
-        });
+        toast("Success - Class created successfully!");
         setLoading(false);
       }, 2000);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create class. Please try again.",
-        variant: "destructive",
-      });
+      toast("Error - Failed to create class. Please try again.");
       setLoading(false);
     }
   };
@@ -111,40 +101,23 @@ export default function Academic() {
       });
 
       if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Exam scheduled successfully!",
-        });
+        toast("Success - Exam scheduled successfully!");
         fetchExams();
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to schedule exam. Please try again.",
-        variant: "destructive",
-      });
+      toast("Error - Failed to schedule exam. Please try again.");
     }
   };
 
   const handleGenerateReports = async () => {
     try {
-      toast({
-        title: "Generating Reports",
-        description: "Report cards are being generated...",
-      });
+      toast("Generating Reports - Report cards are being generated...");
       
       setTimeout(() => {
-        toast({
-          title: "Success",
-          description: "Report cards generated successfully!",
-        });
+        toast("Success - Report cards generated successfully!");
       }, 3000);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate reports. Please try again.",
-        variant: "destructive",
-      });
+      toast("Error - Failed to generate reports. Please try again.");
     }
   };
 

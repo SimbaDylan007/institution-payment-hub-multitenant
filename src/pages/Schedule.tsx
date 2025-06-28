@@ -65,7 +65,7 @@ export default function Schedule() {
             </p>
           </div>
           <div className="flex gap-2">
-            <AddEventModal onEventAdded={fetchEvents} />
+            <AddEventModal />
             <Button
               className="bg-purple-600 text-white hover:bg-purple-700"
               asChild
@@ -117,7 +117,7 @@ export default function Schedule() {
                   School Events Management
                 </CardTitle>
                 <div className="flex gap-2">
-                  <AddEventModal onEventAdded={fetchEvents} />
+                  <AddEventModal />
                 </div>
               </CardHeader>
               <CardContent>
