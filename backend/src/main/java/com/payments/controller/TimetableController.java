@@ -1,4 +1,5 @@
 
+
 package com.payments.controller;
 
 import com.payments.model.Timetable;
@@ -146,14 +147,5 @@ public class TimetableController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetable stats", e);
         }
     }
-
-    @GetMapping("/classes/count")
-    public ResponseEntity<Integer> getClassCount() {
-        try {
-            int count = timetableService.getTotalClassCount();
-            return ResponseEntity.ok(count);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve class count", e);
-        }
-    }
 }
+
