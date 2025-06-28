@@ -9,6 +9,7 @@ com\payments\service\TimetableService.class
 com\payments\repository\LeaveRequestRepository.class
 com\payments\model\Facility.class
 com\payments\service\ZbApiService.class
+com\payments\controller\SubjectController.class
 com\payments\model\Book.class
 com\payments\dto\SystemPreferencesDto.class
 com\payments\repository\TimetableRepository.class

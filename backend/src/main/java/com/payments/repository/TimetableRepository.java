@@ -9,22 +9,26 @@ import java.util.List;
 
 @Repository
 public interface TimetableRepository extends JpaRepository<Timetable, Long> {
-    
+
     List<Timetable> findByGrade(String grade);
-    
+
     List<Timetable> findByGradeAndSection(String grade, String section);
-    
+
     List<Timetable> findByDayOfWeek(String dayOfWeek);
-    
+
+
     List<Timetable> findByTeacherId(Long teacherId);
-    
+
     List<Timetable> findBySubjectId(Long subjectId);
-    
+
     List<Timetable> findByAcademicYear(String academicYear);
-    
+
     @Query("SELECT COUNT(DISTINCT CONCAT(t.grade, '-', t.section)) FROM Timetable t")
     long countDistinctByGradeAndSection();
-    
-    @Query("SELECT COUNT(t) FROM Timetable t WHERE EXISTS (SELECT t2 FROM Timetable t2 WHERE t2.id != t.id AND t2.dayOfWeek = t.dayOfWeek AND t2.startTime = t.startTime AND (t2.teacherId = t.teacherId OR t2.room = t.room))")
+
+    @Query("SELECT COUNT(t) FROM Timetable t WHERE EXISTS (" +
+            "SELECT t2 FROM Timetable t2 WHERE t2.id != t.id " +
+            "AND t2.dayOfWeek = t.dayOfWeek AND t2.startTime = t.startTime " +
+            "AND (t2.teacher.id = t.teacher.id OR t2.room = t.room))") // <-- Corrected here!
     int findConflictCount();
 }
