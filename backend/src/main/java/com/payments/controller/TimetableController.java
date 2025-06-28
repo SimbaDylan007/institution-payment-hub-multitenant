@@ -1,3 +1,4 @@
+
 package com.payments.controller;
 
 import com.payments.model.Timetable;
@@ -82,11 +83,21 @@ public class TimetableController {
         }
     }
 
+    @GetMapping("/subject/{subject}")
+    public ResponseEntity<List<Timetable>> getTimetablesBySubject(@PathVariable String subject) {
+        try {
+            List<Timetable> timetables = timetableService.getTimetablesBySubject(subject);
+            return ResponseEntity.ok(timetables);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables for subject: " + subject, e);
+        }
+    }
+
     @PostMapping
     public ResponseEntity<Timetable> createTimetable(@RequestBody Timetable timetable) {
         try {
             Timetable createdTimetable = timetableService.createTimetable(timetable);
-            return new ResponseEntity<>(createdTimetable, HttpStatus.CREATED); //Return a 201
+            return new ResponseEntity<>(createdTimetable, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid timetable data", e);
         } catch (Exception e) {
@@ -114,7 +125,7 @@ public class TimetableController {
         try {
             boolean deleted = timetableService.deleteTimetable(id);
             if (deleted) {
-                return ResponseEntity.noContent().build();  // 204 No Content
+                return ResponseEntity.noContent().build();
             }
             return ResponseEntity.notFound().build();
         } catch (Exception e) {

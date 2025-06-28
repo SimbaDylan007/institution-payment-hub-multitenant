@@ -1,3 +1,4 @@
+
 package com.payments.service;
 
 import com.payments.model.Timetable;
@@ -37,6 +38,10 @@ public class TimetableService {
     
     public List<Timetable> getTimetablesByTeacher(Long teacherId) {
         return timetableRepository.findByTeacherId(teacherId);
+    }
+    
+    public List<Timetable> getTimetablesBySubject(String subject) {
+        return timetableRepository.findBySubject(subject);
     }
     
     @Transactional
