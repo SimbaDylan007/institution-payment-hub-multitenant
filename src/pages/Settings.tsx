@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -60,6 +59,10 @@ const Settings = () => {
   });
   const [users, setUsers] = useState([]);
   const [chartData, setChartData] = useState([]);
+  const [settings, setSettings] = useState({
+    maintenanceMode: false,
+    twoFactorEnabled: false,
+  });
 
   useEffect(() => {
     fetchUserStats();
@@ -109,6 +112,40 @@ const Settings = () => {
     } catch (error) {
       console.error('Error fetching chart data:', error);
       setChartData([]);
+    }
+  };
+
+  const handleMaintenanceMode = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/settings/maintenance-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !settings.maintenanceMode }),
+      });
+
+      if (response.ok) {
+        setSettings(prev => ({ ...prev, maintenanceMode: !prev.maintenanceMode }));
+        toast.success(`Maintenance mode ${!settings.maintenanceMode ? 'enabled' : 'disabled'}`);
+      }
+    } catch (error) {
+      toast.error('Failed to toggle maintenance mode');
+    }
+  };
+
+  const handleTwoFactorAuth = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/settings/two-factor-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !settings.twoFactorEnabled }),
+      });
+
+      if (response.ok) {
+        setSettings(prev => ({ ...prev, twoFactorEnabled: !prev.twoFactorEnabled }));
+        toast.success(`Two-factor authentication ${!settings.twoFactorEnabled ? 'enabled' : 'disabled'}`);
+      }
+    } catch (error) {
+      toast.error('Failed to toggle two-factor authentication');
     }
   };
 
@@ -232,13 +269,42 @@ const Settings = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="twoFactorAuth">Two-Factor Authentication</Label>
-              <Toggle id="twoFactorAuth" />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="sessionTimeout">Session Timeout</Label>
-              <Input type="number" id="sessionTimeout" className="w-24" defaultValue="30" />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-purple-800/30 rounded-lg border border-purple-600">
+                <div>
+                  <h3 className="font-medium text-white">Maintenance Mode</h3>
+                  <p className="text-sm text-gray-300">Enable maintenance mode to restrict access</p>
+                </div>
+                <Button
+                  onClick={handleMaintenanceMode}
+                  variant={settings.maintenanceMode ? "destructive" : "default"}
+                  className={settings.maintenanceMode ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
+                >
+                  {settings.maintenanceMode ? 'Disable' : 'Enable'}
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-purple-800/30 rounded-lg border border-purple-600">
+                <div>
+                  <h3 className="font-medium text-white">Two-Factor Authentication</h3>
+                  <p className="text-sm text-gray-300">Add an extra layer of security to accounts</p>
+                </div>
+                <Button
+                  onClick={handleTwoFactorAuth}
+                  variant={settings.twoFactorEnabled ? "destructive" : "default"}
+                  className={settings.twoFactorEnabled ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
+                >
+                  {settings.twoFactorEnabled ? 'Disable' : 'Enable'}
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-purple-800/30 rounded-lg border border-purple-600">
+                <div>
+                  <h3 className="font-medium text-white">Session Timeout</h3>
+                  <p className="text-sm text-gray-300">Set the duration for user sessions</p>
+                </div>
+                <Input type="number" id="sessionTimeout" className="w-24" defaultValue="30" />
+              </div>
             </div>
           </CardContent>
         </Card>

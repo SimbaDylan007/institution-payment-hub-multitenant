@@ -17,7 +17,6 @@ public class CommunicationService {
     @Autowired
     private MessageRepository messageRepository;
     
-    // Message management
     public List<Message> getAllMessages() {
         return messageRepository.findAll();
     }
@@ -30,12 +29,12 @@ public class CommunicationService {
         return messageRepository.findBySenderId(senderId);
     }
     
-    public List<Message> getReceivedMessages(Long receiverId) {
-        return messageRepository.findByRecipientId(receiverId);
+    public List<Message> getReceivedMessages(Long recipientId) {
+        return messageRepository.findByRecipientId(recipientId);
     }
     
-    public List<Message> getUnreadMessages(Long receiverId) {
-        return messageRepository.findByRecipientIdAndIsReadFalse(receiverId);
+    public List<Message> getUnreadMessages(Long recipientId) {
+        return messageRepository.findByRecipientIdAndIsReadFalse(recipientId);
     }
     
     public List<Message> getConversation(Long senderId, Long receiverId) {
@@ -49,7 +48,9 @@ public class CommunicationService {
     @Transactional
     public Message sendMessage(Message message) {
         message.setSentAt(LocalDateTime.now());
-        message.setIsRead(false);
+        if (message.getMessageType() == null) {
+            message.setMessageType("DIRECT");
+        }
         return messageRepository.save(message);
     }
     
@@ -59,18 +60,16 @@ public class CommunicationService {
         if (optionalMessage.isPresent()) {
             Message message = optionalMessage.get();
             message.setIsRead(true);
-            message.setReadAt(LocalDateTime.now());
             return messageRepository.save(message);
         }
         return null;
     }
     
     @Transactional
-    public void markAllAsRead(Long receiverId) {
-        List<Message> unreadMessages = messageRepository.findByRecipientIdAndIsReadFalse(receiverId);
+    public void markAllAsRead(Long recipientId) {
+        List<Message> unreadMessages = messageRepository.findByRecipientIdAndIsReadFalse(recipientId);
         for (Message message : unreadMessages) {
             message.setIsRead(true);
-            message.setReadAt(LocalDateTime.now());
             messageRepository.save(message);
         }
     }
@@ -80,15 +79,9 @@ public class CommunicationService {
         Message announcement = new Message();
         announcement.setSubject(title);
         announcement.setContent(content);
-        announcement.setMessageType("ANNOUNCEMENT");
-        announcement.setSentAt(LocalDateTime.now());
-        announcement.setIsRead(false);
         announcement.setSenderId(senderId);
-        announcement.setSenderName("System");
-        announcement.setSenderType("SYSTEM");
-        announcement.setRecipientType("ALL");
-        announcement.setRecipientId(0L);
-        announcement.setRecipientName("All Users");
+        announcement.setRecipientId(0L); // Broadcast message
+        announcement.setMessageType("ANNOUNCEMENT");
         return messageRepository.save(announcement);
     }
     

@@ -260,19 +260,19 @@ export default function Reports() {
           </TabsList>
 
           <TabsContent value="academic">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   <BarChart3 className="h-5 w-5" />
                   Academic Performance Reports
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
+                  <Card className="bg-purple-800/30 border-purple-600">
                     <CardContent className="p-4">
-                      <div className="text-lg font-semibold mb-2">Grade Analysis</div>
-                      <p className="text-sm text-gray-400 mb-4">Class-wise performance analysis</p>
+                      <div className="text-lg font-semibold mb-2 text-white">Grade Analysis</div>
+                      <p className="text-sm text-gray-300 mb-4">Class-wise performance analysis</p>
                       <Button 
                         size="sm" 
                         className="w-full bg-blue-500 hover:bg-blue-600"
@@ -284,10 +284,10 @@ export default function Reports() {
                       </Button>
                     </CardContent>
                   </Card>
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
+                  <Card className="bg-purple-800/30 border-purple-600">
                     <CardContent className="p-4">
-                      <div className="text-lg font-semibold mb-2">Subject Reports</div>
-                      <p className="text-sm text-gray-400 mb-4">Subject-wise analysis</p>
+                      <div className="text-lg font-semibold mb-2 text-white">Subject Reports</div>
+                      <p className="text-sm text-gray-300 mb-4">Subject-wise analysis</p>
                       <Button 
                         size="sm" 
                         className="w-full bg-green-500 hover:bg-green-600"
@@ -299,17 +299,17 @@ export default function Reports() {
                       </Button>
                     </CardContent>
                   </Card>
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
+                  <Card className="bg-purple-800/30 border-purple-600">
                     <CardContent className="p-4">
-                      <div className="text-lg font-semibold mb-2">Progress Cards</div>
-                      <p className="text-sm text-gray-400 mb-4">Student progress tracking</p>
+                      <div className="text-lg font-semibold mb-2 text-white">Student Reports</div>
+                      <p className="text-sm text-gray-300 mb-4">Individual student performance</p>
                       <Button 
                         size="sm" 
                         className="w-full bg-purple-500 hover:bg-purple-600"
-                        onClick={() => handleGenerateReport('Progress Cards')}
+                        onClick={() => handleGenerateReport('Student Reports')}
                         disabled={loading}
                       >
-                        <TrendingUp className="h-4 w-4 mr-2" />
+                        <Users className="h-4 w-4 mr-2" />
                         Generate
                       </Button>
                     </CardContent>

@@ -48,6 +48,109 @@ export default function Schedule() {
     }
   };
 
+  const handleExamAction = async (action: string) => {
+    try {
+      let endpoint = '';
+      let method = 'POST';
+      let body = {};
+
+      switch (action) {
+        case 'schedule':
+          endpoint = '/api/exams';
+          body = {
+            title: 'New Exam',
+            grade: '10',
+            examDate: new Date().toISOString().split('T')[0],
+            startTime: '09:00',
+            endTime: '12:00',
+            venue: 'Main Hall',
+            examType: 'MIDTERM',
+            maxMarks: 100
+          };
+          break;
+        case 'hall-tickets':
+          endpoint = '/api/exams/generate-hall-tickets';
+          body = { examIds: [], generateAll: true };
+          break;
+        case 'seating':
+          endpoint = '/api/exams/seating-arrangements';
+          body = { examId: 1, hallId: 1 };
+          break;
+      }
+
+      const response = await fetch(`http://localhost:8080${endpoint}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (response.ok) {
+        toast.success(`${action.replace('-', ' ')} completed successfully`);
+      } else {
+        throw new Error('Failed to complete action');
+      }
+    } catch (error) {
+      console.error(`Error with ${action}:`, error);
+      toast.error(`Failed to ${action.replace('-', ' ')}`);
+    }
+  };
+
+  const handleCalendarAction = async (action: string) => {
+    try {
+      let endpoint = '';
+      let method = 'GET';
+      let body = {};
+
+      switch (action) {
+        case 'view':
+          endpoint = '/api/calendar/view';
+          break;
+        case 'holiday':
+          endpoint = '/api/calendar/holidays';
+          method = 'POST';
+          body = {
+            name: 'New Holiday',
+            date: new Date().toISOString().split('T')[0],
+            type: 'HOLIDAY'
+          };
+          break;
+        case 'term-dates':
+          endpoint = '/api/calendar/term-dates';
+          method = 'POST';
+          body = {
+            termName: 'New Term',
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          };
+          break;
+      }
+
+      const options: RequestInit = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+      };
+
+      if (method === 'POST') {
+        options.body = JSON.stringify(body);
+      }
+
+      const response = await fetch(`http://localhost:8080${endpoint}`, options);
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message || `${action} completed successfully`);
+        if (action === 'view') {
+          console.log('Calendar data:', result);
+        }
+      } else {
+        throw new Error('Failed to complete action');
+      }
+    } catch (error) {
+      console.error(`Error with ${action}:`, error);
+      toast.error(`Failed to ${action}`);
+    }
+  };
+
   if (!user) {
     return <Navigate to="/" replace />;
   }
@@ -178,24 +281,33 @@ export default function Schedule() {
           </TabsContent>
 
           <TabsContent value="exams">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   <Users className="h-5 w-5" />
                   Examination Scheduling
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Examination scheduling system with automated hall ticket generation.</p>
-                  <div className="mt-4 space-y-2">
-                    <Button className="w-full max-w-xs bg-blue-500 hover:bg-blue-600">
+                <div className="text-center py-8 text-gray-300">
+                  <p className="mb-6">Examination scheduling system with automated hall ticket generation.</p>
+                  <div className="flex flex-col items-center space-y-4 max-w-md mx-auto">
+                    <Button 
+                      className="w-full bg-blue-500 hover:bg-blue-600"
+                      onClick={() => handleExamAction('schedule')}
+                    >
                       Schedule New Exam
                     </Button>
-                    <Button className="w-full max-w-xs bg-green-500 hover:bg-green-600">
+                    <Button 
+                      className="w-full bg-green-500 hover:bg-green-600"
+                      onClick={() => handleExamAction('hall-tickets')}
+                    >
                       Generate Hall Tickets
                     </Button>
-                    <Button className="w-full max-w-xs bg-purple-500 hover:bg-purple-600">
+                    <Button 
+                      className="w-full bg-purple-500 hover:bg-purple-600"
+                      onClick={() => handleExamAction('seating')}
+                    >
                       Seating Arrangements
                     </Button>
                   </div>
@@ -205,21 +317,30 @@ export default function Schedule() {
           </TabsContent>
 
           <TabsContent value="calendar">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
               <CardHeader>
-                <CardTitle>Academic Calendar Management</CardTitle>
+                <CardTitle className="text-white">Academic Calendar Management</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Comprehensive academic calendar with term dates, holidays, and important deadlines.</p>
-                  <div className="mt-4 space-y-2">
-                    <Button className="w-full max-w-xs bg-blue-500 hover:bg-blue-600">
+                <div className="text-center py-8 text-gray-300">
+                  <p className="mb-6">Comprehensive academic calendar with term dates, holidays, and important deadlines.</p>
+                  <div className="flex flex-col items-center space-y-4 max-w-md mx-auto">
+                    <Button 
+                      className="w-full bg-blue-500 hover:bg-blue-600"
+                      onClick={() => handleCalendarAction('view')}
+                    >
                       View Calendar
                     </Button>
-                    <Button className="w-full max-w-xs bg-green-500 hover:bg-green-600">
+                    <Button 
+                      className="w-full bg-green-500 hover:bg-green-600"
+                      onClick={() => handleCalendarAction('holiday')}
+                    >
                       Add Holiday
                     </Button>
-                    <Button className="w-full max-w-xs bg-purple-500 hover:bg-purple-600">
+                    <Button 
+                      className="w-full bg-purple-500 hover:bg-purple-600"
+                      onClick={() => handleCalendarAction('term-dates')}
+                    >
                       Set Term Dates
                     </Button>
                   </div>

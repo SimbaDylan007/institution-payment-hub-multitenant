@@ -12,17 +12,17 @@ public class Timetable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne
-    @JoinColumn(name = "subject_id", nullable = false)
-    private Subject subject;
+    @Column(nullable = false)
+    private String subject; // Changed from Subject entity to String
     
     @ManyToOne
-    @JoinColumn(name = "staff_id", nullable = false)
-    private Staff teacher;
+    @JoinColumn(name = "teacher_id")
+    private User teacher;
     
     @Column(nullable = false)
     private String grade;
     
+    @Column(nullable = false)
     private String section;
     
     @Column(nullable = false)
@@ -36,7 +36,7 @@ public class Timetable {
     
     private String room;
     
-    @Column(name = "academic_year")
+    @Column(nullable = false)
     private String academicYear;
     
     // Constructors
@@ -46,11 +46,11 @@ public class Timetable {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
-    public Subject getSubject() { return subject; }
-    public void setSubject(Subject subject) { this.subject = subject; }
+    public String getSubject() { return subject; }
+    public void setSubject(String subject) { this.subject = subject; }
     
-    public Staff getTeacher() { return teacher; }
-    public void setTeacher(Staff teacher) { this.teacher = teacher; }
+    public User getTeacher() { return teacher; }
+    public void setTeacher(User teacher) { this.teacher = teacher; }
     
     public String getGrade() { return grade; }
     public void setGrade(String grade) { this.grade = grade; }

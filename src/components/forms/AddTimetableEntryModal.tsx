@@ -1,33 +1,43 @@
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { TimetableEntry, CreateTimetableEntryRequest } from "@/types/TimetableEntry";
+import { CreateTimetableEntryRequest } from "@/types/TimetableEntry";
 
 interface AddTimetableEntryModalProps {
-  onEntryAdded?: () => void;
-  editEntry?: TimetableEntry;
-  onEntryUpdated?: () => void;
+  onEntryAdded: () => void;
 }
 
-export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntryUpdated }: AddTimetableEntryModalProps) {
+export default function AddTimetableEntryModal({ onEntryAdded }: AddTimetableEntryModalProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CreateTimetableEntryRequest>({
-    subject: editEntry?.subject || "",
-    teacher: editEntry?.teacher || "",
-    grade: editEntry?.grade || "",
-    section: editEntry?.section || "",
-    dayOfWeek: editEntry?.dayOfWeek || "",
-    startTime: editEntry?.startTime || "",
-    endTime: editEntry?.endTime || "",
-    room: editEntry?.room || "",
-    academicYear: editEntry?.academicYear || "2024-2025"
+    subject: "",
+    teacher: "",
+    grade: "",
+    section: "",
+    dayOfWeek: "",
+    startTime: "",
+    endTime: "",
+    room: "",
+    academicYear: "2024-2025"
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,14 +45,8 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
     setLoading(true);
 
     try {
-      const url = editEntry 
-        ? `http://localhost:8080/api/timetables/${editEntry.id}`
-        : 'http://localhost:8080/api/timetables';
-      
-      const method = editEntry ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
+      const response = await fetch('http://localhost:8080/api/timetables', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -50,32 +54,27 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
       });
 
       if (response.ok) {
-        toast.success(editEntry ? 'Entry updated successfully!' : 'Entry added successfully!');
+        toast.success('Timetable entry added successfully');
         setOpen(false);
-        if (editEntry) {
-          onEntryUpdated?.();
-        } else {
-          onEntryAdded?.();
-        }
-        if (!editEntry) {
-          setFormData({
-            subject: "",
-            teacher: "",
-            grade: "",
-            section: "",
-            dayOfWeek: "",
-            startTime: "",
-            endTime: "",
-            room: "",
-            academicYear: "2024-2025"
-          });
-        }
+        setFormData({
+          subject: "",
+          teacher: "",
+          grade: "",
+          section: "",
+          dayOfWeek: "",
+          startTime: "",
+          endTime: "",
+          room: "",
+          academicYear: "2024-2025"
+        });
+        onEntryAdded();
       } else {
-        toast.error('Failed to save entry');
+        const error = await response.json();
+        toast.error(`Failed to add timetable entry: ${error.message}`);
       }
     } catch (error) {
-      console.error('Error saving entry:', error);
-      toast.error('Failed to save entry');
+      console.error('Error adding timetable entry:', error);
+      toast.error('Failed to add timetable entry');
     } finally {
       setLoading(false);
     }
@@ -84,14 +83,14 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-green-600 hover:bg-green-700 text-white">
+        <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
           <Plus className="h-4 w-4 mr-2" />
-          {editEntry ? 'Edit Period' : 'Add Period'}
+          Add Timetable Entry
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-gradient-to-br from-purple-900 to-blue-900 border-purple-700 text-white">
+      <DialogContent className="bg-gradient-to-br from-purple-900/90 to-blue-900/90 border-purple-700 text-white backdrop-blur-sm">
         <DialogHeader>
-          <DialogTitle>{editEntry ? 'Edit Timetable Entry' : 'Add Timetable Entry'}</DialogTitle>
+          <DialogTitle>Add Timetable Entry</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -101,8 +100,8 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
                 id="subject"
                 value={formData.subject}
                 onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                className="bg-purple-800 border-purple-600 text-white"
                 required
+                className="bg-purple-800/50 border-purple-600 text-white"
               />
             </div>
             <div>
@@ -111,8 +110,8 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
                 id="teacher"
                 value={formData.teacher}
                 onChange={(e) => setFormData({...formData, teacher: e.target.value})}
-                className="bg-purple-800 border-purple-600 text-white"
                 required
+                className="bg-purple-800/50 border-purple-600 text-white"
               />
             </div>
           </div>
@@ -121,12 +120,12 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
             <div>
               <Label htmlFor="grade">Grade</Label>
               <Select value={formData.grade} onValueChange={(value) => setFormData({...formData, grade: value})}>
-                <SelectTrigger className="bg-purple-800 border-purple-600 text-white">
+                <SelectTrigger className="bg-purple-800/50 border-purple-600 text-white">
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
-                <SelectContent className="bg-purple-800 border-purple-600">
-                  {Array.from({length: 12}, (_, i) => i + 1).map(grade => (
-                    <SelectItem key={grade} value={grade.toString()}>{grade}</SelectItem>
+                <SelectContent className="bg-purple-900 border-purple-700">
+                  {Array.from({length: 12}, (_, i) => (
+                    <SelectItem key={i+1} value={(i+1).toString()}>{i+1}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -134,11 +133,11 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
             <div>
               <Label htmlFor="section">Section</Label>
               <Select value={formData.section} onValueChange={(value) => setFormData({...formData, section: value})}>
-                <SelectTrigger className="bg-purple-800 border-purple-600 text-white">
+                <SelectTrigger className="bg-purple-800/50 border-purple-600 text-white">
                   <SelectValue placeholder="Select section" />
                 </SelectTrigger>
-                <SelectContent className="bg-purple-800 border-purple-600">
-                  {['A', 'B', 'C', 'D'].map(section => (
+                <SelectContent className="bg-purple-900 border-purple-700">
+                  {['A', 'B', 'C', 'D'].map((section) => (
                     <SelectItem key={section} value={section}>{section}</SelectItem>
                   ))}
                 </SelectContent>
@@ -150,11 +149,11 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
             <div>
               <Label htmlFor="dayOfWeek">Day</Label>
               <Select value={formData.dayOfWeek} onValueChange={(value) => setFormData({...formData, dayOfWeek: value})}>
-                <SelectTrigger className="bg-purple-800 border-purple-600 text-white">
+                <SelectTrigger className="bg-purple-800/50 border-purple-600 text-white">
                   <SelectValue placeholder="Select day" />
                 </SelectTrigger>
-                <SelectContent className="bg-purple-800 border-purple-600">
-                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
+                <SelectContent className="bg-purple-900 border-purple-700">
+                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => (
                     <SelectItem key={day} value={day}>{day}</SelectItem>
                   ))}
                 </SelectContent>
@@ -167,8 +166,8 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
                 type="time"
                 value={formData.startTime}
                 onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                className="bg-purple-800 border-purple-600 text-white"
                 required
+                className="bg-purple-800/50 border-purple-600 text-white"
               />
             </div>
             <div>
@@ -178,8 +177,8 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
                 type="time"
                 value={formData.endTime}
                 onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                className="bg-purple-800 border-purple-600 text-white"
                 required
+                className="bg-purple-800/50 border-purple-600 text-white"
               />
             </div>
           </div>
@@ -190,8 +189,8 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
               id="room"
               value={formData.room}
               onChange={(e) => setFormData({...formData, room: e.target.value})}
-              className="bg-purple-800 border-purple-600 text-white"
               required
+              className="bg-purple-800/50 border-purple-600 text-white"
             />
           </div>
 
@@ -200,16 +199,16 @@ export default function AddTimetableEntryModal({ onEntryAdded, editEntry, onEntr
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              className="border-purple-600 text-white hover:bg-purple-800"
+              className="border-purple-600 text-white hover:bg-purple-700"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
-              {loading ? 'Saving...' : (editEntry ? 'Update' : 'Add')}
+              {loading ? 'Adding...' : 'Add'}
             </Button>
           </div>
         </form>

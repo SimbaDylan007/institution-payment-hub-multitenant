@@ -1,32 +1,44 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus } from "lucide-react";
-import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
 
-export default function AddEventModal() {
+interface AddEventModalProps {
+  onEventAdded?: () => void;
+}
+
+export default function AddEventModal({ onEventAdded }: AddEventModalProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [date, setDate] = useState<Date>();
-  const { toast } = useToast();
-  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     eventType: "",
     targetAudience: "",
-    location: "",
+    eventDate: "",
     startTime: "",
     endTime: "",
-    isPublic: true
+    venue: "",
+    isPublic: true,
+    status: "PLANNED"
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,44 +46,37 @@ export default function AddEventModal() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/events', {
+      const response = await fetch('http://localhost:8080/api/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          eventDate: date?.toISOString().split('T')[0],
-          status: 'SCHEDULED'
-        }),
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Event added successfully!",
-        });
+        toast.success('Event added successfully');
+        setOpen(false);
         setFormData({
           title: "",
           description: "",
           eventType: "",
           targetAudience: "",
-          location: "",
+          eventDate: "",
           startTime: "",
           endTime: "",
-          isPublic: true
+          venue: "",
+          isPublic: true,
+          status: "PLANNED"
         });
-        setDate(undefined);
-        setOpen(false);
+        if (onEventAdded) onEventAdded();
       } else {
-        throw new Error('Failed to add event');
+        const error = await response.json();
+        toast.error(`Failed to add event: ${error.message}`);
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add event. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error adding event:', error);
+      toast.error('Failed to add event');
     } finally {
       setLoading(false);
     }
@@ -80,12 +85,12 @@ export default function AddEventModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-green-500 hover:bg-green-600">
+        <Button className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
           <Plus className="h-4 w-4 mr-2" />
           Add Event
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="bg-gradient-to-br from-purple-900/90 to-blue-900/90 border-purple-700 text-white backdrop-blur-sm max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add New Event</DialogTitle>
         </DialogHeader>
@@ -95,8 +100,9 @@ export default function AddEventModal() {
             <Input
               id="title"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) => setFormData({...formData, title: e.target.value})}
               required
+              className="bg-purple-800/50 border-purple-600 text-white"
             />
           </div>
 
@@ -105,106 +111,103 @@ export default function AddEventModal() {
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Event description..."
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              className="bg-purple-800/50 border-purple-600 text-white"
+              rows={3}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="eventType">Event Type</Label>
-              <Select value={formData.eventType} onValueChange={(value) => setFormData({ ...formData, eventType: value })}>
-                <SelectTrigger>
+              <Select value={formData.eventType} onValueChange={(value) => setFormData({...formData, eventType: value})}>
+                <SelectTrigger className="bg-purple-800/50 border-purple-600 text-white">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-purple-900 border-purple-700">
                   <SelectItem value="ACADEMIC">Academic</SelectItem>
                   <SelectItem value="SPORTS">Sports</SelectItem>
                   <SelectItem value="CULTURAL">Cultural</SelectItem>
                   <SelectItem value="MEETING">Meeting</SelectItem>
-                  <SelectItem value="HOLIDAY">Holiday</SelectItem>
-                  <SelectItem value="EXAM">Exam</SelectItem>
+                  <SelectItem value="EXAMINATION">Examination</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label htmlFor="targetAudience">Target Audience</Label>
-              <Select value={formData.targetAudience} onValueChange={(value) => setFormData({ ...formData, targetAudience: value })}>
-                <SelectTrigger>
+              <Select value={formData.targetAudience} onValueChange={(value) => setFormData({...formData, targetAudience: value})}>
+                <SelectTrigger className="bg-purple-800/50 border-purple-600 text-white">
                   <SelectValue placeholder="Select audience" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
+                <SelectContent className="bg-purple-900 border-purple-700">
                   <SelectItem value="STUDENTS">Students</SelectItem>
                   <SelectItem value="STAFF">Staff</SelectItem>
                   <SelectItem value="PARENTS">Parents</SelectItem>
+                  <SelectItem value="ALL">All</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div>
-            <Label>Event Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="eventDate">Event Date</Label>
+              <Input
+                id="eventDate"
+                type="date"
+                value={formData.eventDate}
+                onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
+                required
+                className="bg-purple-800/50 border-purple-600 text-white"
+              />
+            </div>
             <div>
               <Label htmlFor="startTime">Start Time</Label>
               <Input
                 id="startTime"
                 type="time"
                 value={formData.startTime}
-                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                className="bg-purple-800/50 border-purple-600 text-white"
               />
             </div>
-
             <div>
               <Label htmlFor="endTime">End Time</Label>
               <Input
                 id="endTime"
                 type="time"
                 value={formData.endTime}
-                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                className="bg-purple-800/50 border-purple-600 text-white"
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="location">Location</Label>
+            <Label htmlFor="venue">Location</Label>
             <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              placeholder="Event location"
+              id="venue"
+              value={formData.venue}
+              onChange={(e) => setFormData({...formData, venue: e.target.value})}
+              className="bg-purple-800/50 border-purple-600 text-white"
             />
           </div>
 
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="border-purple-600 text-white hover:bg-purple-700"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Adding..." : "Add Event"}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+            >
+              {loading ? 'Adding...' : 'Add Event'}
             </Button>
           </div>
         </form>
