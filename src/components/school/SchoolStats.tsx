@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, GraduationCap, UserCheck, DollarSign, BookOpen, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -30,26 +29,25 @@ export default function SchoolStats() {
   const fetchStats = async () => {
     try {
       const [studentsRes, staffRes, classesRes, feesRes, booksRes, eventsRes] = await Promise.all([
-        fetch('http://localhost:8080/api/students/count'),
-        fetch('http://localhost:8080/api/staff/count'),
-        fetch('http://localhost:8080/api/timetables/classes/count'),
-        fetch('http://localhost:8080/api/fees/total-collected'),
-        fetch('http://localhost:8080/api/library/books/count'),
-        fetch('http://localhost:8080/api/events/current-month/count')
+        fetch('http://localhost:8080/api/students/count').then(res => res.ok ? res.json() : { count: 0 }),
+        fetch('http://localhost:8080/api/staff/count').then(res => res.ok ? res.json() : { count: 0 }),
+        fetch('http://localhost:8080/api/timetables/classes/count').then(res => res.ok ? res.json() : { count: 0 }),
+        fetch('http://localhost:8080/api/fees/total-collected').then(res => res.ok ? res.json() : { amount: 0 }),
+        fetch('http://localhost:8080/api/library/books/count').then(res => res.ok ? res.json() : { count: 0 }),
+        fetch('http://localhost:8080/api/events/current-month/count').then(res => res.ok ? res.json() : { count: 0 })
       ]);
 
-      const statsData = {
-        totalStudents: studentsRes.ok ? await studentsRes.json() : 1247,
-        teachingStaff: staffRes.ok ? await staffRes.json() : 89,
-        totalClasses: classesRes.ok ? await classesRes.json() : 42,
-        feeCollection: feesRes.ok ? await feesRes.json() : 85420,
-        libraryBooks: booksRes.ok ? await booksRes.json() : 3567,
-        eventsThisMonth: eventsRes.ok ? await eventsRes.json() : 8
-      };
-
-      setStats(statsData);
+      setStats({
+        totalStudents: studentsRes.count || 0,
+        teachingStaff: staffRes.count || 0,
+        totalClasses: classesRes.count || 0,
+        feeCollection: feesRes.amount || 0,
+        libraryBooks: booksRes.count || 0,
+        eventsThisMonth: eventsRes.count || 0
+      });
     } catch (error) {
       console.error('Error fetching stats:', error);
+      // Keep default values of 0 on error
     } finally {
       setLoading(false);
     }

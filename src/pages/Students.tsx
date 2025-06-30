@@ -1,26 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Home, Users, Plus, Edit, Eye, Archive } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import AddStudentModal from "@/components/forms/AddStudentModal";
-import {
-  getAllStudents,
-  updateStudent,
-  deleteStudent,
-  getStudentsByStatus,
-  getStudentsByGrade,
-  searchStudents,
-  getStudentGuardians,
-  getStudentMedicalRecords,
-  getStudentAcademicRecords
-} from "@/services/studentApiService";
+import { Home, Plus, Search, Eye, Edit, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { getAllStudents, deleteStudent } from "@/services/studentApiService";
+import StudentForm from "@/components/forms/StudentForm";
 
 interface Student {
   id: number;
@@ -29,83 +21,46 @@ interface Student {
   studentId: string;
   email: string;
   phone?: string;
-  dateOfBirth: string;
-  gender: string;
-  address?: string;
-  enrollmentStatus: string;
-  enrollmentDate: string;
   currentGrade?: string;
   section?: string;
-}
-
-interface Guardian {
-  id: number;
-  firstName: string;
-  lastName: string;
-  relationship: string;
-  primaryPhone: string;
-  email?: string;
-  isPrimary: boolean;
-}
-
-interface MedicalRecord {
-  id: number;
-  recordType: string;
-  description: string;
-  recordDate: string;
-  doctorName?: string;
-}
-
-interface AcademicRecord {
-  id: number;
-  academicYear: string;
-  grade: string;
-  term: string;
-  gpa?: number;
-  status: string;
+  enrollmentStatus: string;
 }
 
 export default function Students() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [guardians, setGuardians] = useState<Guardian[]>([]);
-  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
-  const [academicRecords, setAcademicRecords] = useState<AcademicRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [gradeFilter, setGradeFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [isLoading, setIsLoading] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [gradeFilter, setGradeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
 
   useEffect(() => {
-    loadStudents();
+    fetchStudents();
   }, []);
 
   useEffect(() => {
     filterStudents();
   }, [students, searchTerm, gradeFilter, statusFilter]);
 
-  const loadStudents = async () => {
-    setIsLoading(true);
+  const fetchStudents = async () => {
     try {
-      const data = await getAllStudents() as Student[];
+      setLoading(true);
+      const data = await getAllStudents();
       setStudents(data);
-      toast({
-        title: "Success",
-        description: "Students loaded successfully",
-      });
     } catch (error) {
-      console.error("Error loading students:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load students",
-        variant: "destructive",
-      });
+      console.error('Error fetching students:', error);
+      toast.error('Failed to fetch students');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -121,80 +76,46 @@ export default function Students() {
       );
     }
 
-    if (gradeFilter !== "ALL") {
+    if (gradeFilter !== "all") {
       filtered = filtered.filter(student => student.currentGrade === gradeFilter);
     }
 
-    if (statusFilter !== "ALL") {
+    if (statusFilter !== "all") {
       filtered = filtered.filter(student => student.enrollmentStatus === statusFilter);
     }
 
     setFilteredStudents(filtered);
   };
 
-  const handleViewStudent = async (student: Student) => {
-    setSelectedStudent(student);
-    try {
-      const [guardianData, medicalData, academicData] = await Promise.all([
-        getStudentGuardians(student.id) as Promise<Guardian[]>,
-        getStudentMedicalRecords(student.id) as Promise<MedicalRecord[]>,
-        getStudentAcademicRecords(student.id) as Promise<AcademicRecord[]>
-      ]);
-      setGuardians(guardianData);
-      setMedicalRecords(medicalData);
-      setAcademicRecords(academicData);
-    } catch (error) {
-      console.error("Error loading student details:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load student details",
-        variant: "destructive",
-      });
+  const handleDelete = async (studentId: number) => {
+    if (window.confirm('Are you sure you want to delete this student?')) {
+      try {
+        await deleteStudent(studentId);
+        toast.success('Student deleted successfully');
+        fetchStudents();
+      } catch (error) {
+        console.error('Error deleting student:', error);
+        toast.error('Failed to delete student');
+      }
     }
   };
 
-  const handleDeleteStudent = async (studentId: number) => {
-    try {
-      await deleteStudent(studentId);
-      setStudents(students.filter(s => s.id !== studentId));
-      toast({
-        title: "Success",
-        description: "Student archived successfully",
-      });
-    } catch (error) {
-      console.error("Error archiving student:", error);
-      toast({
-        title: "Error",
-        description: "Failed to archive student",
-        variant: "destructive",
-      });
+  const handleFormSuccess = () => {
+    setShowAddForm(false);
+    setShowEditForm(false);
+    setSelectedStudent(null);
+    fetchStudents();
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active': return 'bg-green-500';
+      case 'inactive': return 'bg-gray-500';
+      case 'graduated': return 'bg-blue-500';
+      case 'suspended': return 'bg-red-500';
+      default: return 'bg-gray-500';
     }
   };
-
-  const getStatusBadge = (status: string) => {
-    const statusColors = {
-      ACTIVE: "bg-green-500",
-      INACTIVE: "bg-yellow-500",
-      GRADUATED: "bg-blue-500",
-      SUSPENDED: "bg-red-500"
-    };
-    return statusColors[status as keyof typeof statusColors] || "bg-gray-500";
-  };
-
-  const getStatusCounts = () => {
-    return {
-      total: students.length,
-      active: students.filter(s => s.enrollmentStatus === "ACTIVE").length,
-      inactive: students.filter(s => s.enrollmentStatus === "INACTIVE").length,
-      graduated: students.filter(s => s.enrollmentStatus === "GRADUATED").length
-    };
-  };
-
-  const statusCounts = getStatusCounts();
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
 
   return (
     <div className="min-h-screen bg-[#121828] text-white dark:bg-gray-100 dark:text-gray-900 flex flex-col">
@@ -205,13 +126,13 @@ export default function Students() {
           <div>
             <h1 className="text-2xl font-bold">Student Management</h1>
             <p className="text-gray-400 dark:text-gray-600">
-              Manage student records and academic information
+              Manage student records and information
             </p>
           </div>
           <div className="flex gap-2">
-            <Button 
+            <Button
+              onClick={() => setShowAddForm(true)}
               className="bg-green-500 text-white hover:bg-green-600"
-              onClick={() => setShowAddModal(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Student
@@ -229,334 +150,229 @@ export default function Students() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-400">{statusCounts.total}</div>
+              <div className="text-2xl font-bold text-blue-400">{students.length}</div>
               <p className="text-sm text-gray-400">Total Students</p>
             </CardContent>
           </Card>
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-400">{statusCounts.active}</div>
-              <p className="text-sm text-gray-400">Active Enrollment</p>
+              <div className="text-2xl font-bold text-green-400">
+                {students.filter(s => s.enrollmentStatus === 'ACTIVE').length}
+              </div>
+              <p className="text-sm text-gray-400">Active Students</p>
             </CardContent>
           </Card>
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-400">{statusCounts.inactive}</div>
-              <p className="text-sm text-gray-400">Inactive</p>
+              <div className="text-2xl font-bold text-yellow-400">
+                {students.filter(s => s.enrollmentStatus === 'INACTIVE').length}
+              </div>
+              <p className="text-sm text-gray-400">Inactive Students</p>
             </CardContent>
           </Card>
           <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-purple-400">{statusCounts.graduated}</div>
+              <div className="text-2xl font-bold text-purple-400">
+                {students.filter(s => s.enrollmentStatus === 'GRADUATED').length}
+              </div>
               <p className="text-sm text-gray-400">Graduated</p>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="directory" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="directory">Student Directory</TabsTrigger>
-            <TabsTrigger value="enrollment">Enrollment</TabsTrigger>
-            <TabsTrigger value="academic">Academic Records</TabsTrigger>
-            <TabsTrigger value="guardians">Parents/Guardians</TabsTrigger>
-            <TabsTrigger value="medical">Medical Records</TabsTrigger>
-          </TabsList>
+        {/* Filters */}
+        <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200 mb-6">
+          <CardHeader>
+            <CardTitle>Filter Students</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search students..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by Grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  {Array.from({length: 12}, (_, i) => (
+                    <SelectItem key={i+1} value={(i+1).toString()}>Grade {i+1}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="GRADUATED">Graduated</SelectItem>
+                  <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="directory">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Student Directory
-                </CardTitle>
-                <div className="flex gap-4 items-center">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Search students..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300"
-                    />
-                  </div>
-                  <select
-                    value={gradeFilter}
-                    onChange={(e) => setGradeFilter(e.target.value)}
-                    className="bg-[#252e3e] dark:bg-gray-50 border border-gray-700 dark:border-gray-300 rounded px-3 py-2"
-                  >
-                    <option value="ALL">All Grades</option>
-                    {Array.from({length: 12}, (_, i) => (
-                      <option key={i+1} value={(i+1).toString()}>Grade {i+1}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-[#252e3e] dark:bg-gray-50 border border-gray-700 dark:border-gray-300 rounded px-3 py-2"
-                  >
-                    <option value="ALL">All Status</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                    <option value="GRADUATED">Graduated</option>
-                    <option value="SUSPENDED">Suspended</option>
-                  </select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex justify-center items-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredStudents.map((student) => (
-                      <div key={student.id} className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg border border-gray-700 dark:border-gray-200">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="font-semibold text-lg">
-                                {student.firstName} {student.lastName}
-                              </h3>
-                              <Badge className={`${getStatusBadge(student.enrollmentStatus)} text-white`}>
-                                {student.enrollmentStatus}
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                              <div>
-                                <span className="text-gray-400">Student ID:</span>
-                                <p className="font-medium">{student.studentId}</p>
-                              </div>
-                              <div>
-                                <span className="text-gray-400">Grade:</span>
-                                <p className="font-medium">{student.currentGrade}</p>
-                              </div>
-                              <div>
-                                <span className="text-gray-400">Section:</span>
-                                <p className="font-medium">{student.section}</p>
-                              </div>
-                              <div>
-                                <span className="text-gray-400">Email:</span>
-                                <p className="font-medium">{student.email}</p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleViewStudent(student)}
-                              className="bg-blue-500 text-white hover:bg-blue-600"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="bg-green-500 text-white hover:bg-green-600"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDeleteStudent(student.id)}
-                              className="bg-red-500 text-white hover:bg-red-600"
-                            >
-                              <Archive className="h-4 w-4" />
-                            </Button>
-                          </div>
+        {/* Students Table */}
+        <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+          <CardHeader>
+            <CardTitle>Student Directory</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredStudents.map((student) => (
+                  <div key={student.id} className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg border border-gray-700 dark:border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-4 mb-2">
+                          <h3 className="font-semibold">{student.firstName} {student.lastName}</h3>
+                          <Badge className={`${getStatusBadgeColor(student.enrollmentStatus)} text-white`}>
+                            {student.enrollmentStatus}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm text-gray-400">
+                          <div><span className="font-medium">ID:</span> {student.studentId}</div>
+                          <div><span className="font-medium">Grade:</span> {student.currentGrade || 'N/A'}</div>
+                          <div><span className="font-medium">Section:</span> {student.section || 'N/A'}</div>
+                          <div><span className="font-medium">Email:</span> {student.email}</div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="enrollment">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle>Enrollment Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedStudent ? (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">
-                      {selectedStudent.firstName} {selectedStudent.lastName}
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div>
-                        <span className="text-gray-400">Enrollment Status:</span>
-                        <p className="font-medium">{selectedStudent.enrollmentStatus}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Enrollment Date:</span>
-                        <p className="font-medium">{selectedStudent.enrollmentDate}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Current Grade:</span>
-                        <p className="font-medium">{selectedStudent.currentGrade}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Section:</span>
-                        <p className="font-medium">{selectedStudent.section}</p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedStudent(student);
+                            setShowViewDialog(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedStudent(student);
+                            setShowEditForm(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(student.id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                    <p>Select a student to view enrollment details</p>
+                ))}
+                {filteredStudents.length === 0 && !loading && (
+                  <div className="text-center py-8 text-gray-400">
+                    No students found matching your criteria.
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="academic">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle>Academic Records</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedStudent ? (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">
-                      {selectedStudent.firstName} {selectedStudent.lastName}
-                    </h3>
-                    <div className="space-y-2">
-                      {academicRecords.map((record) => (
-                        <div key={record.id} className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-400">Year:</span>
-                              <p className="font-medium">{record.academicYear}</p>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Grade:</span>
-                              <p className="font-medium">{record.grade}</p>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Term:</span>
-                              <p className="font-medium">{record.term}</p>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">GPA:</span>
-                              <p className="font-medium">{record.gpa}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                    <p>Select a student to view academic records</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="guardians">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle>Parents/Guardians</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedStudent ? (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">
-                      {selectedStudent.firstName} {selectedStudent.lastName}
-                    </h3>
-                    <div className="space-y-2">
-                      {guardians.map((guardian) => (
-                        <div key={guardian.id} className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-400">Name:</span>
-                              <p className="font-medium">{guardian.firstName} {guardian.lastName}</p>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Relationship:</span>
-                              <p className="font-medium">{guardian.relationship}</p>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Phone:</span>
-                              <p className="font-medium">{guardian.primaryPhone}</p>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Email:</span>
-                              <p className="font-medium">{guardian.email}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                    <p>Select a student to view guardian information</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="medical">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle>Medical Records</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedStudent ? (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">
-                      {selectedStudent.firstName} {selectedStudent.lastName}
-                    </h3>
-                    <div className="space-y-2">
-                      {medicalRecords.map((record) => (
-                        <div key={record.id} className="bg-[#252e3e] dark:bg-gray-50 p-3 rounded">
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-400">Record Type:</span>
-                              <p className="font-medium">{record.recordType}</p>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Date:</span>
-                              <p className="font-medium">{record.recordDate}</p>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Doctor:</span>
-                              <p className="font-medium">{record.doctorName}</p>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Description:</span>
-                              <p className="font-medium">{record.description}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                    <p>Select a student to view medical records</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
-      
-      <AddStudentModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSuccess={loadStudents}
-      />
+
+      {/* Add Student Dialog */}
+      <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Student</DialogTitle>
+          </DialogHeader>
+          <StudentForm onSuccess={handleFormSuccess} onCancel={() => setShowAddForm(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Student Dialog */}
+      <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Student</DialogTitle>
+          </DialogHeader>
+          {selectedStudent && (
+            <StudentForm 
+              student={selectedStudent} 
+              onSuccess={handleFormSuccess} 
+              onCancel={() => setShowEditForm(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Student Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Student Details</DialogTitle>
+          </DialogHeader>
+          {selectedStudent && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">First Name:</label>
+                  <p className="text-gray-600">{selectedStudent.firstName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Last Name:</label>
+                  <p className="text-gray-600">{selectedStudent.lastName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Student ID:</label>
+                  <p className="text-gray-600">{selectedStudent.studentId}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Email:</label>
+                  <p className="text-gray-600">{selectedStudent.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Phone:</label>
+                  <p className="text-gray-600">{selectedStudent.phone || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Grade:</label>
+                  <p className="text-gray-600">{selectedStudent.currentGrade || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Section:</label>
+                  <p className="text-gray-600">{selectedStudent.section || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Status:</label>
+                  <Badge className={`${getStatusBadgeColor(selectedStudent.enrollmentStatus)} text-white`}>
+                    {selectedStudent.enrollmentStatus}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       
       <footer className="bg-[#1A1F2C] dark:bg-white border-t border-gray-800 dark:border-gray-200 py-4">
         <div className="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-600">

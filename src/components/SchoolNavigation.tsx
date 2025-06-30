@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -24,15 +23,17 @@ const navigationItems = [
   },
   {
     title: "Students",
-    href: "/students",
+    description: "Manage student records",
     icon: Users,
-    description: "Student information and management"
+    href: "/students",
+    color: "bg-blue-500"
   },
   {
     title: "Staff",
-    href: "/staff",
+    description: "Manage staff records",
     icon: UserCheck,
-    description: "Staff and HR management"
+    href: "/staff",
+    color: "bg-green-500"
   },
   {
     title: "Academics",
