@@ -30,4 +30,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     
     @Query("SELECT e FROM Event e WHERE e.title LIKE %:keyword% OR e.description LIKE %:keyword%")
     List<Event> searchEvents(@Param("keyword") String keyword);
+
+    // Add this to com.payments.repository.EventRepository:
+    @Query("SELECT COUNT(e) FROM Event e WHERE YEAR(e.eventDate) = :year AND MONTH(e.eventDate) = :month")
+    long countEventsByYearAndMonth(@Param("year") int year, @Param("month") int month);
 }
