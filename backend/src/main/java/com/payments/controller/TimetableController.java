@@ -1,151 +1,135 @@
 
-
 package com.payments.controller;
 
 import com.payments.model.Timetable;
+import com.payments.model.User;
 import com.payments.service.TimetableService;
+import com.payments.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
-import java.util.Optional;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/timetables")
 @CrossOrigin(origins = "*")
 public class TimetableController {
-
+    
     @Autowired
     private TimetableService timetableService;
-
+    
+    @Autowired
+    private UserService userService;
+    
     @GetMapping
     public ResponseEntity<List<Timetable>> getAllTimetables() {
-        try {
-            List<Timetable> timetables = timetableService.getAllTimetables();
-            return ResponseEntity.ok(timetables);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables", e);
-        }
+        List<Timetable> timetables = timetableService.getAllTimetables();
+        return ResponseEntity.ok(timetables);
     }
-
+    
     @GetMapping("/{id}")
     public ResponseEntity<Timetable> getTimetableById(@PathVariable Long id) {
-        try {
-            Optional<Timetable> timetable = timetableService.getTimetableById(id);
-            return timetable.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetable with id: " + id, e);
-        }
+        Optional<Timetable> timetable = timetableService.getTimetableById(id);
+        return timetable.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
-
-    @GetMapping("/grade/{grade}")
-    public ResponseEntity<List<Timetable>> getTimetablesByGrade(@PathVariable String grade) {
-        try {
-            List<Timetable> timetables = timetableService.getTimetablesByGrade(grade);
-            return ResponseEntity.ok(timetables);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables for grade: " + grade, e);
-        }
-    }
-
-    @GetMapping("/grade/{grade}/section/{section}")
-    public ResponseEntity<List<Timetable>> getTimetablesByGradeAndSection(
-            @PathVariable String grade, @PathVariable String section) {
-        try {
-            List<Timetable> timetables = timetableService.getTimetablesByGradeAndSection(grade, section);
-            return ResponseEntity.ok(timetables);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables for grade: " + grade + " and section: " + section, e);
-        }
-    }
-
-    @GetMapping("/day/{dayOfWeek}")
-    public ResponseEntity<List<Timetable>> getTimetablesByDay(@PathVariable String dayOfWeek) {
-        try {
-            List<Timetable> timetables = timetableService.getTimetablesByDay(dayOfWeek);
-            return ResponseEntity.ok(timetables);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables for day: " + dayOfWeek, e);
-        }
-    }
-
-    @GetMapping("/teacher/{teacherId}")
-    public ResponseEntity<List<Timetable>> getTimetablesByTeacher(@PathVariable Long teacherId) {
-        try {
-            List<Timetable> timetables = timetableService.getTimetablesByTeacher(teacherId);
-            return ResponseEntity.ok(timetables);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables for teacher: " + teacherId, e);
-        }
-    }
-
-    @GetMapping("/subject/{subject}")
-    public ResponseEntity<List<Timetable>> getTimetablesBySubject(@PathVariable String subject) {
-        try {
-            List<Timetable> timetables = timetableService.getTimetablesBySubject(subject);
-            return ResponseEntity.ok(timetables);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetables for subject: " + subject, e);
-        }
-    }
-
+    
     @PostMapping
-    public ResponseEntity<Timetable> createTimetable(@RequestBody Timetable timetable) {
+    public ResponseEntity<Timetable> createTimetable(@RequestBody Map<String, Object> timetableData) {
         try {
-            Timetable createdTimetable = timetableService.createTimetable(timetable);
-            return new ResponseEntity<>(createdTimetable, HttpStatus.CREATED);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid timetable data", e);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create timetable", e);
-        }
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Timetable> updateTimetable(@PathVariable Long id, @RequestBody Timetable timetable) {
-        try {
-            Timetable updatedTimetable = timetableService.updateTimetable(id, timetable);
-            if (updatedTimetable != null) {
-                return ResponseEntity.ok(updatedTimetable);
+            Timetable timetable = new Timetable();
+            timetable.setSubject((String) timetableData.get("subject"));
+            timetable.setGrade((String) timetableData.get("grade"));
+            timetable.setSection((String) timetableData.get("section"));
+            timetable.setDayOfWeek((String) timetableData.get("dayOfWeek"));
+            timetable.setStartTime(java.time.LocalTime.parse((String) timetableData.get("startTime")));
+            timetable.setEndTime(java.time.LocalTime.parse((String) timetableData.get("endTime")));
+            timetable.setRoom((String) timetableData.get("room"));
+            timetable.setAcademicYear((String) timetableData.get("academicYear"));
+            
+            // Handle teacher - find by username or create new user
+            String teacherName = (String) timetableData.get("teacher");
+            Optional<User> existingUser = userService.findByUsername(teacherName);
+            User teacher;
+            if (existingUser.isPresent()) {
+                teacher = existingUser.get();
+            } else {
+                // Create new teacher user
+                teacher = new User();
+                teacher.setUsername(teacherName);
+                teacher.setPassword("defaultPassword"); // This should be handled properly in production
+                teacher.setEnabled(true);
+                teacher = userService.createUser(teacher);
             }
-            return ResponseEntity.notFound().build();
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid timetable data", e);
+            timetable.setTeacher(teacher);
+            
+            Timetable savedTimetable = timetableService.saveTimetable(timetable);
+            return ResponseEntity.ok(savedTimetable);
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update timetable with id: " + id, e);
+            return ResponseEntity.badRequest().build();
         }
     }
-
+    
+    @PutMapping("/{id}")
+    public ResponseEntity<Timetable> updateTimetable(@PathVariable Long id, @RequestBody Map<String, Object> timetableData) {
+        try {
+            Optional<Timetable> existingTimetable = timetableService.getTimetableById(id);
+            if (!existingTimetable.isPresent()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Timetable timetable = existingTimetable.get();
+            timetable.setSubject((String) timetableData.get("subject"));
+            timetable.setGrade((String) timetableData.get("grade"));
+            timetable.setSection((String) timetableData.get("section"));
+            timetable.setDayOfWeek((String) timetableData.get("dayOfWeek"));
+            timetable.setStartTime(java.time.LocalTime.parse((String) timetableData.get("startTime")));
+            timetable.setEndTime(java.time.LocalTime.parse((String) timetableData.get("endTime")));
+            timetable.setRoom((String) timetableData.get("room"));
+            timetable.setAcademicYear((String) timetableData.get("academicYear"));
+            
+            // Handle teacher update
+            String teacherName = (String) timetableData.get("teacher");
+            Optional<User> existingUser = userService.findByUsername(teacherName);
+            User teacher;
+            if (existingUser.isPresent()) {
+                teacher = existingUser.get();
+            } else {
+                teacher = new User();
+                teacher.setUsername(teacherName);
+                teacher.setPassword("defaultPassword");
+                teacher.setEnabled(true);
+                teacher = userService.createUser(teacher);
+            }
+            timetable.setTeacher(teacher);
+            
+            Timetable savedTimetable = timetableService.saveTimetable(timetable);
+            return ResponseEntity.ok(savedTimetable);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTimetable(@PathVariable Long id) {
-        try {
-            boolean deleted = timetableService.deleteTimetable(id);
-            if (deleted) {
-                return ResponseEntity.noContent().build();
-            }
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete timetable with id: " + id, e);
+        boolean deleted = timetableService.deleteTimetable(id);
+        if (deleted) {
+            return ResponseEntity.ok().build();
         }
+        return ResponseEntity.notFound().build();
     }
-
-    @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getTimetableStats() {
-        try {
-            Map<String, Object> stats = new HashMap<>();
-            stats.put("totalClasses", timetableService.getTotalClassCount());
-            stats.put("activePeriods", timetableService.getActivePeriodCount());
-            stats.put("conflicts", timetableService.getConflictCount());
-            stats.put("freeSlots", timetableService.getFreeSlotCount());
-            return ResponseEntity.ok(stats);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve timetable stats", e);
-        }
+    
+    @GetMapping("/grade/{grade}")
+    public ResponseEntity<List<Timetable>> getTimetablesByGrade(@PathVariable String grade) {
+        List<Timetable> timetables = timetableService.getTimetablesByGrade(grade);
+        return ResponseEntity.ok(timetables);
+    }
+    
+    @GetMapping("/teacher/{teacherId}")
+    public ResponseEntity<List<Timetable>> getTimetablesByTeacher(@PathVariable Long teacherId) {
+        List<Timetable> timetables = timetableService.getTimetablesByTeacher(teacherId);
+        return ResponseEntity.ok(timetables);
     }
 }
-
