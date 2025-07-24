@@ -2,6 +2,7 @@ com\payments\repository\StudentRegistrationRepository.class
 com\payments\repository\AcademicRecordRepository.class
 com\payments\repository\SchoolInformationRepository.class
 com\payments\repository\StaffRepository.class
+com\payments\service\ExamService.class
 com\payments\service\LibraryService.class
 com\payments\controller\CommunicationController.class
 com\payments\dto\BulkUserImportDto.class
@@ -74,6 +75,7 @@ com\payments\dto\SchoolInformationDto.class
 com\payments\model\SchoolInformation.class
 com\example\schoolschedule\repository\TimetableEntryRepository.class
 com\payments\repository\FacilityRepository.class
+com\payments\controller\ExamController.class
 com\payments\model\Timestamp.class
 com\payments\repository\EventRepository.class
 com\payments\model\SecurityFeatures.class
@@ -101,8 +103,10 @@ com\payments\service\UserService.class
 com\payments\model\Message.class
 com\payments\repository\StudentRepository.class
 com\payments\service\StaffService.class
+com\payments\controller\StatsController.class
 com\payments\dto\AttendanceAnalyticsDto.class
 com\payments\controller\ReportsController.class
+com\payments\controller\CalendarController.class
 com\payments\model\Guardian.class
 com\payments\model\ResourceUsageLog.class
 com\payments\dto\FinancialAnalyticsDto.class

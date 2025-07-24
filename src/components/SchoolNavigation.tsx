@@ -1,5 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"; // For conditional class names
+import { motion } from "framer-motion"; // For animations
+
+// Import all necessary Lucide icons
 import {
   Users,
   GraduationCap,
@@ -14,71 +17,77 @@ import {
   Building,
 } from "lucide-react";
 
-const navigationItems = [
+// Define the structure for navigation items for type safety and consistency
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  description: string;
+}
+
+const navigationItems: NavigationItem[] = [
   {
-    title: "Dashboard",
+    name: "Dashboard",
     href: "/dashboard",
     icon: Home,
     description: "Overview and key metrics"
   },
   {
-    title: "Students",
+    name: "Students",
     description: "Manage student records",
     icon: Users,
     href: "/students",
-    color: "bg-blue-500"
   },
   {
-    title: "Staff",
+    name: "Staff",
     description: "Manage staff records",
     icon: UserCheck,
     href: "/staff",
-    color: "bg-green-500"
   },
   {
-    title: "Academics",
+    name: "Academics",
     href: "/academics",
     icon: GraduationCap,
     description: "Classes, grades, and curriculum"
   },
   {
-    title: "Finance",
+    name: "Finance",
     href: "/finance",
     icon: DollarSign,
     description: "Fee management and payments"
   },
   {
-    title: "Library",
+    name: "Library",
     href: "/library",
     icon: BookOpen,
     description: "Library management system"
   },
   {
-    title: "Schedule",
+    name: "Schedule",
     href: "/schedule",
     icon: Calendar,
     description: "Timetables and scheduling"
   },
   {
-    title: "Communication",
+    name: "Communication",
     href: "/communication",
     icon: MessageSquare,
     description: "Messages and announcements"
   },
   {
-    title: "Reports",
+    name: "Reports",
     href: "/reports",
     icon: BarChart3,
     description: "Analytics and reporting"
   },
   {
-    title: "Facilities",
+    name: "Facilities",
     href: "/facilities",
     icon: Building,
     description: "Infrastructure and resources"
   },
   {
-    title: "Settings",
+    name: "Settings",
     href: "/settings",
     icon: Settings,
     description: "System configuration"
@@ -89,37 +98,63 @@ export default function SchoolNavigation() {
   const location = useLocation();
 
   return (
-    <nav className="bg-[#1A1F2C] dark:bg-white border border-gray-800 dark:border-gray-200 rounded-lg p-4">
-      <h2 className="text-lg font-semibold mb-4 text-white dark:text-gray-900">
-        School Management
-      </h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {navigationItems.map((item) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {navigationItems.map((item, index) => {
           const isActive = location.pathname === item.href;
           const Icon = item.icon;
-          
+
           return (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={cn(
-                "flex flex-col items-center p-4 rounded-lg transition-colors group",
-                isActive
-                  ? "bg-purple-600 text-white"
-                  : "bg-[#252e3e] dark:bg-gray-50 text-gray-300 dark:text-gray-600 hover:bg-purple-600 hover:text-white dark:hover:bg-purple-600 dark:hover:text-white"
-              )}
-            >
-              <Icon className="h-6 w-6 mb-2" />
-              <span className="text-sm font-medium text-center">
-                {item.title}
-              </span>
-              <span className="text-xs text-center opacity-75 mt-1">
-                {item.description}
-              </span>
-            </Link>
+              <motion.div
+                  key={item.href}
+                  initial={{ opacity: 0, y: 20 }} // Initial state for animation
+                  animate={{ opacity: 1, y: 0 }}   // Animate to this state
+                  transition={{ duration: 0.3, delay: index * 0.05 }} // Staggered animation
+                  // Apply shadow that is dark on light background, but still visible on dark background
+                  whileHover={{ scale: 1.03, boxShadow: "0 8px 16px rgba(0, 0, 0, 0.2)" }} // More subtle shadow for light mode
+                  whileTap={{ scale: 0.98 }} // Slight press effect on click
+                  className="rounded-lg overflow-hidden" // Ensures shadow/scale behaves correctly
+              >
+                <Link
+                    to={item.href}
+                    className={cn(
+                        "flex flex-col items-center justify-center p-4 h-full border", // Base styles
+                        "transition-all duration-200 group text-center", // Transition & Group for hover effects
+
+                        // Default (Light Mode) styles
+                        "bg-gray-100 border-gray-200 text-gray-700",
+                        "hover:bg-purple-100 hover:border-purple-300 hover:text-purple-800",
+
+                        // Dark Mode styles (overrides default when 'dark' class is present)
+                        "dark:bg-[#212738] dark:border-gray-700 dark:text-gray-300",
+                        "dark:hover:bg-purple-700 dark:hover:border-purple-700 dark:hover:text-white",
+
+                        // Active state styles (apply on top of previous, regardless of theme for consistent purple active)
+                        isActive && "bg-purple-600 border-purple-600 text-white shadow-lg"
+                    )}
+                >
+                  <Icon className={cn(
+                      "h-9 w-9 mb-3 transition-colors duration-200", // Base icon styles
+                      // Default (Light Mode) icon color
+                      "text-purple-600 group-hover:text-purple-800",
+                      // Dark Mode icon color
+                      "dark:text-purple-400 dark:group-hover:text-white",
+                      // Active state icon color override
+                      isActive && "text-white" // Active icon is white in both themes
+                  )} />
+                  <span className="text-base font-semibold mb-1 line-clamp-1">
+                    {item.name}
+                  </span>
+                  <span className="text-xs line-clamp-2 transition-colors duration-200
+                               // Default (Light Mode) description text
+                               text-gray-500 group-hover:text-purple-800
+                               // Dark Mode description text
+                               dark:text-gray-400 dark:group-hover:text-white">
+                    {item.description}
+                  </span>
+                </Link>
+              </motion.div>
           );
         })}
       </div>
-    </nav>
   );
 }

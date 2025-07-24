@@ -12,11 +12,26 @@
     "moduleDetection": "force",
     "noEmit": true,
 
+    "esModuleInterop": true,              // Keep this, it's correct for import syntax
+    "allowSyntheticDefaultImports": true, // Keep this, usually goes with esModuleInterop
+
+    /* Type Definition Resolution */
+    "baseUrl": ".",                      // Ensure baseUrl is set if you're using non-relative paths
+    "typeRoots": [                       // <--- ADD THIS SECTION
+      "./node_modules/@types",           // Default location for @types packages
+      "./src/types"                      // Your custom types directory
+    ],
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.js",
+    "./src/types/module-declarations.d.ts"
+  ]
 }
