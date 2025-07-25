@@ -17,10 +17,12 @@ interface Staff {
   id: number;
   firstName: string;
   lastName: string;
+  employeeId: string;
   email: string;
   phone: string;
   department: string;
   position: string;
+  employmentStatus: string;
   salary: number;
   hireDate: string;
   status: string;
@@ -70,17 +72,8 @@ export default function Staff() {
     }
   };
 
-  const handleStaffSaved = (staffData: any) => {
-    if (selectedStaff) {
-      // Update existing staff
-      setStaff(staff.map(s => s.id === selectedStaff.id ? { ...s, ...staffData } : s));
-      toast.success('Staff updated successfully');
-    } else {
-      // Add new staff
-      const newStaff = { ...staffData, id: Date.now() };
-      setStaff([...staff, newStaff]);
-      toast.success('Staff added successfully');
-    }
+  const handleStaffSaved = () => {
+    fetchStaff(); // Refresh the staff list
     setIsDialogOpen(false);
     setSelectedStaff(null);
   };
@@ -147,7 +140,7 @@ export default function Staff() {
                 </DialogHeader>
                 <StaffForm
                   staff={selectedStaff}
-                  onSave={handleStaffSaved}
+                  onSuccess={handleStaffSaved}
                   onCancel={() => {
                     setIsDialogOpen(false);
                     setSelectedStaff(null);
