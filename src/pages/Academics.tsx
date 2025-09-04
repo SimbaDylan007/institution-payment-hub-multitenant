@@ -27,10 +27,10 @@ interface Grade {
   id: number;
   studentId: number;
   subjectId: number;
-  examType: string;
-  marks: number;
+  assessmentType: string;
+  marksObtained: number;
   maxMarks: number;
-  grade: string;
+  letterGrade: string;
   academicYear: string;
 }
 
@@ -120,10 +120,10 @@ export default function Academics() {
     const gradeData = {
       studentId: parseInt(formData.get('studentId') as string),
       subjectId: parseInt(formData.get('subjectId') as string),
-      examType: formData.get('examType'),
-      marks: parseInt(formData.get('marks') as string),
+      assessmentType: formData.get('assessmentType') as string,
+      marksObtained: parseInt(formData.get('marksObtained') as string),
       maxMarks: parseInt(formData.get('maxMarks') as string),
-      grade: formData.get('grade'),
+      letterGrade: formData.get('letterGrade'),
       academicYear: formData.get('academicYear')
     };
 
@@ -370,8 +370,8 @@ export default function Academics() {
                         <div>
                           <Label htmlFor="studentId">Student ID</Label>
                           <Input 
-                            id="studentId" 
-                            name="studentId" 
+                            id="studentId"
+                            name="studentId"
                             type="number"
                             defaultValue={selectedGrade?.studentId || ''}
                             className="bg-purple-800 border-purple-600" 
@@ -381,8 +381,8 @@ export default function Academics() {
                         <div>
                           <Label htmlFor="subjectId">Subject ID</Label>
                           <Input 
-                            id="subjectId" 
-                            name="subjectId" 
+                            id="subjectId"
+                            name="subjectId"
                             type="number"
                             defaultValue={selectedGrade?.subjectId || ''}
                             className="bg-purple-800 border-purple-600" 
@@ -390,8 +390,8 @@ export default function Academics() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="examType">Exam Type</Label>
-                          <Select name="examType" defaultValue={selectedGrade?.examType || ''}>
+                          <Label htmlFor="assessmentType">Exam Type</Label>
+                          <Select name="assessmentType" defaultValue={selectedGrade?.assessmentType || ''}>
                             <SelectTrigger className="bg-purple-800 border-purple-600">
                               <SelectValue placeholder="Select exam type" />
                             </SelectTrigger>
@@ -405,12 +405,12 @@ export default function Academics() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label htmlFor="marks">Marks Obtained</Label>
+                            <Label htmlFor="marksObtained">Marks Obtained</Label>
                             <Input 
-                              id="marks" 
-                              name="marks" 
+                              id="marksObtained"
+                              name="marksObtained"
                               type="number"
-                              defaultValue={selectedGrade?.marks || ''}
+                              defaultValue={selectedGrade?.marksObtained || ''}
                               className="bg-purple-800 border-purple-600" 
                               required 
                             />
@@ -428,11 +428,11 @@ export default function Academics() {
                           </div>
                         </div>
                         <div>
-                          <Label htmlFor="grade">Grade</Label>
+                          <Label htmlFor="letterGrade">Grade</Label>
                           <Input 
-                            id="grade" 
-                            name="grade" 
-                            defaultValue={selectedGrade?.grade || ''}
+                            id="letterGrade"
+                            name="letterGrade"
+                            defaultValue={selectedGrade?.letterGrade || ''}
                             className="bg-purple-800 border-purple-600" 
                             required 
                           />
@@ -473,7 +473,7 @@ export default function Academics() {
                     <div key={grade.id} className="flex justify-between items-center p-4 bg-purple-800/30 rounded-lg border border-purple-600">
                       <div>
                         <h3 className="font-semibold text-white">Student ID: {grade.studentId} • Subject ID: {grade.subjectId}</h3>
-                        <p className="text-sm text-gray-300">{grade.examType} • {grade.marks}/{grade.maxMarks} ({grade.grade})</p>
+                        <p className="text-sm text-gray-300">{grade.assessmentType} • {grade.marksObtained}/{grade.maxMarks} ({grade.letterGrade})</p>
                         <p className="text-sm text-gray-400">Academic Year: {grade.academicYear}</p>
                       </div>
                       <div className="flex gap-2">
@@ -529,7 +529,7 @@ export default function Academics() {
                   <Card className="bg-purple-800/30 border-purple-600">
                     <CardContent className="p-4">
                       <div className="text-2xl font-bold text-purple-400">
-                        {grades.length > 0 ? Math.round(grades.reduce((sum, g) => sum + (g.marks/g.maxMarks * 100), 0) / grades.length) : 0}%
+                        {grades.length > 0 ? Math.round(grades.reduce((sum, g) => sum + (g.marksObtained/g.maxMarks * 100), 0) / grades.length) : 0}%
                       </div>
                       <p className="text-sm text-gray-300">Average Performance</p>
                     </CardContent>

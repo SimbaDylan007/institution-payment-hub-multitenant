@@ -21,7 +21,7 @@ interface Student {
   parentName: string;
   parentPhone: string;
   enrollmentDate: string;
-  status: string;
+  enrollmentStatus: string;
 }
 
 interface StudentFormProps {
@@ -45,7 +45,7 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
     parentName: student?.parentName || "",
     parentPhone: student?.parentPhone || "",
     enrollmentDate: student?.enrollmentDate || new Date().toISOString().split('T')[0],
-    status: student?.status || "active"
+    enrollmentStatus: student?.enrollmentStatus || "active"
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -248,7 +248,7 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
         </div>
         <div>
           <Label htmlFor="status" className="text-white">Status</Label>
-          <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
+          <Select value={formData.enrollmentStatus} onValueChange={(value) => handleInputChange("status", value)}>
             <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
               <SelectValue />
             </SelectTrigger>

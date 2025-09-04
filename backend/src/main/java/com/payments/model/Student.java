@@ -4,6 +4,8 @@ package com.payments.model;
 import javax.persistence.*;
 import java.time.LocalDate;
 import java.util.List;
+import java.time.Year;
+import java.util.Random;
 
 @Entity
 @Table(name = "students")
@@ -17,10 +19,19 @@ public class Student {
     
     @Column(nullable = false)
     private String lastName;
-    
+
     @Column(unique = true, nullable = false)
     private String studentId;
-    
+
+    @PrePersist
+    public void generateStudentId() {
+        if (this.studentId == null) {
+            String year = String.valueOf(Year.now().getValue()).substring(2); // last 2 digits of year
+            int randomNum = new Random().nextInt(90000) + 10000; // 5-digit random number
+            this.studentId = "P" + year + randomNum;
+        }
+    }
+
     @Column(nullable = false)
     private String email;
     

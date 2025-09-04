@@ -25,11 +25,11 @@ public class Staff {
     private String email;
     
     private String phone;
-    
-    @Column(nullable = false)
+
+    @Column(nullable = true)
     private LocalDate dateOfBirth;
-    
-    @Column(nullable = false)
+
+    @Column(nullable = true)
     private String gender;
     
     private String address;

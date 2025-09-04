@@ -3,6 +3,7 @@ com\payments\repository\AcademicRecordRepository.class
 com\payments\repository\SchoolInformationRepository.class
 com\payments\repository\StaffRepository.class
 com\payments\service\ExamService.class
+OpenApiConfig.class
 com\payments\service\LibraryService.class
 com\payments\controller\CommunicationController.class
 com\payments\dto\BulkUserImportDto.class

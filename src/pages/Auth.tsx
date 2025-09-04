@@ -63,7 +63,7 @@ const Auth = () => {
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Institution Payment Hub</h1>
+              <h1 className="text-2xl font-bold">Pachedu Junior School</h1>
               <p className="text-gray-400">Student Payment Management</p>
             </div>
           </div>
@@ -142,7 +142,7 @@ const Auth = () => {
       {/* Right side - purple gradient */}
       <div className="hidden md:block md:w-1/2 bg-gradient-to-br from-purple-600 to-purple-800 p-12 flex flex-col justify-center">
         <div className="max-w-lg">
-          <h2 className="text-4xl font-bold mb-6">Institution Payment Management</h2>
+          <h2 className="text-4xl font-bold mb-6">Pachedu Junior School</h2>
           <ul className="space-y-4">
             <li className="flex items-center">
               <div className="mr-4 text-xl">•</div>
