@@ -11,9 +11,14 @@ import com.payments.service.EnrollmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpStatus;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.opencsv.exceptions.CsvValidationException;
 
 @RestController
 @RequestMapping("/api/students")
@@ -25,11 +30,13 @@ public class StudentManagementController {
     
     @Autowired
     private EnrollmentService enrollmentService;
-    
+
     @GetMapping
-    public ResponseEntity<List<Student>> getAllStudents() {
-        List<Student> students = studentService.getAllStudents();
-        return ResponseEntity.ok(students);
+    public ResponseEntity<Page<Student>> getAllStudents(
+            Pageable pageable,
+            @RequestParam(required = false, defaultValue = "") String searchTerm) {
+        Page<Student> studentPage = studentService.getAllStudents(pageable, searchTerm);
+        return ResponseEntity.ok(studentPage);
     }
     
     @GetMapping("/{id}")
@@ -58,11 +65,11 @@ public class StudentManagementController {
         return ResponseEntity.ok(students);
     }
     
-    @GetMapping("/search")
-    public ResponseEntity<List<Student>> searchStudents(@RequestParam String name) {
-        List<Student> students = studentService.searchStudentsByName(name);
-        return ResponseEntity.ok(students);
-    }
+//    @GetMapping("/search")
+//    public ResponseEntity<List<Student>> searchStudents(@RequestParam String name) {
+//        List<Student> students = studentService.searchStudentsByName(name);
+//        return ResponseEntity.ok(students);
+//    }
     
     @PostMapping
     public ResponseEntity<Student> createStudent(@RequestBody Student student) {
@@ -173,5 +180,18 @@ public class StudentManagementController {
     public ResponseEntity<Long> getStudentCount(@RequestParam String status) {
         Long count = studentService.getStudentCountByStatus(status);
         return ResponseEntity.ok(count);
+    }
+
+    @PostMapping("/bulk-upload")
+    public ResponseEntity<?> bulkAddStudents(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return new ResponseEntity<>("Please upload a file!", HttpStatus.BAD_REQUEST);
+        }
+        try {
+            List<Student> savedStudents = studentService.bulkAddStudents(file);
+            return new ResponseEntity<>(savedStudents, HttpStatus.CREATED);
+        } catch (IOException | CsvValidationException | RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
     }
 }

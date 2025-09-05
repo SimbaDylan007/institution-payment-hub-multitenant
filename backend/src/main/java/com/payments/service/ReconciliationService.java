@@ -31,38 +31,35 @@ public class ReconciliationService {
         List<PaymentAlert> pendingPayments = paymentRepository.findByStatus("PENDING");
 
         for (PaymentAlert payment : pendingPayments) {
-            // Try to find a student using the regNumber from the payment alert
             Optional<Student> studentOpt = studentRepository.findByStudentId(payment.getRegNumber());
 
             if (studentOpt.isPresent()) {
                 Student student = studentOpt.get();
-                BigDecimal currentBalance = ledgerRepository.getBalanceForStudent(student.getId());
 
-                // Simple auto-allocation rule: if the student has an outstanding balance.
-                if (currentBalance.compareTo(BigDecimal.ZERO) > 0) {
-                    logger.info("Auto-allocating payment {} to student {}", payment.getId(), student.getStudentId());
+                // --- THIS IS THE MODIFIED LOGIC ---
+                // The check for a positive balance has been removed.
+                // The system will now ALWAYS allocate a payment if the student ID matches.
 
-                    // Create the credit entry in the ledger
-                    FinancialLedger creditEntry = new FinancialLedger();
-                    creditEntry.setStudent(student);
-                    creditEntry.setTransactionType(TransactionType.CREDIT);
-                    creditEntry.setAmount(BigDecimal.valueOf(payment.getAmount()));
-                    creditEntry.setCurrency(Currency.USD); // Defaulting to USD
-                    creditEntry.setDescription("Auto-Allocated Payment. Ref: " + payment.getReference());
-                    creditEntry.setTransactionDate(LocalDate.now());
-                    creditEntry.setPaymentAlertId(payment.getId());
-                    ledgerRepository.save(creditEntry);
+                logger.info("Auto-allocating payment {} to student {}", payment.getId(), student.getStudentId());
 
-                    // Mark the payment as allocated
-                    payment.setStatus("AUTO_ALLOCATED");
-                    paymentRepository.save(payment);
-                } else {
-                    logger.warn("Payment {} for student {} found, but student has no outstanding balance. Skipping.", payment.getId(), student.getStudentId());
-                }
+                FinancialLedger creditEntry = new FinancialLedger();
+                creditEntry.setStudent(student);
+                creditEntry.setTransactionType(TransactionType.CREDIT);
+                creditEntry.setAmount(BigDecimal.valueOf(payment.getAmount()));
+                creditEntry.setCurrency(Currency.USD); // Defaulting to USD
+                creditEntry.setDescription("Auto-Allocated Prepayment/Credit. Ref: " + payment.getReference());
+                creditEntry.setTransactionDate(LocalDate.now());
+                creditEntry.setPaymentAlertId(payment.getId());
+                ledgerRepository.save(creditEntry);
+
+                payment.setStatus("AUTO_ALLOCATED");
+                paymentRepository.save(payment);
+
             } else {
                 logger.warn("Could not find student with ID {} for payment {}. Manual allocation required.", payment.getRegNumber(), payment.getId());
             }
         }
+
         logger.info("Finished automatic payment reconciliation job. Processed {} payments.", pendingPayments.size());
     }
 }

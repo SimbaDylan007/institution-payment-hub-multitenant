@@ -8,7 +8,12 @@ import com.payments.service.StaffService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpStatus;
+import java.io.IOException;
+import com.opencsv.exceptions.CsvValidationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -20,11 +25,13 @@ public class StaffManagementController {
     
     @Autowired
     private StaffService staffService;
-    
+
     @GetMapping
-    public ResponseEntity<List<Staff>> getAllStaff() {
-        List<Staff> staff = staffService.getAllStaff();
-        return ResponseEntity.ok(staff);
+    public ResponseEntity<Page<Staff>> getAllStaff(
+            Pageable pageable,
+            @RequestParam(required = false, defaultValue = "") String searchTerm) {
+        Page<Staff> staffPage = staffService.getAllStaff(pageable, searchTerm);
+        return ResponseEntity.ok(staffPage);
     }
     
     @GetMapping("/{id}")
@@ -133,4 +140,20 @@ public class StaffManagementController {
         Long count = staffService.getStaffCountByStatus(status);
         return ResponseEntity.ok(count);
     }
+
+    @PostMapping("/bulk-upload")
+    public ResponseEntity<?> bulkAddStaff(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return new ResponseEntity<>("Please upload a file!", HttpStatus.BAD_REQUEST);
+        }
+        try {
+            List<Staff> savedStaff = staffService.bulkAddStaff(file);
+            return new ResponseEntity<>(savedStaff, HttpStatus.CREATED);
+        } catch (IOException | CsvValidationException | RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+
+
 }

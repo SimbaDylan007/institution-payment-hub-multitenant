@@ -60,6 +60,7 @@ com\payments\controller\SettingsController.class
 com\payments\dto\UserStatisticsDto.class
 com\payments\controller\EventController.class
 com\payments\repository\NotificationPreferencesRepository.class
+com\payments\service\StaffService$1.class
 com\payments\repository\PaymentRepository.class
 com\payments\model\Staff.class
 com\payments\repository\FeeTypeRepository.class
@@ -98,6 +99,7 @@ com\payments\repository\SubjectRepository.class
 com\payments\model\AcademicRecord.class
 com\payments\model\StudentRegistrationRequest.class
 com\payments\service\SettingsService.class
+com\payments\service\StudentService$1.class
 com\payments\model\PickPaymentRequest.class
 com\payments\service\StudentRegistrationService.class
 com\payments\service\EventService.class
