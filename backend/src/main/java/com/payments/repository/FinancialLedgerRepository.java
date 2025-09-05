@@ -1,0 +1,54 @@
+package com.payments.repository;
+
+import com.payments.model.FinancialLedger;
+import com.payments.model.Student;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface FinancialLedgerRepository extends JpaRepository<FinancialLedger, Long> {
+
+    // --- Methods for the Financials Page ---
+    List<FinancialLedger> findByStudentOrderByTransactionDateAsc(Student student);
+
+    @Query("SELECT fl FROM FinancialLedger fl WHERE fl.student.id = :studentId " +
+            "AND (COALESCE(:years, NULL) IS NULL OR fl.academicYear IN (:years)) " +
+            "AND (COALESCE(:semesters, NULL) IS NULL OR fl.semester IN (:semesters)) " +
+            "ORDER BY fl.transactionDate ASC")
+    List<FinancialLedger> findByStudentAndFilter(
+            @Param("studentId") Long studentId,
+            @Param("years") List<String> years,
+            @Param("semesters") List<String> semesters
+    );
+
+    @Query("SELECT COALESCE(SUM(CASE WHEN fl.transactionType = 'DEBIT' THEN fl.amount ELSE -fl.amount END), 0) FROM FinancialLedger fl WHERE fl.student.id = :studentId")
+    BigDecimal getBalanceForStudent(@Param("studentId") Long studentId);
+
+
+    // --- Methods needed for StatsController and AnalyticsService ---
+    @Query("SELECT SUM(fl.amount) FROM FinancialLedger fl WHERE fl.transactionType = 'CREDIT'")
+    Optional<BigDecimal> findTotalFeesCollected();
+
+    @Query("SELECT SUM(CASE WHEN fl.transactionType = 'DEBIT' THEN fl.amount ELSE -fl.amount END) FROM FinancialLedger fl")
+    Optional<BigDecimal> findTotalOutstandingFees();
+
+    @Query("SELECT SUM(fl.amount) FROM FinancialLedger fl WHERE fl.transactionType = 'CREDIT' AND fl.transactionDate >= :startDate AND fl.transactionDate <= :endDate")
+    Optional<BigDecimal> findRevenueBetweenDates(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+
+    // --- NEW METHOD FOR THE SAFETY CHECK ---
+    /**
+     * Efficiently checks if any ledger entry is associated with a given fee type ID.
+     * @param feeTypeId The ID of the FeeType to check.
+     * @return true if the fee type is in use, false otherwise.
+     */
+    boolean existsByFeeTypeId(Long feeTypeId);
+
+}

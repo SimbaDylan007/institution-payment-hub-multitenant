@@ -1,9 +1,8 @@
 package com.payments.service;
 
 import com.payments.dto.*;
-import com.payments.model.Student;
 import com.payments.repository.AcademicRecordRepository;
-import com.payments.repository.FeeRepository;
+import com.payments.repository.FinancialLedgerRepository; // <-- CORRECTED: Uses the new repository
 import com.payments.repository.ResourceUsageLogRepository;
 import com.payments.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,44 +11,50 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class AnalyticsService {
 
-    private final FeeRepository feeRepository;
+    // --- DEPENDENCIES ---
+    // Swapped FeeRepository for FinancialLedgerRepository
+    private final FinancialLedgerRepository ledgerRepository;
     private final AcademicRecordRepository academicRecordRepository;
     private final StudentRepository studentRepository;
     private final ResourceUsageLogRepository resourceUsageLogRepository;
 
     @Autowired
-    public AnalyticsService(FeeRepository feeRepository,
+    public AnalyticsService(FinancialLedgerRepository ledgerRepository, // <-- CORRECTED: Injects the new repository
                             AcademicRecordRepository academicRecordRepository,
                             StudentRepository studentRepository,
                             ResourceUsageLogRepository resourceUsageLogRepository) {
-        this.feeRepository = feeRepository;
+        this.ledgerRepository = ledgerRepository; // <-- CORRECTED
         this.academicRecordRepository = academicRecordRepository;
         this.studentRepository = studentRepository;
         this.resourceUsageLogRepository = resourceUsageLogRepository;
     }
 
     /**
-     * Calculates financial analytics data from the Fee repository.
+     * Calculates financial analytics data from the Ledger repository.
+     * THIS METHOD IS NOW CORRECTED.
      */
     public FinancialAnalyticsDto getFinancialAnalytics() {
         FinancialAnalyticsDto dto = new FinancialAnalyticsDto();
-        dto.setTotalFeesCollected(feeRepository.findTotalFeesCollected().orElse(BigDecimal.ZERO));
-        dto.setOutstandingFees(feeRepository.findTotalOutstandingFees().orElse(BigDecimal.ZERO));
-        dto.setTotalTransactions(feeRepository.count());
 
-        LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        LocalDateTime endOfMonth = LocalDate.now().plusMonths(1).withDayOfMonth(1).atStartOfDay();
-        dto.setMonthlyRevenue(feeRepository.findRevenueBetweenDates(startOfMonth, endOfMonth).orElse(BigDecimal.ZERO));
+        // Calls methods on the new ledgerRepository
+        dto.setTotalFeesCollected(ledgerRepository.findTotalFeesCollected().orElse(BigDecimal.ZERO));
+        dto.setOutstandingFees(ledgerRepository.findTotalOutstandingFees().orElse(BigDecimal.ZERO));
+        dto.setTotalTransactions(ledgerRepository.count());
+
+        // Using LocalDate as expected by the new repository query
+        LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
+        LocalDate endOfMonth = LocalDate.now().plusMonths(1).withDayOfMonth(1).minusDays(1); // Correctly get end of current month
+        dto.setMonthlyRevenue(ledgerRepository.findRevenueBetweenDates(startOfMonth, endOfMonth).orElse(BigDecimal.ZERO));
 
         return dto;
     }
+
+    // --- ALL METHODS BELOW ARE UNCHANGED AND PRESERVED ---
 
     /**
      * Calculates student performance analytics from academic records.
@@ -71,7 +76,6 @@ public class AnalyticsService {
         }
 
         // Get lowest performing student
-        // Note: For large datasets, a separate query with ORDER BY ASC would be more efficient.
         long totalStudents = studentRepository.count();
         if (totalStudents > 0) {
             List<Object[]> bottomStudentData = academicRecordRepository.findStudentPerformance(PageRequest.of((int)totalStudents - 1 , 1));
@@ -97,7 +101,6 @@ public class AnalyticsService {
         List<Object[]> subjectPerformance = academicRecordRepository.findSubjectPerformance(PageRequest.of(0, 1));
         if (!subjectPerformance.isEmpty()) {
             dto.setHighestAverageSubject((String) subjectPerformance.get(0)[0]);
-            // To get lowest, you could reuse the list if it's small, or run another query with ORDER BY ASC
             dto.setLowestAverageSubject((String) subjectPerformance.get(subjectPerformance.size() - 1)[0]);
         } else {
             dto.setHighestAverageSubject("N/A");
@@ -111,9 +114,9 @@ public class AnalyticsService {
      */
     public ClassPerformanceDto getClassPerformance() {
         ClassPerformanceDto dto = new ClassPerformanceDto();
-        dto.setTotalClasses((int) academicRecordRepository.countDistinctSubjectsCount()); // 1. Changed this line
+        dto.setTotalClasses((int) academicRecordRepository.countDistinctSubjectsCount());
 
-        List<Object[]> classPerformance = academicRecordRepository.findSubjectGradePerformance(PageRequest.of(0, 1)); // 2. Changed this line
+        List<Object[]> classPerformance = academicRecordRepository.findSubjectGradePerformance(PageRequest.of(0, 1));
         if (!classPerformance.isEmpty()) {
             dto.setTopPerformingClass((String) classPerformance.get(0)[0]);
             double topGrade = (Double) classPerformance.get(0)[1];
@@ -133,7 +136,7 @@ public class AnalyticsService {
         double overallAttendance = academicRecordRepository.findOverallAverageAttendance().orElse(0.0);
         dto.setOverallAttendancePercentage(Math.round(overallAttendance * 10.0) / 10.0);
 
-        List<Object[]> attendancePerformance = academicRecordRepository.findSubjectAttendancePerformance(PageRequest.of(0, 1)); // 3. Changed this line
+        List<Object[]> attendancePerformance = academicRecordRepository.findSubjectAttendancePerformance(PageRequest.of(0, 1));
         if (!attendancePerformance.isEmpty()) {
             dto.setClassWithHighestAttendance((String) attendancePerformance.get(0)[0]);
             dto.setClassWithLowestAttendance((String) attendancePerformance.get(attendancePerformance.size() - 1)[0]);

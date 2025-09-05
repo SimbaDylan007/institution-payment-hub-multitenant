@@ -23,6 +23,8 @@ import Facilities from "./pages/Facilities";
 import Settings from "./pages/Settings";
 import StudentPortal from "./pages/StudentPortal";
 import NotFound from "./pages/NotFound";
+import Financials from "@/pages/Financials.tsx";
+import PaymentAllocation from './pages/PaymentAllocation';
 
 const queryClient = new QueryClient();
 
@@ -37,7 +39,6 @@ function AppContent() {
         <Route path="/students" element={<Students />} />
         <Route path="/staff" element={<Staff />} />
         <Route path="/academics" element={<Academics />} />
-        <Route path="/finance" element={<Finance />} />
         <Route path="/library" element={<Library />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/communication" element={<Communication />} />
@@ -46,6 +47,8 @@ function AppContent() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/student-portal" element={<StudentPortal />} />
         <Route path="*" element={<NotFound />} />
+        <Route path="/financials" element={<Financials />} />
+        <Route path="/payment-allocation" element={<PaymentAllocation />} />
       </Routes>
     </Router>
   );

@@ -1,22 +1,40 @@
 package com.payments.model;
 
-import lombok.Data;
-
-@Data // This generates getters and setters
 public class ErrorDetails {
-    private String details;
     private String message;
+    private String details;
     private String timestamp;
 
-    // No-arg constructor (provided by Lombok's @NoArgsConstructor if used, but explicit is fine)
-    public ErrorDetails() {
+    public ErrorDetails() {}
+
+    public ErrorDetails(String message, String details, String timestamp) {
+        this.message = message;
+        this.details = details;
+        this.timestamp = timestamp;
     }
 
-    // All-args constructor (provided by Lombok's @AllArgsConstructor if used, but explicit is fine)
-    public ErrorDetails(String message, String timestamp, String details) {
+    // --- Getters and Setters ---
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
         this.message = message;
-        this.timestamp = timestamp;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+
+    public void setDetails(String details) {
         this.details = details;
     }
 
+    public String getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(String timestamp) {
+        this.timestamp = timestamp;
+    }
 }

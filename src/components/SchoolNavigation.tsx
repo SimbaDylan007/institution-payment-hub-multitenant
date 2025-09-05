@@ -15,6 +15,9 @@ import {
   Home,
   UserCheck,
   Building,
+  Landmark,
+  LayoutDashboard, Banknote
+
 } from "lucide-react";
 
 // Define the structure for navigation items for type safety and consistency
@@ -52,7 +55,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: "Finance",
-    href: "/finance",
+    href: "/financials",
     icon: DollarSign,
     description: "Fee management and payments"
   },
@@ -91,6 +94,12 @@ const navigationItems: NavigationItem[] = [
     href: "/settings",
     icon: Settings,
     description: "System configuration"
+  },
+  {
+    name: "Payment Allocation",
+    href: "/payment-allocation",
+    icon: Banknote, // Or another icon you prefer
+    description: "Reconcile bank payments"
   },
 ];
 

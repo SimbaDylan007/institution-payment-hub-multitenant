@@ -1,15 +1,12 @@
 package com.payments.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Transient;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.Data;
 import java.io.Serializable;
 
-@Data // This generates getters and setters for all fields
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PaymentAlert implements Serializable {
@@ -18,52 +15,70 @@ public class PaymentAlert implements Serializable {
 
     @Id
     private String id;
-
     private double amount;
-
     @Transient
-    private Object date; // Using Object to handle both String and Timestamp
-
+    private Object date;
     @Column(length = 1000)
     private String narrative;
-
     @Column(length = 255)
     private String nr1;
-
     @Column(length = 255)
     private String nr2;
-
     @Column(length = 255)
     private String nr3;
-
     @Column(length = 255)
     private String nr4;
-
     private int picked;
-
     @Column(length = 255)
     private String reference;
-
     @Column(length = 100)
     private String source;
-
     @Column(length = 100)
-    private String status; // This field exists
-
+    private String status;
     @Column(length = 100)
     private String tcd;
-
     @Column(length = 100)
     private String transactionDate;
-
-    // Derived fields
     @Column(length = 255)
     private String studentName;
-
     @Column(length = 255)
     private String studentSurname;
-
     @Column(length = 100)
     private String regNumber;
 
+    // --- Getters and Setters ---
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public double getAmount() { return amount; }
+    public void setAmount(double amount) { this.amount = amount; }
+    public Object getDate() { return date; }
+    public void setDate(Object date) { this.date = date; }
+    public String getNarrative() { return narrative; }
+    public void setNarrative(String narrative) { this.narrative = narrative; }
+    public String getNr1() { return nr1; }
+    public void setNr1(String nr1) { this.nr1 = nr1; }
+    public String getNr2() { return nr2; }
+    public void setNr2(String nr2) { this.nr2 = nr2; }
+    public String getNr3() { return nr3; }
+    public void setNr3(String nr3) { this.nr3 = nr3; }
+    public String getNr4() { return nr4; }
+    public void setNr4(String nr4) { this.nr4 = nr4; }
+    public int getPicked() { return picked; }
+    public void setPicked(int picked) { this.picked = picked; }
+    public String getReference() { return reference; }
+    public void setReference(String reference) { this.reference = reference; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public String getTcd() { return tcd; }
+    public void setTcd(String tcd) { this.tcd = tcd; }
+    public String getTransactionDate() { return transactionDate; }
+    public void setTransactionDate(String transactionDate) { this.transactionDate = transactionDate; }
+    public String getStudentName() { return studentName; }
+    public void setStudentName(String studentName) { this.studentName = studentName; }
+    public String getStudentSurname() { return studentSurname; }
+    public void setStudentSurname(String studentSurname) { this.studentSurname = studentSurname; }
+    public String getRegNumber() { return regNumber; }
+    public void setRegNumber(String regNumber) { this.regNumber = regNumber; }
 }

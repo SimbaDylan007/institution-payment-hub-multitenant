@@ -13,7 +13,6 @@ public class NotificationPreferencesDto {
     // Getters and Setters...
     public boolean isNewStudentEmail() { return newStudentEmail; }
     public void setNewStudentEmail(boolean newStudentEmail) { this.newStudentEmail = newStudentEmail; }
-    // ... and so on for all boolean fields
     public boolean isGradeUpdatesEmail() { return gradeUpdatesEmail; }
     public void setGradeUpdatesEmail(boolean gradeUpdatesEmail) { this.gradeUpdatesEmail = gradeUpdatesEmail; }
     public boolean isAttendanceEmail() { return attendanceEmail; }

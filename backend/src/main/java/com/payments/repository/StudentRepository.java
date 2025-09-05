@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
+import com.payments.dto.StudentBalanceDto;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,4 +27,10 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     Long countByEnrollmentStatus(String enrollmentStatus);
     
     Optional<Student> findByEmail(String email);
+
+    @Query("SELECT new com.payments.dto.StudentBalanceDto(" +
+            "s.id, s.studentId, s.firstName, s.lastName, s.currentGrade, " +
+            "COALESCE((SELECT SUM(CASE WHEN fl.transactionType = 'DEBIT' THEN fl.amount ELSE -fl.amount END) FROM FinancialLedger fl WHERE fl.student.id = s.id), 0.00)" +
+            ") FROM Student s")
+    List<StudentBalanceDto> findAllWithBalance();
 }

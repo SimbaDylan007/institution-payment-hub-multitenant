@@ -8,6 +8,7 @@ import com.payments.service.AcademicService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.payments.dto.GradeDTO;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -121,10 +122,10 @@ public class AcademicController {
         BigDecimal gpa = academicService.getStudentGPA(studentId, year);
         return ResponseEntity.ok(gpa);
     }
-    
+
     @PostMapping("/grades")
-    public ResponseEntity<Grade> createGrade(@RequestBody Grade grade) {
-        Grade createdGrade = academicService.createGrade(grade);
+    public ResponseEntity<Grade> createGrade(@RequestBody GradeDTO gradeDTO) {
+        Grade createdGrade = academicService.createGrade(gradeDTO);
         return ResponseEntity.ok(createdGrade);
     }
     

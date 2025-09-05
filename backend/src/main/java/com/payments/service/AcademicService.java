@@ -7,14 +7,16 @@ import com.payments.model.Subject;
 import com.payments.repository.ExamRepository;
 import com.payments.repository.GradeRepository;
 import com.payments.repository.SubjectRepository;
+import com.payments.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import com.payments.dto.GradeDTO;
+import com.payments.model.Student;
 
 @Service
 public class AcademicService {
@@ -27,6 +29,9 @@ public class AcademicService {
     
     @Autowired
     private GradeRepository gradeRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;
     
     // Subject management
     public List<Subject> getAllSubjects() {
@@ -121,12 +126,34 @@ public class AcademicService {
     public BigDecimal getStudentGPA(Long studentId, String academicYear) {
         return gradeRepository.getAverageGPAByStudentAndYear(studentId, academicYear);
     }
-    
+
     @Transactional
-    public Grade createGrade(Grade grade) {
+    public Grade createGrade(GradeDTO gradeDTO) {
+        // Fetch the related entities from the database
+        Student student = studentRepository.findByStudentId(gradeDTO.getStudentId())
+                .orElseThrow(() -> new RuntimeException("Student not found with ID: " + gradeDTO.getStudentId()));
+
+        // Find all subjects with that code (should be only one)
+        Subject subject = subjectRepository.findByCode(gradeDTO.getSubjectId())
+                .orElseThrow(() -> new RuntimeException("Subject not found with code: " + gradeDTO.getSubjectId()));
+
+
+
+        // Create and populate the Grade entity
+        Grade grade = new Grade();
+        grade.setStudent(student);
+        grade.setSubject(subject);
+        grade.setAssessmentType(gradeDTO.getAssessmentType());
+        grade.setMarksObtained(gradeDTO.getMarksObtained());
+        grade.setMaxMarks(gradeDTO.getMaxMarks());
+        grade.setLetterGrade(gradeDTO.getLetterGrade());
+        grade.setAcademicYear(gradeDTO.getAcademicYear());
+        grade.setSemester(gradeDTO.getSemester());
         grade.setRecordedDate(LocalDate.now());
+
         return gradeRepository.save(grade);
     }
+
     
     @Transactional
     public Grade updateGrade(Long id, Grade gradeDetails) {
