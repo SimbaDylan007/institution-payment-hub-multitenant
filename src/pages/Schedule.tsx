@@ -1,715 +1,232 @@
-
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Home, Calendar, Clock, Plus, Users, Bell, MapPin, Edit, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Home, Plus, UploadCloud, Download, Calendar as CalendarIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import { EventClickArg, DateSelectArg } from '@fullcalendar/core';
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the secure apiFetch wrapper
 
-interface TimetableEntry {
-  id: number;
-  subject: string;
-  teacher: { username: string };
-  grade: string;
-  section: string;
-  dayOfWeek: string;
-  startTime: string;
-  endTime: string;
-  room: string;
-  academicYear: string;
-}
-
-interface Exam {
-  id: number;
+// --- Interfaces ---
+type EventType = 'CLASS' | 'EXAM' | 'EVENT' | 'HOLIDAY';
+interface ScheduleEvent {
+  id?: string;
   title: string;
-  subject: { name: string };
-  examDate: string;
-  startTime: string;
-  endTime: string;
-  grade: string;
-  venue: string;
-  examType: string;
-  status: string;
-}
-
-interface CalendarEvent {
-  id: number;
-  name: string;
-  date: string;
-  type: string;
+  start: string;
+  end?: string;
+  allDay: boolean;
+  extendedProps: {
+    eventType: EventType;
+    grade?: string;
+    section?: string;
+    room?: string;
+    teacherName?: string;
+    description?: string;
+    subjectCode?: string;
+  };
 }
 
 export default function Schedule() {
   const { user } = useAuth();
-  const [events, setEvents] = useState([]);
-  const [timetables, setTimetables] = useState<TimetableEntry[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [calendar, setCalendar] = useState<any>(null);
+  const calendarRef = useRef<FullCalendar>(null);
+  const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedTimetable, setSelectedTimetable] = useState<TimetableEntry | null>(null);
-  const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-  const [isTimetableDialogOpen, setIsTimetableDialogOpen] = useState(false);
-  const [isExamDialogOpen, setIsExamDialogOpen] = useState(false);
-  const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [formData, setFormData] = useState<Partial<ScheduleEvent>>({});
 
-  useEffect(() => {
-    fetchEvents();
-    fetchTimetables();
-    fetchExams();
-    fetchCalendar();
+  const fetchEvents = useCallback(async () => {
+    const calendarApi = calendarRef.current?.getApi();
+    if (!calendarApi) return;
+    setLoading(true);
+    const currentDate = calendarApi.getDate();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+
+    try {
+      // 2. Use apiFetch
+      const response = await apiFetch(`http://localhost:8080/api/schedule/events?year=${year}&month=${month}`);
+      if (response.ok) {
+        const data = await response.json();
+        const formattedEvents = data.map((event: any) => ({
+          id: event.id.toString(),
+          title: event.title,
+          start: event.startTime ? `${event.startDate}T${event.startTime}` : event.startDate,
+          end: event.endTime ? `${event.startDate}T${event.endTime}` : (event.endDate ? event.endDate : null),
+          allDay: !event.startTime,
+          extendedProps: { eventType: event.eventType, grade: event.grade, description: event.description, teacherName: event.teacherName, room: event.room, section: event.section, subjectCode: event.subjectCode },
+          backgroundColor: getEventColor(event.eventType),
+          borderColor: getEventColor(event.eventType)
+        }));
+        setEvents(formattedEvents);
+      } else {
+        toast.error("Failed to load schedule.");
+      }
+    } catch (error) {
+      // apiFetch handles network error toasts
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const fetchEvents = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/events');
-      if (response.ok) {
-        const data = await response.json();
-        setEvents(data);
-      }
-    } catch (error) {
-      console.error('Error fetching events:', error);
+  useEffect(() => {
+    // Initial load is now handled by the `datesSet` prop on the FullCalendar component.
+  }, []);
+
+  const getEventColor = (type: string) => {
+    switch(type) {
+      case 'CLASS': return '#3b82f6'; case 'EXAM': return '#ef4444';
+      case 'EVENT': return '#10b981'; case 'HOLIDAY': return '#f59e0b';
+      default: return '#6b7280';
     }
   };
 
-  const fetchTimetables = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/timetables');
-      if (response.ok) {
-        const data = await response.json();
-        setTimetables(data);
-      }
-    } catch (error) {
-      console.error('Error fetching timetables:', error);
-    }
+  const handleEventClick = (clickInfo: EventClickArg) => {
+    setSelectedEvent(clickInfo.event as any);
+    setFormData({ id: clickInfo.event.id, title: clickInfo.event.title, start: clickInfo.event.startStr, end: clickInfo.event.endStr || "", allDay: clickInfo.event.allDay, extendedProps: clickInfo.event.extendedProps as any });
+    setIsFormOpen(true);
   };
 
-  const fetchExams = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/exams');
-      if (response.ok) {
-        const data = await response.json();
-        setExams(data);
-      }
-    } catch (error) {
-      console.error('Error fetching exams:', error);
-    }
+  const handleDateSelect = (selectInfo: DateSelectArg) => {
+    setSelectedEvent(null);
+    setFormData({ title: "", start: selectInfo.startStr, end: selectInfo.endStr, allDay: selectInfo.allDay, extendedProps: { eventType: 'EVENT' } });
+    setIsFormOpen(true);
   };
 
-  const fetchCalendar = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/calendar/view');
-      if (response.ok) {
-        const data = await response.json();
-        setCalendar(data);
-      }
-    } catch (error) {
-      console.error('Error fetching calendar:', error);
-    }
-  };
-
-  const handleTimetableSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    
-    const formData = new FormData(e.currentTarget);
-    const timetableData = {
-      subject: formData.get('subject'),
-      teacher: formData.get('teacher'),
-      grade: formData.get('grade'),
-      section: formData.get('section'),
-      dayOfWeek: formData.get('dayOfWeek'),
-      startTime: formData.get('startTime'),
-      endTime: formData.get('endTime'),
-      room: formData.get('room'),
-      academicYear: formData.get('academicYear')
-    };
-
+    const apiEvent = { id: selectedEvent ? parseInt(selectedEvent.id!) : null, title: formData.title, startDate: formData.start?.split('T')[0], endDate: formData.end?.split('T')[0] || formData.start?.split('T')[0], startTime: formData.allDay ? null : formData.start?.split('T')[1]?.substring(0, 8), endTime: formData.allDay ? null : formData.end?.split('T')[1]?.substring(0, 8), eventType: formData.extendedProps?.eventType, grade: formData.extendedProps?.grade, teacherName: formData.extendedProps?.teacherName, description: formData.extendedProps?.description, room: formData.extendedProps?.room, section: formData.extendedProps?.section, subjectCode: formData.extendedProps?.subjectCode, };
     try {
-      const url = selectedTimetable 
-        ? `http://localhost:8080/api/timetables/${selectedTimetable.id}`
-        : 'http://localhost:8080/api/timetables';
-      
-      const response = await fetch(url, {
-        method: selectedTimetable ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(timetableData)
-      });
-
+      const response = await apiFetch('http://localhost:8080/api/schedule/events', { method: 'POST', body: JSON.stringify(apiEvent) });
       if (response.ok) {
-        toast.success(`Timetable ${selectedTimetable ? 'updated' : 'created'} successfully`);
-        setIsTimetableDialogOpen(false);
-        setSelectedTimetable(null);
-        fetchTimetables();
-      } else {
-        throw new Error('Failed to save timetable');
-      }
-    } catch (error) {
-      toast.error('Failed to save timetable');
-    } finally {
-      setLoading(false);
-    }
+        toast.success("Event saved successfully!");
+        setIsFormOpen(false);
+        fetchEvents();
+      } else { const error = await response.json().catch(() => ({ message: "Failed to save event."})); throw new Error(error.message); }
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setLoading(false); }
   };
 
-  const handleExamSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleDeleteEvent = async () => {
+    if (!selectedEvent) return;
+    if (!window.confirm(`Are you sure you want to delete the event '${selectedEvent.title}'?`)) return;
     setLoading(true);
-    
-    const formData = new FormData(e.currentTarget);
-    const examData = {
-      title: formData.get('title'),
-      grade: formData.get('grade'),
-      examDate: formData.get('examDate'),
-      startTime: formData.get('startTime'),
-      endTime: formData.get('endTime'),
-      venue: formData.get('venue'),
-      examType: formData.get('examType'),
-      maxMarks: parseInt(formData.get('maxMarks') as string),
-      status: 'SCHEDULED'
-    };
-
     try {
-      const url = selectedExam 
-        ? `http://localhost:8080/api/exams/${selectedExam.id}`
-        : 'http://localhost:8080/api/exams';
-      
-      const response = await fetch(url, {
-        method: selectedExam ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(examData)
-      });
-
+      const response = await apiFetch(`http://localhost:8080/api/schedule/events/${selectedEvent.id}`, { method: 'DELETE' });
       if (response.ok) {
-        toast.success(`Exam ${selectedExam ? 'updated' : 'scheduled'} successfully`);
-        setIsExamDialogOpen(false);
-        setSelectedExam(null);
-        fetchExams();
-      } else {
-        throw new Error('Failed to save exam');
-      }
-    } catch (error) {
-      toast.error('Failed to save exam');
-    } finally {
-      setLoading(false);
-    }
+        toast.success("Event deleted successfully!");
+        setIsFormOpen(false);
+        fetchEvents();
+      } else { throw new Error("Failed to delete event."); }
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setLoading(false); }
   };
 
-  const handleDeleteTimetable = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this timetable entry?')) return;
-    
+  const handleImport = async () => {
+    if (!importFile) { toast.warning("Please select a file."); return; }
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("file", importFile);
+    formData.append("academicYear", "2024-2025");
     try {
-      const response = await fetch(`http://localhost:8080/api/timetables/${id}`, {
-        method: 'DELETE'
-      });
-      
+      const response = await apiFetch('http://localhost:8080/api/schedule/timetables/bulk-upload', { method: 'POST', body: formData });
       if (response.ok) {
-        toast.success('Timetable entry deleted successfully');
-        fetchTimetables();
-      }
-    } catch (error) {
-      toast.error('Failed to delete timetable entry');
-    }
+        toast.success("Timetable imported successfully!");
+        setIsImportOpen(false); setImportFile(null); fetchEvents();
+      } else { throw new Error(await response.text()); }
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setLoading(false); }
   };
 
-  const handleDeleteExam = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this exam?')) return;
-    
-    try {
-      const response = await fetch(`http://localhost:8080/api/exams/${id}`, {
-        method: 'DELETE'
-      });
-      
-      if (response.ok) {
-        toast.success('Exam deleted successfully');
-        fetchExams();
-      }
-    } catch (error) {
-      toast.error('Failed to delete exam');
-    }
+  const handleDownloadTemplate = () => {
+    const headers = "grade,section,dayOfWeek,startTime(HH:mm:ss),endTime(HH:mm:ss),subjectCode,teacherName,room\n";
+    const example = "10,A,MONDAY,09:00:00,10:00:00,MTH-101,Mr. Smith,Room 101\n";
+    const blob = new Blob([headers + example], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", "timetable_import_template.csv");
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
+  if (!user) { return <Navigate to="/" replace />; }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Schedule Management</h1>
-            <p className="text-gray-300">Manage timetables, events, and scheduling</p>
-          </div>
-          <Button className="bg-purple-600 text-white hover:bg-purple-700" asChild>
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <Home className="h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
-        </div>
-
-        <Tabs defaultValue="timetable" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-purple-900/50 border-purple-700">
-            <TabsTrigger value="timetable" className="data-[state=active]:bg-purple-600">Class Timetable</TabsTrigger>
-            <TabsTrigger value="events" className="data-[state=active]:bg-purple-600">School Events</TabsTrigger>
-            <TabsTrigger value="exams" className="data-[state=active]:bg-purple-600">Exam Schedule</TabsTrigger>
-            <TabsTrigger value="calendar" className="data-[state=active]:bg-purple-600">Academic Calendar</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="timetable">
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Clock className="h-5 w-5" />
-                    Class Timetable Management
-                  </CardTitle>
-                  <Dialog open={isTimetableDialogOpen} onOpenChange={setIsTimetableDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="bg-green-600 hover:bg-green-700">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Timetable Entry
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-purple-900 border-purple-700 text-white max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>{selectedTimetable ? 'Edit Timetable Entry' : 'Add Timetable Entry'}</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleTimetableSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="subject">Subject</Label>
-                            <Input 
-                              id="subject" 
-                              name="subject" 
-                              defaultValue={selectedTimetable?.subject || ''}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="teacher">Teacher</Label>
-                            <Input 
-                              id="teacher" 
-                              name="teacher" 
-                              defaultValue={selectedTimetable?.teacher?.username || ''}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="grade">Grade</Label>
-                            <Select name="grade" defaultValue={selectedTimetable?.grade || ''}>
-                              <SelectTrigger className="bg-purple-800 border-purple-600">
-                                <SelectValue placeholder="Select grade" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-purple-800 border-purple-600">
-                                {[1,2,3,4,5,6,7,8,9,10,11,12].map(grade => (
-                                  <SelectItem key={grade} value={grade.toString()}>{grade}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="section">Section</Label>
-                            <Select name="section" defaultValue={selectedTimetable?.section || ''}>
-                              <SelectTrigger className="bg-purple-800 border-purple-600">
-                                <SelectValue placeholder="Select section" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-purple-800 border-purple-600">
-                                {['A','B','C','D','E'].map(section => (
-                                  <SelectItem key={section} value={section}>{section}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <Label htmlFor="dayOfWeek">Day</Label>
-                            <Select name="dayOfWeek" defaultValue={selectedTimetable?.dayOfWeek || ''}>
-                              <SelectTrigger className="bg-purple-800 border-purple-600">
-                                <SelectValue placeholder="Select day" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-purple-800 border-purple-600">
-                                {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(day => (
-                                  <SelectItem key={day} value={day}>{day}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="startTime">Start Time</Label>
-                            <Input 
-                              id="startTime" 
-                              name="startTime" 
-                              type="time"
-                              defaultValue={selectedTimetable?.startTime || ''}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="endTime">End Time</Label>
-                            <Input 
-                              id="endTime" 
-                              name="endTime" 
-                              type="time"
-                              defaultValue={selectedTimetable?.endTime || ''}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="room">Room</Label>
-                            <Input 
-                              id="room" 
-                              name="room" 
-                              defaultValue={selectedTimetable?.room || ''}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="academicYear">Academic Year</Label>
-                            <Input 
-                              id="academicYear" 
-                              name="academicYear" 
-                              defaultValue={selectedTimetable?.academicYear || '2024-2025'}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            onClick={() => {
-                              setIsTimetableDialogOpen(false);
-                              setSelectedTimetable(null);
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button type="submit" disabled={loading}>
-                            {loading ? 'Saving...' : (selectedTimetable ? 'Update' : 'Add')}
-                          </Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="mb-6 flex justify-between items-center"><h1 className="text-2xl font-bold">School Calendar & Schedule</h1><Button asChild className="bg-purple-600 hover:bg-purple-700"><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4 mr-2"/>Dashboard</Link></Button></div>
+          <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2"><CalendarIcon />Calendar</CardTitle>
+                <div className="flex gap-2">
+                  <Button onClick={() => setIsImportOpen(true)} className="bg-blue-600 hover:bg-blue-700"><UploadCloud size={16} className="mr-2"/> Import Timetable</Button>
+                  <Button onClick={() => { setSelectedEvent(null); setFormData({ start: new Date().toISOString().split('T')[0], allDay: true, extendedProps: { eventType: 'EVENT' } }); setIsFormOpen(true); }} className="bg-green-600 hover:bg-green-700"><Plus size={16} className="mr-2"/> Add Event</Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {timetables.map((entry) => (
-                    <div key={entry.id} className="flex justify-between items-center p-4 bg-purple-800/30 rounded-lg border border-purple-600">
-                      <div>
-                        <h3 className="font-semibold text-white">{entry.subject} - Grade {entry.grade}{entry.section}</h3>
-                        <p className="text-sm text-gray-300">Teacher: {entry.teacher?.username || 'Not assigned'}</p>
-                        <div className="flex gap-4 text-sm text-gray-400 mt-1">
-                          <span>{entry.dayOfWeek}</span>
-                          <span>{entry.startTime} - {entry.endTime}</span>
-                          <span>Room: {entry.room}</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="border-purple-600 text-white hover:bg-purple-700"
-                          onClick={() => {
-                            setSelectedTimetable(entry);
-                            setIsTimetableDialogOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
-                          onClick={() => handleDeleteTimetable(entry.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 bg-gray-900/50 rounded-b-md text-white">
+              <FullCalendar
+                  ref={calendarRef}
+                  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                  initialView="dayGridMonth"
+                  headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
+                  events={events}
+                  datesSet={fetchEvents}
+                  editable={true}
+                  selectable={true}
+                  eventClick={handleEventClick}
+                  select={handleDateSelect}
+                  dayHeaderClassNames="text-white bg-purple-900/50"
+                  viewClassNames="text-white"
+              />
+            </CardContent>
+          </Card>
+        </main>
 
-          <TabsContent value="events">
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Calendar className="h-5 w-5" />
-                  School Events Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-300">
-                  <p className="mb-6">School events are managed through the event system.</p>
-                  <p>Total Events: {events.length}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+        <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+          <DialogContent className="bg-gray-900 text-white border-gray-700">
+            <DialogHeader><DialogTitle>Bulk Import Timetable</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4"><p className="text-sm text-gray-400">Upload a CSV file with class schedules.</p><Button variant="outline" onClick={handleDownloadTemplate} className="w-full gap-2"><Download size={16}/>Download CSV Template</Button><div><Label htmlFor="importFile">Upload File</Label><Input id="importFile" type="file" onChange={(e) => setImportFile(e.target.files?.[0] || null)} accept=".csv" className="bg-gray-800 border-gray-600 file:text-white" /></div><div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button><Button onClick={handleImport} disabled={loading}>{loading ? "Importing..." : "Start Import"}</Button></div></div>
+          </DialogContent>
+        </Dialog>
 
-          <TabsContent value="exams">
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Users className="h-5 w-5" />
-                    Examination Scheduling
-                  </CardTitle>
-                  <Dialog open={isExamDialogOpen} onOpenChange={setIsExamDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="bg-green-600 hover:bg-green-700">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Schedule Exam
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-purple-900 border-purple-700 text-white max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>{selectedExam ? 'Edit Exam' : 'Schedule New Exam'}</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleExamSubmit} className="space-y-4">
-                        <div>
-                          <Label htmlFor="title">Exam Title</Label>
-                          <Input 
-                            id="title" 
-                            name="title" 
-                            defaultValue={selectedExam?.title || ''}
-                            className="bg-purple-800 border-purple-600" 
-                            required 
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="grade">Grade</Label>
-                            <Select name="grade" defaultValue={selectedExam?.grade || ''}>
-                              <SelectTrigger className="bg-purple-800 border-purple-600">
-                                <SelectValue placeholder="Select grade" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-purple-800 border-purple-600">
-                                {[1,2,3,4,5,6,7,8,9,10,11,12].map(grade => (
-                                  <SelectItem key={grade} value={grade.toString()}>{grade}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="examType">Exam Type</Label>
-                            <Select name="examType" defaultValue={selectedExam?.examType || ''}>
-                              <SelectTrigger className="bg-purple-800 border-purple-600">
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-purple-800 border-purple-600">
-                                <SelectItem value="MIDTERM">Midterm</SelectItem>
-                                <SelectItem value="FINAL">Final</SelectItem>
-                                <SelectItem value="QUIZ">Quiz</SelectItem>
-                                <SelectItem value="ASSIGNMENT">Assignment</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <Label htmlFor="examDate">Exam Date</Label>
-                            <Input 
-                              id="examDate" 
-                              name="examDate" 
-                              type="date"
-                              defaultValue={selectedExam?.examDate || ''}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="startTime">Start Time</Label>
-                            <Input 
-                              id="startTime" 
-                              name="startTime" 
-                              type="time"
-                              defaultValue={selectedExam?.startTime || ''}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="endTime">End Time</Label>
-                            <Input 
-                              id="endTime" 
-                              name="endTime" 
-                              type="time"
-                              defaultValue={selectedExam?.endTime || ''}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="venue">Venue</Label>
-                            <Input 
-                              id="venue" 
-                              name="venue" 
-                              defaultValue={selectedExam?.venue || ''}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="maxMarks">Max Marks</Label>
-                            <Input 
-                              id="maxMarks" 
-                              name="maxMarks" 
-                              type="number"
-                              defaultValue={selectedExam ? '100' : ''}
-                              className="bg-purple-800 border-purple-600" 
-                              required 
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            onClick={() => {
-                              setIsExamDialogOpen(false);
-                              setSelectedExam(null);
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button type="submit" disabled={loading}>
-                            {loading ? 'Saving...' : (selectedExam ? 'Update' : 'Schedule')}
-                          </Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {exams.map((exam) => (
-                    <div key={exam.id} className="flex justify-between items-center p-4 bg-purple-800/30 rounded-lg border border-purple-600">
-                      <div>
-                        <h3 className="font-semibold text-white">{exam.title}</h3>
-                        <p className="text-sm text-gray-300">Grade {exam.grade} • {exam.examType}</p>
-                        <div className="flex gap-4 text-sm text-gray-400 mt-1">
-                          <span>{new Date(exam.examDate).toLocaleDateString()}</span>
-                          <span>{exam.startTime} - {exam.endTime}</span>
-                          <span>Venue: {exam.venue}</span>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            exam.status === 'SCHEDULED' ? 'bg-blue-600' : 
-                            exam.status === 'ONGOING' ? 'bg-yellow-600' : 
-                            exam.status === 'COMPLETED' ? 'bg-green-600' : 'bg-red-600'
-                          }`}>
-                            {exam.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="border-purple-600 text-white hover:bg-purple-700"
-                          onClick={() => {
-                            setSelectedExam(exam);
-                            setIsExamDialogOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
-                          onClick={() => handleDeleteExam(exam.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="calendar">
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
-              <CardHeader>
-                <CardTitle className="text-white">Academic Calendar Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {calendar ? (
-                  <div className="space-y-6">
-                    <div className="p-4 bg-purple-800/30 rounded-lg border border-purple-600">
-                      <h3 className="font-semibold text-white mb-2">Current Term</h3>
-                      <p className="text-gray-300">{calendar.currentTerm}</p>
-                      <p className="text-sm text-gray-400">
-                        {calendar.termStartDate} to {calendar.termEndDate}
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-white mb-4">Holidays & Events</h3>
-                      <div className="space-y-2">
-                        {calendar.holidays?.map((holiday: CalendarEvent, index: number) => (
-                          <div key={index} className="p-3 bg-purple-700/30 rounded border border-purple-600">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <span className="font-medium text-white">{holiday.name}</span>
-                                <p className="text-sm text-gray-300">{holiday.date}</p>
-                              </div>
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                holiday.type === 'HOLIDAY' ? 'bg-red-600' : 'bg-blue-600'
-                              } text-white`}>
-                                {holiday.type}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="bg-gray-900 text-white border-gray-700">
+            <DialogHeader><DialogTitle>{selectedEvent ? 'Edit Event' : 'Create Event'}</DialogTitle></DialogHeader>
+            <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
+              <div><Label htmlFor="title">Event Title</Label><Input id="title" value={formData.title || ''} onChange={e => setFormData(f => ({ ...f, title: e.target.value }))} required className="bg-gray-800 border-gray-600"/></div>
+              <div><Label htmlFor="eventType">Event Type</Label><Select value={formData.extendedProps?.eventType} onValueChange={(v: EventType) => setFormData(f => ({ ...f, extendedProps: { ...f.extendedProps, eventType: v } }))}><SelectTrigger className="bg-gray-800 border-gray-600"><SelectValue/></SelectTrigger><SelectContent className="bg-gray-800 border-gray-600"><SelectItem value="CLASS">Class</SelectItem><SelectItem value="EXAM">Exam</SelectItem><SelectItem value="EVENT">School Event</SelectItem><SelectItem value="HOLIDAY">Holiday</SelectItem></SelectContent></Select></div>
+              {formData.extendedProps?.eventType === 'CLASS' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><Label htmlFor="grade">Grade</Label><Input id="grade" value={formData.extendedProps?.grade || ''} onChange={e => setFormData(f => ({ ...f, extendedProps: { ...f.extendedProps, grade: e.target.value } }))} className="bg-gray-800 border-gray-600"/></div>
+                    <div><Label htmlFor="teacherName">Teacher</Label><Input id="teacherName" value={formData.extendedProps?.teacherName || ''} onChange={e => setFormData(f => ({ ...f, extendedProps: { ...f.extendedProps, teacherName: e.target.value } }))} className="bg-gray-800 border-gray-600"/></div>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-300">
-                    <p>Loading calendar data...</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
-      
-      <footer className="bg-gradient-to-r from-purple-900 via-blue-900 to-black border-t border-purple-700 py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-300">
-          &copy; {new Date().getFullYear()} School Management System
-        </div>
-      </footer>
-    </div>
+              )}
+              <div className="flex justify-between items-center gap-2 pt-4">
+                <div>{selectedEvent && <Button type="button" variant="destructive" onClick={handleDeleteEvent} disabled={loading}><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>}</div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Event'}</Button>
+                </div>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
   );
 }

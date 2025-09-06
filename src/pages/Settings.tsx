@@ -1,28 +1,11 @@
-import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Toggle } from "@/components/ui/toggle";
-import { Label } from "@/components/ui/label";
+import { useState, useEffect, ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -31,122 +14,86 @@ import {
   TableFooter,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from "@/components/ui/table";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
-import { Users, UserPlus, Settings as SettingsIcon, Home } from "lucide-react";
-import { AddUserModal } from "@/components/forms/AddUserModal";
-import { BulkUserImportModal } from "@/components/forms/BulkUserImportModal";
-import { ManageRolesModal } from "@/components/forms/ManageRolesModal";
-import { Link } from "react-router-dom";
+import { Toggle } from "@/components/ui/toggle";
+import { Users, Settings as SettingsIcon, Home } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
+import { apiFetch } from "@/utils/apiClient";
+import {ManageRolesModal} from "@/components/forms/ManageRolesModal.tsx";
+import {BulkUserImportModal} from "@/components/forms/BulkUserImportModal.tsx";
+import {AddUserModal} from "@/components/forms/AddUserModal.tsx"; // 1. Import the secure fetch wrapper
 
+// --- Interfaces ---
+interface UserStats { totalUsers: number; activeUsers: number; administrators: number; teachers: number; }
+interface User { id: number; username: string; enabled: boolean; roles: { name: string }[]; createdAt: string; }
+
+// --- Main Component ---
 const Settings = () => {
-  const [userStats, setUserStats] = useState({
-    totalUsers: 0,
-    activeUsers: 0,
-    administrators: 0,
-    teachers: 0,
-  });
-  const [users, setUsers] = useState([]);
+  const { user } = useAuth(); // Assuming useAuth provides the logged-in user context
+  const [userStats, setUserStats] = useState<UserStats>({ totalUsers: 0, activeUsers: 0, administrators: 0, teachers: 0 });
+  const [users, setUsers] = useState<User[]>([]);
   const [chartData, setChartData] = useState([]);
-  const [settings, setSettings] = useState({
-    maintenanceMode: false,
-    twoFactorEnabled: false,
-  });
+  const [settings, setSettings] = useState({ maintenanceMode: false, twoFactorEnabled: false });
 
   useEffect(() => {
-    fetchUserStats();
-    fetchUsers();
-    fetchChartData();
-  }, []);
+    if (user) { // Only fetch data if the user is logged in
+      fetchUserStats();
+      fetchUsers();
+      fetchChartData();
+    }
+  }, [user]);
 
+  // --- CORRECTED: All fetch functions now use apiFetch ---
   const fetchUserStats = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/users/statistics');
-      if (response.ok) {
-        const data = await response.json();
-        setUserStats(data);
-      } else {
-        console.error('Failed to fetch user statistics');
-      }
-    } catch (error) {
-      console.error('Error fetching user statistics:', error);
-    }
+      const response = await apiFetch('http://localhost:8080/api/users/statistics');
+      if (response.ok) setUserStats(await response.json());
+      else console.error('Failed to fetch user statistics');
+    } catch (error) { console.error('Error fetching user statistics:', error); }
   };
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/users');
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      } else {
-        console.error('Failed to fetch users');
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
+      const response = await apiFetch('http://localhost:8080/api/users');
+      if (response.ok) setUsers(await response.json());
+      else console.error('Failed to fetch users');
+    } catch (error) { console.error('Error fetching users:', error); }
   };
 
   const fetchChartData = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/users/monthly-stats');
-      if (response.ok) {
-        const data = await response.json();
-        setChartData(data);
-      } else {
-        console.error('Failed to fetch chart data');
-        // Fallback to empty array if API fails
-        setChartData([]);
-      }
-    } catch (error) {
-      console.error('Error fetching chart data:', error);
-      setChartData([]);
-    }
+      const response = await apiFetch('http://localhost:8080/api/users/monthly-stats');
+      if (response.ok) setChartData(await response.json());
+      else setChartData([]);
+    } catch (error) { setChartData([]); }
   };
 
   const handleMaintenanceMode = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/settings/maintenance-mode', {
+      const response = await apiFetch('http://localhost:8080/api/settings/maintenance-mode', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !settings.maintenanceMode }),
       });
-
       if (response.ok) {
         setSettings(prev => ({ ...prev, maintenanceMode: !prev.maintenanceMode }));
         toast.success(`Maintenance mode ${!settings.maintenanceMode ? 'enabled' : 'disabled'}`);
-      }
-    } catch (error) {
-      toast.error('Failed to toggle maintenance mode');
-    }
+      } else { throw new Error("Failed to toggle"); }
+    } catch (error) { toast.error('Failed to toggle maintenance mode'); }
   };
 
   const handleTwoFactorAuth = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/settings/two-factor-auth', {
+      const response = await apiFetch('http://localhost:8080/api/settings/two-factor-auth', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !settings.twoFactorEnabled }),
       });
-
       if (response.ok) {
         setSettings(prev => ({ ...prev, twoFactorEnabled: !prev.twoFactorEnabled }));
         toast.success(`Two-factor authentication ${!settings.twoFactorEnabled ? 'enabled' : 'disabled'}`);
-      }
-    } catch (error) {
-      toast.error('Failed to toggle two-factor authentication');
-    }
+      } else { throw new Error("Failed to toggle"); }
+    } catch (error) { toast.error('Failed to toggle two-factor authentication'); }
   };
 
   return (

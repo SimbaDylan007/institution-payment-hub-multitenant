@@ -9,9 +9,11 @@ import com.payments.model.User;
 import com.payments.repository.RoleRepository;
 import com.payments.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.util.Map;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -23,35 +25,28 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder; // Added for password hashing
 
-    // Define your role names (these should match what's in your DB or Role entity)
     public static final String ROLE_NAME_ADMIN = "ROLE_ADMIN";
     public static final String ROLE_NAME_TEACHER = "ROLE_TEACHER";
     public static final String ROLE_NAME_STUDENT = "ROLE_STUDENT";
 
     @Autowired
-    public UserService(UserRepository userRepository, RoleRepository roleRepository) {
+    public UserService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public UserStatisticsDto getUserStatistics() {
         long totalUsers = userRepository.count();
         long activeUsers = userRepository.countByEnabled(true);
 
-        // Fetch Role entities once
         Role adminRole = roleRepository.findByName(ROLE_NAME_ADMIN).orElse(null);
         Role teacherRole = roleRepository.findByName(ROLE_NAME_TEACHER).orElse(null);
 
-        long administrators = 0;
-        if (adminRole != null) {
-            administrators = userRepository.countByRolesContaining(adminRole);
-        }
-
-        long teachers = 0;
-        if (teacherRole != null) {
-            teachers = userRepository.countByRolesContaining(teacherRole);
-        }
+        long administrators = (adminRole != null) ? userRepository.countByRolesContaining(adminRole) : 0;
+        long teachers = (teacherRole != null) ? userRepository.countByRolesContaining(teacherRole) : 0;
 
         return new UserStatisticsDto(totalUsers, activeUsers, administrators, teachers);
     }
@@ -68,17 +63,14 @@ public class UserService {
     public User createUser(UserCreationDto dto) {
         User user = new User();
         user.setUsername(dto.getUsername());
-        user.setPassword(dto.getPassword()); // In real app, hash this password
+        user.setPassword(passwordEncoder.encode(dto.getPassword())); // Hash the password
+        user.setEmail(dto.getEmail()); // Assuming email is part of DTO
         user.setEnabled(dto.isEnabled());
 
-        // Assign roles
         Set<Role> roles = new HashSet<>();
         if (dto.getRoleNames() != null) {
             for (String roleName : dto.getRoleNames()) {
-                Role role = roleRepository.findByName(roleName).orElse(null);
-                if (role != null) {
-                    roles.add(role);
-                }
+                roleRepository.findByName(roleName).ifPresent(roles::add);
             }
         }
         user.setRoles(roles);
@@ -88,70 +80,50 @@ public class UserService {
 
     @Transactional
     public User updateUser(Long id, UserCreationDto dto) {
-        Optional<User> optionalUser = userRepository.findById(id);
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
-            user.setUsername(dto.getUsername());
-            if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
-                user.setPassword(dto.getPassword()); // Hash in real app
-            }
-            user.setEnabled(dto.isEnabled());
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
 
-            // Update roles
-            Set<Role> roles = new HashSet<>();
-            if (dto.getRoleNames() != null) {
-                for (String roleName : dto.getRoleNames()) {
-                    Role role = roleRepository.findByName(roleName).orElse(null);
-                    if (role != null) {
-                        roles.add(role);
-                    }
-                }
-            }
-            user.setRoles(roles);
-
-            return userRepository.save(user);
+        user.setUsername(dto.getUsername());
+        if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
-        return null;
+        user.setEmail(dto.getEmail());
+        user.setEnabled(dto.isEnabled());
+
+        Set<Role> roles = new HashSet<>();
+        if (dto.getRoleNames() != null) {
+            for (String roleName : dto.getRoleNames()) {
+                roleRepository.findByName(roleName).ifPresent(roles::add);
+            }
+        }
+        user.setRoles(roles);
+
+        return userRepository.save(user);
     }
 
     @Transactional
     public User assignRoles(UserRoleAssignmentDto dto) {
-        Optional<User> optionalUser = userRepository.findById(dto.getUserId());
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
-            Set<Role> roles = new HashSet<>();
-            
-            for (String roleName : dto.getRoleNames()) {
-                Role role = roleRepository.findByName(roleName).orElse(null);
-                if (role != null) {
-                    roles.add(role);
-                }
-            }
-            user.setRoles(roles);
-            return userRepository.save(user);
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getUserId()));
+
+        Set<Role> roles = new HashSet<>();
+        for (String roleName : dto.getRoleNames()) {
+            roleRepository.findByName(roleName).ifPresent(roles::add);
         }
-        return null;
+        user.setRoles(roles);
+        return userRepository.save(user);
     }
 
     @Transactional
     public List<User> bulkImportUsers(BulkUserImportDto dto) {
         List<User> createdUsers = new ArrayList<>();
-        
         for (UserCreationDto userDto : dto.getUsers()) {
             try {
-                User user = createUser(userDto);
-                createdUsers.add(user);
-                
-                // In a real application, you might send welcome emails here
-                if (dto.isSendWelcomeEmail()) {
-                    // sendWelcomeEmail(user);
-                }
+                createdUsers.add(createUser(userDto));
             } catch (Exception e) {
-                // Log error but continue with other users
                 System.err.println("Failed to create user: " + userDto.getUsername() + " - " + e.getMessage());
             }
         }
-        
         return createdUsers;
     }
 
@@ -170,41 +142,41 @@ public class UserService {
 
     @Transactional
     public Role createRole(String roleName) {
-        Role role = new Role(roleName);
-        return roleRepository.save(role);
-    }
-
-    public Optional<User> authenticateUser(String username, String password) {
-        // In a real application, you would hash the password and compare hashes
-        // For now, we'll do a simple comparison
-        List<User> users = userRepository.findAll();
-        return users.stream()
-                .filter(user -> user.getUsername().equals(username) && 
-                               user.getPassword().equals(password) &&
-                               user.isEnabled())
-                .findFirst();
+        return roleRepository.save(new Role(roleName));
     }
 
     public Optional<User> getUserByUsername(String username) {
-        List<User> users = userRepository.findAll();
-        return users.stream()
-                .filter(user -> user.getUsername().equals(username))
-                .findFirst();
+        return userRepository.findByUsername(username);
     }
 
     @Transactional
     public User registerUser(String username, String password, String email) {
         User user = new User();
         user.setUsername(username);
-        user.setPassword(password); // In real app, hash this password
+        user.setPassword(passwordEncoder.encode(password));
+        user.setEmail(email);
         user.setEnabled(true);
 
-        // Assign default student role
-        Role studentRole = roleRepository.findByName(ROLE_NAME_STUDENT).orElse(null);
-        if (studentRole != null) {
-            user.addRole(studentRole);
-        }
+        roleRepository.findByName(ROLE_NAME_STUDENT).ifPresent(user::addRole);
 
         return userRepository.save(user);
+    }
+
+    public Optional<User> authenticateUser(String username, String password) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isPresent() && passwordEncoder.matches(password, userOpt.get().getPassword())) {
+            return userOpt;
+        }
+        return Optional.empty();
+    }
+
+    public Map<String, Long> getUserStats() {
+        Map<String, Long> stats = new HashMap<>();
+        stats.put("activeUsers", userRepository.countByEnabled(true));
+        stats.put("inactiveUsers", userRepository.countByEnabled(false));
+        roleRepository.findByName(ROLE_NAME_ADMIN).ifPresent(role -> stats.put("adminCount", userRepository.countByRolesContaining(role)));
+        roleRepository.findByName(ROLE_NAME_TEACHER).ifPresent(role -> stats.put("teacherCount", userRepository.countByRolesContaining(role)));
+        stats.put("totalUsers", userRepository.count());
+        return stats;
     }
 }

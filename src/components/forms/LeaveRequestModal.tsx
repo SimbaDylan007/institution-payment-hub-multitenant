@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
 interface LeaveRequestModalProps {
   staffId: number;
@@ -25,7 +25,7 @@ export default function LeaveRequestModal({ staffId, onLeaveRequested }: LeaveRe
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  
+
   const [formData, setFormData] = useState({
     leaveType: "",
     startDate: "",
@@ -34,16 +34,16 @@ export default function LeaveRequestModal({ staffId, onLeaveRequested }: LeaveRe
     notes: ""
   });
 
+  // 2. Refactor the handleSubmit function
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/staff/${staffId}/leave-requests`, {
+      // Replace `fetch` with `apiFetch` and remove the manual headers.
+      // `apiFetch` will automatically add the 'Authorization' and 'Content-Type' headers.
+      const response = await apiFetch(`http://localhost:8080/api/staff/${staffId}/leave-requests`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(formData),
       });
 
@@ -52,6 +52,7 @@ export default function LeaveRequestModal({ staffId, onLeaveRequested }: LeaveRe
           title: "Success",
           description: "Leave request submitted successfully!",
         });
+        // Reset form and close the modal on success
         setFormData({
           leaveType: "",
           startDate: "",
@@ -60,14 +61,17 @@ export default function LeaveRequestModal({ staffId, onLeaveRequested }: LeaveRe
           notes: ""
         });
         setOpen(false);
-        onLeaveRequested?.();
+        onLeaveRequested?.(); // Callback to refresh parent component data
       } else {
-        throw new Error("Failed to submit leave request");
+        // Try to get a more specific error message from the server response
+        const errorData = await response.json().catch(() => ({ message: "Failed to submit leave request. Please try again." }));
+        throw new Error(errorData.message);
       }
     } catch (error) {
+      // Display the specific error message from the server or the generic one from apiFetch
       toast({
         title: "Error",
-        description: "Failed to submit leave request. Please try again.",
+        description: (error as Error).message,
         variant: "destructive",
       });
     } finally {
@@ -79,107 +83,108 @@ export default function LeaveRequestModal({ staffId, onLeaveRequested }: LeaveRe
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // The JSX for the component remains unchanged
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-green-500 hover:bg-green-600">
-          <Calendar className="h-4 w-4 mr-2" />
-          Request Leave
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-        <DialogHeader>
-          <DialogTitle>Submit Leave Request</DialogTitle>
-          <DialogDescription>
-            Submit a new leave request for approval.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="leaveType">Leave Type</Label>
-            <Select value={formData.leaveType} onValueChange={(value) => handleInputChange("leaveType", value)}>
-              <SelectTrigger className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                <SelectValue placeholder="Select leave type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="SICK">Sick Leave</SelectItem>
-                <SelectItem value="VACATION">Vacation</SelectItem>
-                <SelectItem value="PERSONAL">Personal Leave</SelectItem>
-                <SelectItem value="EMERGENCY">Emergency Leave</SelectItem>
-                <SelectItem value="MATERNITY">Maternity Leave</SelectItem>
-                <SelectItem value="PATERNITY">Paternity Leave</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button className="bg-green-500 hover:bg-green-600">
+            <Calendar className="h-4 w-4 mr-2" />
+            Request Leave
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[500px] bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
+          <DialogHeader>
+            <DialogTitle>Submit Leave Request</DialogTitle>
+            <DialogDescription>
+              Submit a new leave request for approval.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => handleInputChange("startDate", e.target.value)}
-                className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                required
+              <Label htmlFor="leaveType">Leave Type</Label>
+              <Select value={formData.leaveType} onValueChange={(value) => handleInputChange("leaveType", value)}>
+                <SelectTrigger className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
+                  <SelectValue placeholder="Select leave type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SICK">Sick Leave</SelectItem>
+                  <SelectItem value="VACATION">Vacation</SelectItem>
+                  <SelectItem value="PERSONAL">Personal Leave</SelectItem>
+                  <SelectItem value="EMERGENCY">Emergency Leave</SelectItem>
+                  <SelectItem value="MATERNITY">Maternity Leave</SelectItem>
+                  <SelectItem value="PATERNITY">Paternity Leave</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => handleInputChange("startDate", e.target.value)}
+                    className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
+                    required
+                />
+              </div>
+              <div>
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                    id="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => handleInputChange("endDate", e.target.value)}
+                    className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
+                    required
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="reason">Reason</Label>
+              <Textarea
+                  id="reason"
+                  value={formData.reason}
+                  onChange={(e) => handleInputChange("reason", e.target.value)}
+                  className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
+                  rows={3}
+                  required
               />
             </div>
+
             <div>
-              <Label htmlFor="endDate">End Date</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => handleInputChange("endDate", e.target.value)}
-                className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-                required
+              <Label htmlFor="notes">Additional Notes</Label>
+              <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange("notes", e.target.value)}
+                  className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
+                  rows={2}
               />
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="reason">Reason</Label>
-            <Textarea
-              id="reason"
-              value={formData.reason}
-              onChange={(e) => handleInputChange("reason", e.target.value)}
-              className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-              rows={3}
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="notes">Additional Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => handleInputChange("notes", e.target.value)}
-              className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200"
-              rows={2}
-            />
-          </div>
-
-          <div className="flex justify-end space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              className="border-gray-700 dark:border-gray-200"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-blue-500 hover:bg-blue-600"
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit Request
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <div className="flex justify-end space-x-2">
+              <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  className="border-gray-700 dark:border-gray-200"
+              >
+                Cancel
+              </Button>
+              <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-blue-500 hover:bg-blue-600"
+              >
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit Request
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
   );
 }

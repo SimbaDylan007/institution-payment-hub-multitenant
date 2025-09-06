@@ -1,565 +1,206 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Home, BookOpen, Search, Plus, Users, Edit, Trash2, FileText } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Home, Plus, Edit, Trash2, BookUp, BookDown, Library as LibraryIcon, UploadCloud, Download, Search, BookUser } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { PaginationControls } from "@/components/PaginationControls";
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the secure fetch wrapper
 
-interface Book {
-  id: number;
-  title: string;
-  author: string;
-  isbn: string;
-  publisher: string;
-  publishedDate: string;
-  category: string;
-  totalCopies: number;
-  availableCopies: number;
-  location: string;
-  status: string;
-}
-
-interface Member {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  memberType: string;
-  membershipDate: string;
-  status: string;
-}
+// --- Interfaces ---
+interface Book { id: number; title: string; author: string; isbn: string; publisher: string; publishedDate: string; category: string; totalCopies: number; availableCopies: number; location: string; status: string; }
+interface BookTransaction { id: number; book: { title: string }; student: { studentId: string }; issueDate: string; dueDate: string; returnDate: string | null; status: string; }
+interface Page<T> { content: T[]; totalPages: number; number: number; }
 
 export default function Library() {
   const { user } = useAuth();
-  const [books, setBooks] = useState<Book[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [isBookDialogOpen, setIsBookDialogOpen] = useState(false);
-  const [isMemberDialogOpen, setIsMemberDialogOpen] = useState(false);
+  const [bookPage, setBookPage] = useState<Page<Book> | null>(null);
+  const [loanPage, setLoanPage] = useState<Page<BookTransaction> | null>(null);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [bookSearch, setBookSearch] = useState("");
+  const [loanSearch, setLoanSearch] = useState("");
+  const [bookPageNum, setBookPageNum] = useState(0);
+  const [loanPageNum, setLoanPageNum] = useState(0);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isTransactionOpen, setIsTransactionOpen] = useState(false);
+  const [transactionType, setTransactionType] = useState<'issue' | 'return'>('issue');
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [studentId, setStudentId] = useState("");
 
-  useEffect(() => {
-    fetchBooks();
-    fetchMembers();
+  const fetchBooks = useCallback((page = 0, search = "") => {
+    setLoading(true);
+    const url = `http://localhost:8080/api/library/books?page=${page}&size=10&sort=title,asc&searchTerm=${encodeURIComponent(search)}`;
+    apiFetch(url).then(res => res.json()).then(setBookPage).catch(() => toast.error('Failed to fetch books.')).finally(() => setLoading(false));
   }, []);
 
-  const fetchBooks = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/library/books');
-      if (response.ok) {
-        const data = await response.json();
-        setBooks(data);
-      }
-    } catch (error) {
-      console.error('Error fetching books:', error);
-    }
-  };
+  const fetchLoans = useCallback((page = 0, search = "") => {
+    setLoading(true);
+    const url = `http://localhost:8080/api/library/transactions?page=${page}&size=10&studentId=${encodeURIComponent(search)}`;
+    apiFetch(url).then(res => res.json()).then(setLoanPage).catch(err => toast.error(err.message)).finally(() => setLoading(false));
+  }, []);
 
-  const fetchMembers = async () => {
-    try {
-      // Since there's no members endpoint, we'll use a placeholder
-      setMembers([
-        {
-          id: 1,
-          name: "John Doe",
-          email: "john@example.com",
-          phone: "+1234567890",
-          memberType: "STUDENT",
-          membershipDate: "2024-01-15",
-          status: "ACTIVE"
-        }
-      ]);
-    } catch (error) {
-      console.error('Error fetching members:', error);
-    }
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => { fetchBooks(bookPageNum, bookSearch); }, 300);
+    return () => clearTimeout(timer);
+  }, [bookSearch, bookPageNum, fetchBooks]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => { fetchLoans(loanPageNum, loanSearch); }, 300);
+    return () => clearTimeout(timer);
+  }, [loanSearch, loanPageNum, fetchLoans]);
 
   const handleBookSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    
+    e.preventDefault(); setLoading(true);
     const formData = new FormData(e.currentTarget);
-    const bookData = {
-      title: formData.get('title'),
-      author: formData.get('author'),
-      isbn: formData.get('isbn'),
-      publisher: formData.get('publisher'),
-      publishedDate: formData.get('publishedDate'),
-      category: formData.get('category'),
-      totalCopies: parseInt(formData.get('totalCopies') as string),
-      location: formData.get('location')
-    };
-
+    const bookData = { title: formData.get('title'), author: formData.get('author'), isbn: formData.get('isbn'), publisher: formData.get('publisher'), publishedDate: formData.get('publishedDate'), category: formData.get('category'), totalCopies: parseInt(formData.get('totalCopies') as string), location: formData.get('location') };
+    const url = selectedBook ? `http://localhost:8080/api/library/books/${selectedBook.id}` : 'http://localhost:8080/api/library/books';
+    const method = selectedBook ? 'PUT' : 'POST';
     try {
-      const url = selectedBook 
-        ? `http://localhost:8080/api/library/books/${selectedBook.id}`
-        : 'http://localhost:8080/api/library/books';
-      
-      const response = await fetch(url, {
-        method: selectedBook ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bookData)
-      });
-
+      const response = await apiFetch(url, { method, body: JSON.stringify(bookData) });
       if (response.ok) {
         toast.success(`Book ${selectedBook ? 'updated' : 'added'} successfully`);
-        setIsBookDialogOpen(false);
-        setSelectedBook(null);
-        fetchBooks();
-      } else {
-        throw new Error('Failed to save book');
-      }
-    } catch (error) {
-      toast.error('Failed to save book');
-    } finally {
-      setLoading(false);
-    }
+        setIsFormOpen(false); setSelectedBook(null); fetchBooks(bookPageNum, bookSearch);
+      } else { throw new Error(await response.text()); }
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setLoading(false); }
   };
 
   const handleDeleteBook = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this book?')) return;
-    
+    if (!window.confirm('Are you sure you want to delete this book?')) return;
     try {
-      const response = await fetch(`http://localhost:8080/api/library/books/${id}`, {
-        method: 'DELETE'
-      });
-      
+      const response = await apiFetch(`http://localhost:8080/api/library/books/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success('Book deleted successfully');
-        fetchBooks();
-      }
-    } catch (error) {
-      toast.error('Failed to delete book');
-    }
+        fetchBooks(bookPageNum, bookSearch);
+      } else { throw new Error(await response.text()); }
+    } catch (error) { toast.error((error as Error).message); }
   };
 
-  const searchBooks = async () => {
-    if (!searchTerm.trim()) {
-      fetchBooks();
-      return;
-    }
-
+  const handleImport = async () => {
+    if (!importFile) { toast.warning("Please select a file."); return; }
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('file', importFile);
     try {
-      const response = await fetch(`http://localhost:8080/api/library/books/search/title?title=${encodeURIComponent(searchTerm)}`);
+      const response = await apiFetch('http://localhost:8080/api/library/books/bulk-upload', { method: 'POST', body: formData });
       if (response.ok) {
-        const data = await response.json();
-        setBooks(data);
-      }
-    } catch (error) {
-      console.error('Error searching books:', error);
-    }
+        const newBooks = await response.json();
+        toast.success(`${newBooks.length} books imported/updated successfully!`);
+        setIsImportOpen(false); setImportFile(null); fetchBooks();
+      } else { throw new Error(await response.text()); }
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setLoading(false); }
   };
 
-  const filteredBooks = books.filter(book => 
-    book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    book.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleDownloadTemplate = () => {
+    const headers = "title,author,isbn,category,totalCopies\n";
+    const example = "The Great Gatsby,F. Scott Fitzgerald,9780743273565,FICTION,5\n";
+    const blob = new Blob([headers + example], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "books_import_template.csv");
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
+  const handleTransactionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBook || !studentId) return toast.error("Book and Student ID are required.");
+    setLoading(true);
+    const url = `http://localhost:8080/api/library/books/${transactionType}?bookId=${selectedBook.id}&studentId=${studentId}`;
+    try {
+      const response = await apiFetch(url, { method: 'POST' });
+      if (response.ok) {
+        toast.success(`Book successfully ${transactionType === 'issue' ? 'issued' : 'returned'}!`);
+        setIsTransactionOpen(false); setSelectedBook(null); setStudentId("");
+        fetchBooks(bookPageNum, bookSearch);
+        fetchLoans(loanPageNum, loanSearch);
+      } else { throw new Error(await response.text()); }
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setLoading(false); }
+  };
+
+  if (!user) { return <Navigate to="/" replace />; }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Library Management</h1>
-            <p className="text-gray-300">Manage books, circulation, and library resources</p>
-          </div>
-          <div className="flex gap-2">
-            <Dialog open={isBookDialogOpen} onOpenChange={setIsBookDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-green-600 text-white hover:bg-green-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Book
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-purple-900 border-purple-700 text-white max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{selectedBook ? 'Edit Book' : 'Add New Book'}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleBookSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="title">Title</Label>
-                      <Input 
-                        id="title" 
-                        name="title" 
-                        defaultValue={selectedBook?.title || ''}
-                        className="bg-purple-800 border-purple-600" 
-                        required 
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="author">Author</Label>
-                      <Input 
-                        id="author" 
-                        name="author" 
-                        defaultValue={selectedBook?.author || ''}
-                        className="bg-purple-800 border-purple-600" 
-                        required 
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="isbn">ISBN</Label>
-                      <Input 
-                        id="isbn" 
-                        name="isbn" 
-                        defaultValue={selectedBook?.isbn || ''}
-                        className="bg-purple-800 border-purple-600" 
-                        required 
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="publisher">Publisher</Label>
-                      <Input 
-                        id="publisher" 
-                        name="publisher" 
-                        defaultValue={selectedBook?.publisher || ''}
-                        className="bg-purple-800 border-purple-600" 
-                        required 
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="publishedDate">Published Date</Label>
-                      <Input 
-                        id="publishedDate" 
-                        name="publishedDate" 
-                        type="date"
-                        defaultValue={selectedBook?.publishedDate || ''}
-                        className="bg-purple-800 border-purple-600" 
-                        required 
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="category">Category</Label>
-                      <Select name="category" defaultValue={selectedBook?.category || ''}>
-                        <SelectTrigger className="bg-purple-800 border-purple-600">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-purple-800 border-purple-600">
-                          <SelectItem value="FICTION">Fiction</SelectItem>
-                          <SelectItem value="NON_FICTION">Non-Fiction</SelectItem>
-                          <SelectItem value="SCIENCE">Science</SelectItem>
-                          <SelectItem value="HISTORY">History</SelectItem>
-                          <SelectItem value="BIOGRAPHY">Biography</SelectItem>
-                          <SelectItem value="REFERENCE">Reference</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="totalCopies">Total Copies</Label>
-                      <Input 
-                        id="totalCopies" 
-                        name="totalCopies" 
-                        type="number"
-                        defaultValue={selectedBook?.totalCopies || ''}
-                        className="bg-purple-800 border-purple-600" 
-                        required 
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="location">Location</Label>
-                      <Input 
-                        id="location" 
-                        name="location" 
-                        defaultValue={selectedBook?.location || ''}
-                        className="bg-purple-800 border-purple-600" 
-                        required 
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => {
-                        setIsBookDialogOpen(false);
-                        setSelectedBook(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={loading}>
-                      {loading ? 'Saving...' : (selectedBook ? 'Update' : 'Add')}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-            <Button className="bg-purple-600 text-white hover:bg-purple-700" asChild>
-              <Link to="/dashboard" className="flex items-center gap-2">
-                <Home className="h-4 w-4" />
-                Dashboard
-              </Link>
-            </Button>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="mb-6 flex justify-between items-center"><h1 className="text-2xl font-bold">Library Management</h1><Button asChild><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4 mr-2"/>Dashboard</Link></Button></div>
+          <Tabs defaultValue="inventory" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2 bg-purple-900/50 border-purple-700">
+              <TabsTrigger value="inventory">Book Inventory</TabsTrigger>
+              <TabsTrigger value="history">Loan History</TabsTrigger>
+            </TabsList>
 
-        <Tabs defaultValue="catalog" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-purple-900/50 border-purple-700">
-            <TabsTrigger value="catalog" className="data-[state=active]:bg-purple-600">Book Catalog</TabsTrigger>
-            <TabsTrigger value="circulation" className="data-[state=active]:bg-purple-600">Circulation</TabsTrigger>
-            <TabsTrigger value="members" className="data-[state=active]:bg-purple-600">Members</TabsTrigger>
-            <TabsTrigger value="reports" className="data-[state=active]:bg-purple-600">Reports</TabsTrigger>
-          </TabsList>
+            <TabsContent value="inventory">
+              <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+                <CardHeader>
+                  <div className="flex justify-between items-center"><CardTitle className="flex items-center gap-2"><LibraryIcon/>Book Inventory</CardTitle><div className="flex gap-2"><Button onClick={() => setIsImportOpen(true)} className="bg-blue-600 hover:bg-blue-700"><UploadCloud size={16} className="mr-2"/> Import Books</Button><Button className="bg-green-600 hover:bg-green-700" onClick={() => {setSelectedBook(null); setIsFormOpen(true);}}><Plus size={16} className="mr-2"/> Add Book</Button></div></div>
+                  <div className="flex gap-4 pt-4"><Input placeholder="Search by title, author, or ISBN..." value={bookSearch} onChange={e => {setBookSearch(e.target.value); setBookPageNum(0);}} className="bg-purple-800 border-purple-600"/></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-purple-700"><th className="p-2">Title</th><th className="p-2">Author</th><th className="p-2">ISBN</th><th className="p-2">Copies (Avail/Total)</th><th className="p-2 text-center">Actions</th></tr></thead><tbody>
+                  {loading && !bookPage?.content ? (<tr><td colSpan={5} className="text-center p-4">Loading...</td></tr>) :
+                      bookPage?.content.map((book) => (
+                          <tr key={book.id} className="border-b border-purple-800/50">
+                            <td className="p-2">{book.title}</td><td className="p-2">{book.author}</td>
+                            <td className="p-2">{book.isbn}</td><td className="p-2 text-center">{`${book.availableCopies} / ${book.totalCopies}`}</td>
+                            <td className="p-2 flex justify-center gap-2">
+                              <Button title="Issue Book" size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => { setSelectedBook(book); setTransactionType('issue'); setIsTransactionOpen(true); }}><BookUp size={16}/></Button>
+                              <Button title="Return Book" size="sm" className="bg-yellow-600 hover:bg-yellow-700" onClick={() => { setSelectedBook(book); setTransactionType('return'); setIsTransactionOpen(true); }}><BookDown size={16}/></Button>
+                              <Button title="Edit Book" size="sm" variant="outline" onClick={() => { setSelectedBook(book); setIsFormOpen(true); }}><Edit size={16}/></Button>
+                              <Button title="Delete Book" size="sm" variant="destructive" onClick={() => handleDeleteBook(book.id)}><Trash2 size={16}/></Button>
+                            </td>
+                          </tr>
+                      ))}
+                  </tbody></table></div>
+                  <PaginationControls page={bookPage} onPageChange={setBookPageNum}/>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="catalog">
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <BookOpen className="h-5 w-5" />
-                  Book Catalog
-                </CardTitle>
-                <div className="flex gap-4 items-center mt-4">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Search books by title, author, or category..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="bg-purple-800 border-purple-600 text-white"
-                    />
-                  </div>
-                  <Button onClick={searchBooks} className="bg-blue-600 hover:bg-blue-700">
-                    <Search className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <Card className="bg-purple-800/30 border-purple-600">
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-blue-400">{books.length}</div>
-                      <p className="text-sm text-gray-300">Total Books</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-purple-800/30 border-purple-600">
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-green-400">
-                        {books.reduce((sum, book) => sum + book.availableCopies, 0)}
-                      </div>
-                      <p className="text-sm text-gray-300">Available</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-purple-800/30 border-purple-600">
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-yellow-400">
-                        {books.reduce((sum, book) => sum + (book.totalCopies - book.availableCopies), 0)}
-                      </div>
-                      <p className="text-sm text-gray-300">Issued</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-purple-800/30 border-purple-600">
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-red-400">
-                        {books.filter(book => book.status === 'OVERDUE').length}
-                      </div>
-                      <p className="text-sm text-gray-300">Overdue</p>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="space-y-4">
-                  {filteredBooks.map((book) => (
-                    <div key={book.id} className="flex justify-between items-center p-4 bg-purple-800/30 rounded-lg border border-purple-600">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-white">{book.title}</h3>
-                        <p className="text-sm text-gray-300">by {book.author}</p>
-                        <div className="flex gap-4 text-sm text-gray-400 mt-1">
-                          <span>ISBN: {book.isbn}</span>
-                          <span>Category: {book.category}</span>
-                          <span>Available: {book.availableCopies}/{book.totalCopies}</span>
-                          <span>Location: {book.location}</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="border-purple-600 text-white hover:bg-purple-700"
-                          onClick={() => {
-                            setSelectedBook(book);
-                            setIsBookDialogOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
-                          onClick={() => handleDeleteBook(book.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="history">
+              <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><BookUser/>Loan History</CardTitle>
+                  <div className="flex gap-2 pt-4"><Input placeholder="Filter by Student ID..." value={loanSearch} onChange={e => {setLoanSearch(e.target.value); setLoanPageNum(0);}} className="bg-purple-800 border-purple-600"/></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-purple-700"><th className="p-2">Book Title</th><th className="p-2">Student ID</th><th className="p-2">Issue Date</th><th className="p-2">Due Date</th><th className="p-2">Return Date</th><th className="p-2">Status</th></tr></thead><tbody>
+                  {loading && !loanPage?.content ? (<tr><td colSpan={6} className="text-center p-4">Loading history...</td></tr>) :
+                      loanPage?.content.map(loan => (
+                          <tr key={loan.id} className="border-b border-purple-800/50">
+                            <td className="p-2">{loan.book.title}</td>
+                            <td className="p-2">{loan.student.studentId}</td>
+                            <td className="p-2">{loan.issueDate}</td>
+                            <td className="p-2">{loan.dueDate}</td>
+                            <td className="p-2">{loan.returnDate || 'Not Returned'}</td>
+                            <td className="p-2"><Badge className={loan.status === 'ISSUED' ? 'bg-yellow-500' : 'bg-green-500'}>{loan.status}</Badge></td>
+                          </tr>
+                      ))}
+                  </tbody></table></div>
+                  <PaginationControls page={loanPage} onPageChange={setLoanPageNum}/>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </main>
 
-          <TabsContent value="circulation">
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Search className="h-5 w-5" />
-                  Book Circulation
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-300">
-                  <p className="mb-4">Book issue/return interface</p>
-                  <div className="space-y-4 max-w-md mx-auto">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                      Issue Book
-                    </Button>
-                    <Button className="w-full bg-green-600 hover:bg-green-700">
-                      Return Book
-                    </Button>
-                    <Button className="w-full bg-yellow-600 hover:bg-yellow-700">
-                      Renew Book
-                    </Button>
-                    <Button className="w-full bg-red-600 hover:bg-red-700">
-                      View Overdue Books
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="members">
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Users className="h-5 w-5" />
-                    Library Members
-                  </CardTitle>
-                  <Button className="bg-green-600 hover:bg-green-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Member
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {members.map((member) => (
-                    <div key={member.id} className="flex justify-between items-center p-4 bg-purple-800/30 rounded-lg border border-purple-600">
-                      <div>
-                        <h3 className="font-semibold text-white">{member.name}</h3>
-                        <p className="text-sm text-gray-300">{member.email} • {member.phone}</p>
-                        <div className="flex gap-4 text-sm text-gray-400 mt-1">
-                          <span>Type: {member.memberType}</span>
-                          <span>Member since: {new Date(member.membershipDate).toLocaleDateString()}</span>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            member.status === 'ACTIVE' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                          }`}>
-                            {member.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="border-purple-600 text-white hover:bg-purple-700">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="reports">
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <FileText className="h-5 w-5" />
-                  Library Reports
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="p-6 bg-purple-800/30 rounded-lg border border-purple-600 text-center">
-                    <h3 className="font-semibold text-white mb-4">Circulation Report</h3>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                      Generate Report
-                    </Button>
-                  </div>
-                  
-                  <div className="p-6 bg-purple-800/30 rounded-lg border border-purple-600 text-center">
-                    <h3 className="font-semibold text-white mb-4">Overdue Books</h3>
-                    <Button className="w-full bg-red-600 hover:bg-red-700">
-                      Generate Report
-                    </Button>
-                  </div>
-                  
-                  <div className="p-6 bg-purple-800/30 rounded-lg border border-purple-600 text-center">
-                    <h3 className="font-semibold text-white mb-4">Popular Books</h3>
-                    <Button className="w-full bg-green-600 hover:bg-green-700">
-                      Generate Report
-                    </Button>
-                  </div>
-                  
-                  <div className="p-6 bg-purple-800/30 rounded-lg border border-purple-600 text-center">
-                    <h3 className="font-semibold text-white mb-4">Member Activity</h3>
-                    <Button className="w-full bg-purple-600 hover:bg-purple-700">
-                      Generate Report
-                    </Button>
-                  </div>
-                  
-                  <div className="p-6 bg-purple-800/30 rounded-lg border border-purple-600 text-center">
-                    <h3 className="font-semibold text-white mb-4">Inventory Status</h3>
-                    <Button className="w-full bg-amber-600 hover:bg-amber-700">
-                      Generate Report
-                    </Button>
-                  </div>
-                  
-                  <div className="p-6 bg-purple-800/30 rounded-lg border border-purple-600 text-center">
-                    <h3 className="font-semibold text-white mb-4">Monthly Summary</h3>
-                    <Button className="w-full bg-cyan-600 hover:bg-cyan-700">
-                      Generate Report
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
-      
-      <footer className="bg-gradient-to-r from-purple-900 via-blue-900 to-black border-t border-purple-700 py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-300">
-          &copy; {new Date().getFullYear()} School Management System
-        </div>
-      </footer>
-    </div>
+        <Dialog open={isTransactionOpen} onOpenChange={setIsTransactionOpen}><DialogContent className="bg-gray-900 text-white border-gray-700"><DialogHeader><DialogTitle>{transactionType === 'issue' ? `Issue Book: ${selectedBook?.title}` : `Return Book: ${selectedBook?.title}`}</DialogTitle></DialogHeader><form onSubmit={handleTransactionSubmit} className="space-y-4 py-4"><div><Label htmlFor="studentId">Student ID</Label><Input id="studentId" value={studentId} onChange={e => setStudentId(e.target.value)} required className="bg-gray-800"/></div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setIsTransactionOpen(false)}>Cancel</Button><Button type="submit">{transactionType === 'issue' ? 'Issue Book' : 'Return Book'}</Button></div></form></DialogContent></Dialog>
+        <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) setSelectedBook(null); setIsFormOpen(isOpen);}}><DialogContent className="bg-purple-900 border-purple-700 text-white max-w-2xl"><DialogHeader><DialogTitle>{selectedBook ? 'Edit Book' : 'Add New Book'}</DialogTitle></DialogHeader><form onSubmit={handleBookSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4"><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="title">Title</Label><Input id="title" name="title" defaultValue={selectedBook?.title} required className="bg-gray-800"/></div><div><Label htmlFor="author">Author</Label><Input id="author" name="author" defaultValue={selectedBook?.author} required className="bg-gray-800"/></div></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="isbn">ISBN</Label><Input id="isbn" name="isbn" defaultValue={selectedBook?.isbn} required className="bg-gray-800"/></div><div><Label htmlFor="publisher">Publisher</Label><Input id="publisher" name="publisher" defaultValue={selectedBook?.publisher} className="bg-gray-800"/></div></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="publishedDate">Published Date</Label><Input id="publishedDate" name="publishedDate" type="date" defaultValue={selectedBook?.publishedDate} className="bg-gray-800"/></div><div><Label htmlFor="category">Category</Label><Select name="category" defaultValue={selectedBook?.category}><SelectTrigger className="bg-gray-800"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent className="bg-gray-800"><SelectItem value="FICTION">Fiction</SelectItem><SelectItem value="NON_FICTION">Non-Fiction</SelectItem><SelectItem value="SCIENCE">Science</SelectItem><SelectItem value="HISTORY">History</SelectItem></SelectContent></Select></div></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="totalCopies">Total Copies</Label><Input id="totalCopies" name="totalCopies" type="number" defaultValue={selectedBook?.totalCopies} required className="bg-gray-800"/></div><div><Label htmlFor="location">Location</Label><Input id="location" name="location" defaultValue={selectedBook?.location} className="bg-gray-800"/></div></div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button><Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save'}</Button></div></form></DialogContent></Dialog>
+        <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}><DialogContent className="bg-gray-900 text-white border-gray-700"><DialogHeader><DialogTitle>Bulk Import Books</DialogTitle></DialogHeader><div className="space-y-4 py-4"><p className="text-sm text-gray-400">Upload a CSV or Excel file.</p><Button variant="outline" onClick={handleDownloadTemplate} className="w-full gap-2"><Download size={16}/>Download CSV Template</Button><div><Label htmlFor="importFile">Upload File</Label><Input id="importFile" type="file" onChange={(e) => setImportFile(e.target.files?.[0] || null)} accept=".csv, .xlsx"/></div><div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button><Button onClick={handleImport} disabled={loading}>{loading ? "Importing..." : "Start Import"}</Button></div></div></DialogContent></Dialog>
+      </div>
   );
 }

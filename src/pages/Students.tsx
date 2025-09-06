@@ -7,14 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label"; // CORRECTED: Import from the correct UI library
+import { Label } from "@/components/ui/label";
 import { Home, Plus, Search, Edit, Trash2, Users, UserCheck, UserX, UploadCloud, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import StudentForm from "@/components/forms/StudentForm";
+import { apiFetch } from "@/utils/apiClient"; // --- 1. IMPORT APIFETCH ---
 
 // --- Interfaces ---
-// CORRECTED: A single, complete interface for Student
 interface Student {
   id: number;
   studentId: string;
@@ -29,16 +29,14 @@ interface Student {
   address: string;
   enrollmentDate: string;
   enrollmentStatus: string;
-  // Add optional guardian fields if StudentForm needs them
   parentName?: string;
   parentPhone?: string;
 }
 
-// Interface for paginated API responses
 interface Page<T> {
   content: T[];
   totalPages: number;
-  number: number; // This is the current page index (0-based)
+  number: number;
   totalElements: number;
 }
 
@@ -53,23 +51,26 @@ export default function Students() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
 
+  // --- 2. REFACTOR fetchStudents ---
   const fetchStudents = useCallback((page = 0, search = "") => {
     setLoading(true);
     const url = `http://localhost:8080/api/students?page=${page}&size=10&sort=firstName,asc&searchTerm=${encodeURIComponent(search)}`;
-    fetch(url)
+    apiFetch(url)
         .then(res => {
           if (res.ok) return res.json();
+          // Let the centralized error handler in apiFetch show the toast for network/auth errors
+          // But still throw an error to be caught here for component-specific logic
           throw new Error("Failed to fetch students");
         })
         .then(data => setStudentPage(data))
-        .catch(() => toast.error('Failed to fetch students'))
+        .catch(() => toast.error('Could not retrieve student data.')) // Specific error for this action
         .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchStudents(currentPage, searchTerm);
-    }, 300); // Debounce search input
+    }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm, currentPage, fetchStudents]);
 
@@ -77,7 +78,7 @@ export default function Students() {
     setIsFormDialogOpen(false);
     setSelectedStudent(null);
     toast.success(`Student ${selectedStudent ? 'updated' : 'added'} successfully`);
-    fetchStudents(currentPage, searchTerm); // Refresh the current page of data
+    fetchStudents(currentPage, searchTerm);
   };
 
   const handleEditStudent = (student: Student) => {
@@ -85,18 +86,22 @@ export default function Students() {
     setIsFormDialogOpen(true);
   };
 
+  // --- 3. REFACTOR handleDeleteStudent ---
   const handleDeleteStudent = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this student?')) {
       try {
-        const response = await fetch(`http://localhost:8080/api/students/${id}`, { method: 'DELETE' });
+        const response = await apiFetch(`http://localhost:8080/api/students/${id}`, { method: 'DELETE' });
         if (response.ok) {
           toast.success('Student deleted successfully');
-          fetchStudents(currentPage, searchTerm); // Refresh
+          fetchStudents(currentPage, searchTerm);
         } else {
-          toast.error('Failed to delete student');
+          // Handle specific API errors, e.g., student has related records
+          const error = await response.json();
+          toast.error(error.message || 'Failed to delete student');
         }
       } catch (error) {
-        toast.error('Error deleting student');
+        // Network errors are already handled by apiFetch's toast
+        console.error('Error deleting student:', error);
       }
     }
   };
@@ -107,6 +112,7 @@ export default function Students() {
     }
   };
 
+  // --- 4. REFACTOR handleImportSubmit ---
   const handleImportSubmit = async () => {
     if (!importFile) {
       toast.warning("Please select a file to upload.");
@@ -116,7 +122,12 @@ export default function Students() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const response = await fetch('http://localhost:8080/api/students/bulk-upload', { method: 'POST', body: formData });
+      const response = await apiFetch('http://localhost:8080/api/students/bulk-upload', {
+        method: 'POST',
+        body: formData,
+        // No Content-Type needed; browser sets it for FormData
+      });
+
       if (response.ok) {
         const newStudents = await response.json();
         toast.success(`${newStudents.length} students imported successfully!`);
@@ -128,6 +139,7 @@ export default function Students() {
         throw new Error(errorMessage || "Failed to import students.");
       }
     } catch (error) {
+      // Show specific error from server or the generic one from apiFetch
       toast.error((error as Error).message);
     }
     finally {
@@ -146,6 +158,7 @@ export default function Students() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url); // Clean up the object URL
   };
 
   if (!user) { return <Navigate to="/" replace />; }

@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -10,7 +9,9 @@ import { Home, BarChart3, Download, FileText, TrendingUp, Users, DollarSign } fr
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the secure apiFetch wrapper
 
+// --- Interfaces to match backend DTOs ---
 interface ReportData {
   financialAnalytics: any;
   studentPerformance: any;
@@ -26,43 +27,41 @@ export default function Reports() {
   const [selectedPeriod, setSelectedPeriod] = useState('monthly');
 
   useEffect(() => {
-    fetchReportData();
-  }, []);
+    if (user) { // Only fetch if logged in
+      fetchReportData();
+    }
+  }, [user]);
 
+  // CORRECTED: All fetch functions now use apiFetch
   const fetchReportData = async () => {
     setLoading(true);
     try {
       const [financial, performance, attendance, resources] = await Promise.all([
-        fetch('http://localhost:8080/api/analytics/financial-analytics').then(res => res.json()).catch(() => ({})),
-        fetch('http://localhost:8080/api/analytics/student-performance').then(res => res.json()).catch(() => ({})),
-        fetch('http://localhost:8080/api/analytics/attendance-analytics').then(res => res.json()).catch(() => ({})),
-        fetch('http://localhost:8080/api/analytics/resource-utilization').then(res => res.json()).catch(() => ({}))
+        apiFetch('http://localhost:8080/api/analytics/financial-analytics').then(res => res.ok ? res.json() : {}),
+        apiFetch('http://localhost:8080/api/analytics/student-performance').then(res => res.ok ? res.json() : {}),
+        apiFetch('http://localhost:8080/api/analytics/attendance-analytics').then(res => res.ok ? res.json() : {}),
+        apiFetch('http://localhost:8080/api/analytics/resource-utilization').then(res => res.ok ? res.json() : {})
       ]);
 
-      setReportData({
-        financialAnalytics: financial,
-        studentPerformance: performance,
-        attendanceAnalytics: attendance,
-        resourceUtilization: resources
-      });
+      setReportData({ financialAnalytics: financial, studentPerformance: performance, attendanceAnalytics: attendance, resourceUtilization: resources });
     } catch (error) {
+      // The apiFetch wrapper will handle toast notifications for network/auth errors
       console.error('Error fetching report data:', error);
-      toast.error('Failed to fetch report data');
     } finally {
       setLoading(false);
     }
   };
 
+  // CORRECTED: Uses apiFetch
   const generateReport = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/reports/generate`, {
+      const response = await apiFetch(`http://localhost:8080/api/reports/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reportType: selectedReportType,
           period: selectedPeriod,
-          format: 'PDF'
+          format: 'PDF' // Assuming PDF for now
         })
       });
 
@@ -81,7 +80,6 @@ export default function Reports() {
         throw new Error('Failed to generate report');
       }
     } catch (error) {
-      console.error('Error generating report:', error);
       toast.error('Failed to generate report');
     } finally {
       setLoading(false);

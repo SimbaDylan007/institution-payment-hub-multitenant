@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, Navigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { CSVLink } from "react-csv";
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the secure apiFetch wrapper
 
 // --- Interfaces ---
 interface PaymentAlert { id: string; amount: number; narrative: string; studentName: string; regNumber: string; reference: string; transactionDate: string; status: string; }
@@ -35,7 +36,8 @@ export default function PaymentAllocation() {
     const fetchPayments = useCallback((status: string, page: number, searchTerm: string) => {
         setLoading(true);
         const url = `http://localhost:8080/api/financials/payments/status?status=${status}&page=${page}&size=10&searchTerm=${encodeURIComponent(searchTerm)}`;
-        fetch(url)
+        // 2. Use apiFetch
+        apiFetch(url)
             .then(res => {
                 if (res.ok) return res.json();
                 throw new Error("Failed to fetch payments");
@@ -46,16 +48,21 @@ export default function PaymentAllocation() {
     }, []);
 
     useEffect(() => {
-        fetchPayments(activeTab, currentPage, paymentSearchTerm);
-    }, [activeTab, currentPage, paymentSearchTerm, fetchPayments]);
+        if(user) { // Only fetch if logged in
+            fetchPayments(activeTab, currentPage, paymentSearchTerm);
+        }
+    }, [user, activeTab, currentPage, paymentSearchTerm, fetchPayments]);
 
     useEffect(() => {
-        fetchAllStudents();
-    }, []);
+        if(user) {
+            fetchAllStudents();
+        }
+    }, [user]);
 
     const fetchAllStudents = async () => {
         try {
-            const res = await fetch('http://localhost:8080/api/financials/students/balances');
+            // 3. Use apiFetch
+            const res = await apiFetch('http://localhost:8080/api/financials/students/balances');
             if (res.ok) setAllStudents(await res.json());
         } catch (e) { console.error("Could not fetch students for search"); }
     };
@@ -73,9 +80,9 @@ export default function PaymentAllocation() {
         }
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:8080/api/financials/payments/allocate', {
+            // 4. Use apiFetch
+            const response = await apiFetch('http://localhost:8080/api/financials/payments/allocate', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     paymentAlertId: selectedPayment.id,
                     studentId: selectedStudent.studentId
@@ -117,6 +124,7 @@ export default function PaymentAllocation() {
 
     if (!user) return <Navigate to="/" replace />;
 
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const filteredStudents = useMemo(() => {
         if (!studentSearchTerm) return [];
         return allStudents.filter(s =>

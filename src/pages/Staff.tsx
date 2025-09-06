@@ -12,6 +12,7 @@ import { Home, Plus, Search, Edit, Trash2, Users, UserCheck, UserX, UploadCloud,
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import StaffForm from "@/components/forms/StaffForm";
+import { apiFetch } from "../utils/apiClient";
 
 // --- Interfaces ---
 interface Staff {
@@ -48,8 +49,13 @@ export default function Staff() {
   const fetchStaff = useCallback((page = 0, search = "") => {
     setLoading(true);
     const url = `http://localhost:8080/api/staff?page=${page}&size=10&sort=firstName,asc&searchTerm=${encodeURIComponent(search)}`;
-    fetch(url)
-        .then(res => res.ok ? res.json() : Promise.reject("Failed to fetch staff"))
+    apiFetch(url)
+        .then(res => {
+          if (res.ok) {
+            return res.json();
+          }
+          throw new Error("Failed to fetch staff");
+        })
         .then(data => setStaffPage(data))
         .catch(() => toast.error('Failed to fetch staff data.'))
         .finally(() => setLoading(false));
@@ -77,12 +83,17 @@ export default function Staff() {
   const handleDeleteStaff = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this staff member?')) {
       try {
-        const response = await fetch(`http://localhost:8080/api/staff/${id}`, { method: 'DELETE' });
+        const response = await apiFetch(`http://localhost:8080/api/staff/${id}`, { method: 'DELETE' });
         if (response.ok) {
           toast.success('Staff member deleted successfully');
           fetchStaff(currentPage, searchTerm);
-        } else { toast.error('Failed to delete staff member'); }
-      } catch (error) { toast.error('Error deleting staff member'); }
+        } else {
+          toast.error('Failed to delete staff member');
+        }
+      } catch (error) {
+        // The error toast is already handled in apiFetch, but you could add specific logic here if needed.
+        console.error('Error deleting staff member:', error);
+      }
     }
   };
 
@@ -91,23 +102,35 @@ export default function Staff() {
   };
 
   const handleImportSubmit = async () => {
-    if (!importFile) { toast.warning("Please select a file."); return; }
+    if (!importFile) {
+      toast.warning("Please select a file.");
+      return;
+    }
     setLoading(true);
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const response = await fetch('http://localhost:8080/api/staff/bulk-upload', { method: 'POST', body: formData });
+      const response = await apiFetch('http://localhost:8080/api/staff/bulk-upload', {
+        method: 'POST',
+        body: formData,
+        // No 'Content-Type' header needed, the browser will set it correctly for FormData
+      });
+
       if (response.ok) {
         const newStaff = await response.json();
         toast.success(`${newStaff.length} staff members imported successfully!`);
-        setIsImportDialogOpen(false); setImportFile(null);
+        setIsImportDialogOpen(false);
+        setImportFile(null);
         fetchStaff(); // Refresh list to page 0
       } else {
         const errorMsg = await response.text();
         throw new Error(errorMsg || "Failed to import staff.");
       }
-    } catch (error) { toast.error((error as Error).message); }
-    finally { setLoading(false); }
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDownloadTemplate = () => {
@@ -122,7 +145,9 @@ export default function Staff() {
     URL.revokeObjectURL(url);
   };
 
-  if (!user) { return <Navigate to="/" replace />; }
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">

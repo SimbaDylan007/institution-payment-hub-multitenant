@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
 export interface ManageRolesModalProps {
   onRolesUpdated: () => void;
@@ -27,24 +26,31 @@ export const ManageRolesModal: React.FC<ManageRolesModalProps> = ({ onRolesUpdat
     }
   }, [open]);
 
+  // 2. Refactor fetchUsers
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/users');
+      const response = await apiFetch('http://localhost:8080/api/users');
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
+      } else {
+        toast.error("Failed to fetch users.");
       }
     } catch (error) {
+      // apiFetch will have already shown a toast for network/auth errors
       console.error('Error fetching users:', error);
     }
   };
 
+  // 3. Refactor fetchRoles
   const fetchRoles = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/users/roles');
+      const response = await apiFetch('http://localhost:8080/api/users/roles');
       if (response.ok) {
         const data = await response.json();
         setRoles(data);
+      } else {
+        toast.error("Failed to fetch roles.");
       }
     } catch (error) {
       console.error('Error fetching roles:', error);
@@ -69,21 +75,20 @@ export const ManageRolesModal: React.FC<ManageRolesModalProps> = ({ onRolesUpdat
     }
   };
 
+  // 4. Refactor handleSubmit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUserId) {
       toast.error("Please select a user");
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
-      const response = await fetch('http://localhost:8080/api/users/assign-roles', {
+      // Use apiFetch and remove the manual headers
+      const response = await apiFetch('http://localhost:8080/api/users/assign-roles', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           userId: parseInt(selectedUserId),
           roleNames: selectedRoles
@@ -97,68 +102,71 @@ export const ManageRolesModal: React.FC<ManageRolesModalProps> = ({ onRolesUpdat
         setOpen(false);
         onRolesUpdated();
       } else {
-        toast.error("Failed to update user roles");
+        // Provide more specific error feedback
+        const errorData = await response.json().catch(() => ({ message: "Failed to update user roles." }));
+        throw new Error(errorData.message);
       }
     } catch (error) {
       console.error('Error updating user roles:', error);
-      toast.error("Error updating user roles");
+      toast.error((error as Error).message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // The JSX for the component remains unchanged
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline">Manage Roles</Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Manage User Roles</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="user">Select User</Label>
-            <Select value={selectedUserId} onValueChange={handleUserSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a user" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id.toString()}>
-                    {user.username} ({user.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {selectedUserId && (
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline">Manage Roles</Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage User Roles</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label>Assign Roles</Label>
-              <div className="space-y-2">
-                {roles.map((role) => (
-                  <div key={role.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`role-${role.id}`}
-                      checked={selectedRoles.includes(role.name)}
-                      onCheckedChange={(checked) => handleRoleChange(role.name, checked === true)}
-                    />
-                    <Label htmlFor={`role-${role.id}`}>{role.name}</Label>
-                  </div>
-                ))}
-              </div>
+              <Label htmlFor="user">Select User</Label>
+              <Select value={selectedUserId} onValueChange={handleUserSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id.toString()}>
+                        {user.username} ({user.email})
+                      </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading || !selectedUserId}>
-              {isLoading ? "Updating..." : "Update Roles"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            {selectedUserId && (
+                <div>
+                  <Label>Assign Roles</Label>
+                  <div className="space-y-2">
+                    {roles.map((role) => (
+                        <div key={role.id} className="flex items-center space-x-2">
+                          <Checkbox
+                              id={`role-${role.id}`}
+                              checked={selectedRoles.includes(role.name)}
+                              onCheckedChange={(checked) => handleRoleChange(role.name, checked === true)}
+                          />
+                          <Label htmlFor={`role-${role.id}`}>{role.name}</Label>
+                        </div>
+                    ))}
+                  </div>
+                </div>
+            )}
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading || !selectedUserId}>
+                {isLoading ? "Updating..." : "Update Roles"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
   );
 };

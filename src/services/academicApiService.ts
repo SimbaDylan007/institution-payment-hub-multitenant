@@ -1,107 +1,121 @@
-
 import { toast } from "sonner";
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
 const API_BASE_URL = "http://localhost:8080/api/academic";
 
-// Generic fetch function with error handling
-async function fetchWithErrorHandling<T>(
-  url: string,
-  options: RequestInit = {}
-): Promise<T> {
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+// 2. The local fetchWithErrorHandling function is no longer needed and has been removed.
+
+// A helper function to process the response from apiFetch
+async function processResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    // Try to parse a specific error message from the API, otherwise use a generic one
+    try {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+    } catch (e) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
     }
-    
-    return await response.json();
-  } catch (error) {
-    console.error("API Error:", error);
-    toast.error(error instanceof Error ? error.message : "Network error");
-    throw error;
   }
+  // If the response is OK, parse and return the JSON body
+  return await response.json();
 }
 
-// Subject API functions
+
+// --- Subject API functions ---
+
 export async function getAllSubjects() {
-  return fetchWithErrorHandling(`${API_BASE_URL}/subjects`);
+  const response = await apiFetch(`${API_BASE_URL}/subjects`);
+  return processResponse(response);
 }
 
 export async function getSubjectsByGrade(grade: string) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/subjects/grade/${grade}`);
+  const response = await apiFetch(`${API_BASE_URL}/subjects/grade/${grade}`);
+  return processResponse(response);
 }
 
 export async function createSubject(subject: any) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/subjects`, {
+  const response = await apiFetch(`${API_BASE_URL}/subjects`, {
     method: "POST",
     body: JSON.stringify(subject),
   });
+  return processResponse(response);
 }
 
 export async function updateSubject(id: number, subject: any) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/subjects/${id}`, {
+  const response = await apiFetch(`${API_BASE_URL}/subjects/${id}`, {
     method: "PUT",
     body: JSON.stringify(subject),
   });
+  return processResponse(response);
 }
 
-// Timetable API functions
+
+// --- Timetable API functions ---
+
 export async function getTimetableByClass(grade: string, section: string) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/timetable/class/${grade}/${section}`);
+  const response = await apiFetch(`${API_BASE_URL}/timetable/class/${grade}/${section}`);
+  return processResponse(response);
 }
 
 export async function getTimetableByTeacher(teacherId: number) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/timetable/teacher/${teacherId}`);
+  const response = await apiFetch(`${API_BASE_URL}/timetable/teacher/${teacherId}`);
+  return processResponse(response);
 }
 
 export async function createTimetableEntry(timetable: any) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/timetable`, {
+  const response = await apiFetch(`${API_BASE_URL}/timetable`, {
     method: "POST",
     body: JSON.stringify(timetable),
   });
+  return processResponse(response);
 }
 
-// Grade API functions
+
+// --- Grade API functions ---
+
 export async function getStudentGrades(studentId: number) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/grades/student/${studentId}`);
+  const response = await apiFetch(`${API_BASE_URL}/grades/student/${studentId}`);
+  return processResponse(response);
 }
 
 export async function getStudentGradesByYear(studentId: number, academicYear: string) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/grades/student/${studentId}/year/${academicYear}`);
+  const response = await apiFetch(`${API_BASE_URL}/grades/student/${studentId}/year/${academicYear}`);
+  return processResponse(response);
 }
 
 export async function addGrade(grade: any) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/grades`, {
+  const response = await apiFetch(`${API_BASE_URL}/grades`, {
     method: "POST",
     body: JSON.stringify(grade),
   });
+  return processResponse(response);
 }
 
-// Exam API functions
+
+// --- Exam API functions ---
+
 export async function getExamsByClass(grade: string, section: string) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/exams/class/${grade}/${section}`);
+  const response = await apiFetch(`${API_BASE_URL}/exams/class/${grade}/${section}`);
+  return processResponse(response);
 }
 
 export async function getUpcomingExams() {
-  return fetchWithErrorHandling(`${API_BASE_URL}/exams/upcoming`);
+  const response = await apiFetch(`${API_BASE_URL}/exams/upcoming`);
+  return processResponse(response);
 }
 
 export async function scheduleExam(exam: any) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/exams`, {
+  const response = await apiFetch(`${API_BASE_URL}/exams`, {
     method: "POST",
     body: JSON.stringify(exam),
   });
+  return processResponse(response);
 }
 
 export async function updateExamStatus(examId: number, status: string) {
-  return fetchWithErrorHandling(`${API_BASE_URL}/exams/${examId}/status?status=${status}`, {
+  const response = await apiFetch(`${API_BASE_URL}/exams/${examId}/status?status=${status}`, {
     method: "PUT",
+    // No body needed for this request
   });
+  return processResponse(response);
 }

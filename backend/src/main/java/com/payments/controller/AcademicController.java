@@ -1,15 +1,21 @@
 
 package com.payments.controller;
 
+import com.opencsv.exceptions.CsvValidationException;
+import com.payments.dto.GradeDTO;
 import com.payments.model.Exam;
 import com.payments.model.Grade;
 import com.payments.model.Subject;
 import com.payments.service.AcademicService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.payments.dto.GradeDTO;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -24,10 +30,13 @@ public class AcademicController {
     
     // Subject endpoints
     @GetMapping("/subjects")
-    public ResponseEntity<List<Subject>> getAllSubjects() {
-        List<Subject> subjects = academicService.getAllSubjects();
-        return ResponseEntity.ok(subjects);
+    public ResponseEntity<Page<Subject>> getAllSubjects(
+            @RequestParam(defaultValue = "All") String grade,
+            @RequestParam(defaultValue = "") String searchTerm,
+            Pageable pageable) {
+        return ResponseEntity.ok(academicService.getAllSubjects(grade, searchTerm, pageable));
     }
+
     
     @GetMapping("/subjects/{id}")
     public ResponseEntity<Subject> getSubjectById(@PathVariable Long id) {
@@ -97,12 +106,15 @@ public class AcademicController {
         }
         return ResponseEntity.notFound().build();
     }
-    
-    // Grade endpoints
+
     @GetMapping("/grades")
-    public ResponseEntity<List<Grade>> getAllGrades() {
-        List<Grade> grades = academicService.getAllGrades();
-        return ResponseEntity.ok(grades);
+    public ResponseEntity<Page<Grade>> getAllGrades(
+            @RequestParam(defaultValue = "All") String year,
+            @RequestParam(defaultValue = "All") String semester,
+            @RequestParam(defaultValue = "All") String letterGrade,
+            @RequestParam(defaultValue = "") String searchTerm,
+            Pageable pageable) {
+        return ResponseEntity.ok(academicService.getAllGrades(year, semester, letterGrade, searchTerm, pageable));
     }
     
     @GetMapping("/grades/student/{studentId}")
@@ -136,5 +148,49 @@ public class AcademicController {
             return ResponseEntity.ok(updatedGrade);
         }
         return ResponseEntity.notFound().build();
+    }
+
+    // --- NEW: Bulk Upload Endpoints ---
+    @PostMapping("/subjects/bulk-upload")
+    public ResponseEntity<?> bulkAddSubjects(@RequestParam("file") MultipartFile file) {
+        try {
+            List<Subject> subjects = academicService.bulkAddSubjects(file);
+            return ResponseEntity.ok(subjects);
+        } catch (IOException | CsvValidationException | RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/grades/bulk-upload")
+    public ResponseEntity<?> bulkAddGrades(@RequestParam("file") MultipartFile file) {
+        try {
+            List<Grade> grades = academicService.bulkAddGrades(file);
+            return ResponseEntity.ok(grades);
+        } catch (IOException | CsvValidationException | RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @DeleteMapping("/grades/{id}")
+    public ResponseEntity<Void> deleteGrade(@PathVariable Long id) {
+        try {
+            academicService.deleteGrade(id);
+            return ResponseEntity.noContent().build(); // Standard success response for DELETE
+        } catch (Exception e) {
+            // If the grade doesn't exist, you might want to return a 404
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // --- NEW: Add this endpoint to handle DELETE requests for subjects ---
+    @DeleteMapping("/subjects/{id}")
+    public ResponseEntity<Void> deleteSubject(@PathVariable Long id) {
+        try {
+            academicService.deleteSubject(id);
+            return ResponseEntity.noContent().build(); // Standard success response for DELETE
+        } catch (Exception e) {
+            // If the subject doesn't exist or cannot be deleted, return an appropriate error
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
     }
 }

@@ -1,322 +1,157 @@
+import React, { useState, useEffect, useCallback, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, MessageSquare, Mail, Bell, Send, Plus, Users, FileText } from "lucide-react";
-import NewMessageModal from "@/components/forms/NewMessageModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Bell, Send, Inbox, MailOpen, Trash2, Home } from "lucide-react";
+import { toast } from "sonner";
+import { formatDistanceToNow } from 'date-fns';
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the apiFetch wrapper
+
+// --- Interfaces ---
+interface Notification { id: number; subject: string; content: string; createdAt: string; readAt: string | null; type: string; }
+interface Page<T> { content: T[]; totalPages: number; number: number; }
 
 export default function Communication() {
   const { user } = useAuth();
+  const [notificationsPage, setNotificationsPage] = useState<Page<Notification> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
 
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
+  // CORRECTED: This function now uses the apiFetch wrapper
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const response = await apiFetch('http://localhost:8080/api/notifications?page=0&size=20');
+      if (response.ok) {
+        const data: Page<Notification> = await response.json();
+        setNotificationsPage(data);
+      } else {
+        // The wrapper will have already shown a 403 toast, but we can add a fallback.
+        toast.error("Failed to load notifications.");
+      }
+    } catch (error) {
+      // The wrapper handles network error toasts.
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // CORRECTED: This function now uses the apiFetch wrapper
+  const handleSendAnnouncement = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    const announcementData = { subject: formData.get('subject'), content: formData.get('content'), targetAudience: formData.get('targetAudience'), };
+    try {
+      const res = await apiFetch('http://localhost:8080/api/notifications/announcements', {
+        method: 'POST',
+        body: JSON.stringify(announcementData)
+      });
+      if (res.ok) {
+        toast.success("Announcement sent successfully!");
+        setIsComposeOpen(false);
+      } else {
+        const errorData = await res.json().catch(() => ({ message: "Failed to send announcement."}));
+        throw new Error(errorData.message);
+      }
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // CORRECTED: This function now uses the apiFetch wrapper
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      const response = await apiFetch(`http://localhost:8080/api/notifications/${id}/read`, { method: 'POST' });
+      if(response.ok) {
+        setNotificationsPage(prev => {
+          if (!prev) return null;
+          const updatedContent = prev.content.map(n => n.id === id ? { ...n, readAt: new Date().toISOString() } : n);
+          return { ...prev, content: updatedContent };
+        });
+      }
+    } catch (e) { /* Fails silently for better UX */ }
+  };
+
+  if (!user) return <Navigate to="/" replace />;
+
+  const notifications = notificationsPage?.content || [];
 
   return (
-    <div className="min-h-screen bg-[#121828] text-white dark:bg-gray-100 dark:text-gray-900 flex flex-col">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="mb-6 flex justify-between items-center">
             <h1 className="text-2xl font-bold">Communication Center</h1>
-            <p className="text-gray-400 dark:text-gray-600">
-              Manage messages, announcements, and notifications
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <NewMessageModal />
-            <Button
-              className="bg-purple-500 text-white hover:bg-purple-600"
-              asChild
-            >
-              <Link to="/dashboard" className="flex items-center gap-2">
-                <Home className="h-4 w-4" />
-                Dashboard
-              </Link>
+            <Button asChild className="bg-purple-600 hover:bg-purple-700">
+              <Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4"/>Dashboard</Link>
             </Button>
           </div>
-        </div>
-
-        <Tabs defaultValue="messages" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="messages">Messages</TabsTrigger>
-            <TabsTrigger value="announcements">Announcements</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="messages">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Internal Messaging System
-                </CardTitle>
-                <div className="flex gap-2">
-                  <NewMessageModal />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4">Features</h3>
-                      <ul className="space-y-2 text-sm">
-                        <li>• Staff-to-staff messaging</li>
-                        <li>• Staff-to-parent communication</li>
-                        <li>• Group messaging</li>
-                        <li>• Message history</li>
-                        <li>• Read receipts</li>
-                      </ul>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4">Message Stats</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>Inbox:</span>
-                          <span className="font-bold text-blue-400">24</span>
+          <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2"><Inbox />Notification Feed</CardTitle>
+                {user.role === 'ADMIN' && (
+                    <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
+                      <DialogTrigger asChild><Button className="bg-green-600 hover:bg-green-700 gap-2"><Send size={16}/>New Announcement</Button></DialogTrigger>
+                      <DialogContent className="bg-gray-900 text-white border-gray-700">
+                        <DialogHeader><DialogTitle>Compose Announcement</DialogTitle></DialogHeader>
+                        <form onSubmit={handleSendAnnouncement} className="space-y-4">
+                          <div><Label>Subject</Label><Input name="subject" required className="bg-gray-800 border-gray-600"/></div>
+                          <div><Label>Content</Label><Textarea name="content" rows={6} required className="bg-gray-800 border-gray-600"/></div>
+                          <div>
+                            <Label>Target Audience</Label>
+                            <Select name="targetAudience" defaultValue="ALL">
+                              <SelectTrigger className="bg-gray-800 border-gray-600"><SelectValue/></SelectTrigger>
+                              <SelectContent className="bg-gray-800 border-gray-700">
+                                <SelectGroup><SelectLabel>General Groups</SelectLabel><SelectItem value="ALL">All Users</SelectItem><SelectItem value="ALL_STAFF">All Staff</SelectItem><SelectItem value="ALL_STUDENTS">All Students</SelectItem></SelectGroup>
+                                <SelectGroup><SelectLabel>Parents by Grade</SelectLabel>{Array.from({ length: 12 }, (_, i) => (<SelectItem key={i+1} value={`PARENTS_GRADE_${i+1}`}>Parents of Grade {i+1}</SelectItem>))}</SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex justify-end"><Button type="submit" disabled={loading}>{loading ? "Sending..." : "Send Announcement"}</Button></div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                {loading && notifications.length === 0 && <p className="text-center p-8">Loading notifications...</p>}
+                {!loading && notifications.length === 0 && <p className="text-center p-8 text-gray-400">Your notification inbox is empty.</p>}
+                {notifications.map(notif => (
+                    <div key={notif.id} className={`p-4 rounded-lg border flex items-start gap-4 transition-colors ${notif.readAt ? 'bg-purple-800/20 border-purple-900' : 'bg-purple-700/40 border-purple-600'}`}>
+                      <div className={`mt-1.5 h-2.5 w-2.5 rounded-full flex-shrink-0 ${!notif.readAt ? 'bg-blue-400 animate-pulse' : 'bg-transparent'}`}></div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center">
+                          <p className="font-bold">{notif.subject}</p>
+                          <p className="text-xs text-gray-400">{formatDistanceToNow(new Date(notif.createdAt))} ago</p>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Unread:</span>
-                          <span className="font-bold text-red-400">8</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Sent:</span>
-                          <span className="font-bold text-green-400">156</span>
-                        </div>
+                        <p className="text-sm text-gray-300 mt-1 whitespace-pre-wrap">{notif.content}</p>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold mb-3">Recent Messages</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center p-2 bg-[#1A1F2C] dark:bg-white rounded">
-                      <div>
-                        <span className="font-medium">Sarah Johnson</span>
-                        <p className="text-sm text-gray-400">Parent meeting request</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="text-sm text-blue-400">2h ago</span>
-                        <Button size="sm" variant="outline">Reply</Button>
-                      </div>
+                      {!notif.readAt && <Button size="sm" variant="ghost" className="self-center" onClick={() => handleMarkAsRead(notif.id)}><MailOpen size={16} className="mr-2"/> Mark as Read</Button>}
                     </div>
-                    <div className="flex justify-between items-center p-2 bg-[#1A1F2C] dark:bg-white rounded">
-                      <div>
-                        <span className="font-medium">Math Department</span>
-                        <p className="text-sm text-gray-400">Curriculum update discussion</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="text-sm text-green-400">5h ago</span>
-                        <Button size="sm" variant="outline">View</Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="announcements">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
-                  School Announcements Management
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button className="bg-green-500 hover:bg-green-600">
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Announcement
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-blue-400">12</div>
-                      <p className="text-sm text-gray-400">Active Announcements</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-green-400">156</div>
-                      <p className="text-sm text-gray-400">Total Views</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-purple-400">3</div>
-                      <p className="text-sm text-gray-400">Urgent</p>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold mb-3">Recent Announcements</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center p-2 bg-[#1A1F2C] dark:bg-white rounded">
-                      <div>
-                        <span className="font-medium">School Closure - Weather Alert</span>
-                        <p className="text-sm text-gray-400">Posted 2 hours ago</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="text-sm bg-red-500 text-white px-2 py-1 rounded text-xs">URGENT</span>
-                        <Button size="sm" variant="outline">Edit</Button>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center p-2 bg-[#1A1F2C] dark:bg-white rounded">
-                      <div>
-                        <span className="font-medium">Parent-Teacher Conference Schedule</span>
-                        <p className="text-sm text-gray-400">Posted yesterday</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="text-sm bg-blue-500 text-white px-2 py-1 rounded text-xs">INFO</span>
-                        <Button size="sm" variant="outline">Edit</Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5" />
-                  Email & SMS Notification System
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4">Email Notifications</h3>
-                      <div className="space-y-2">
-                        <Button className="w-full bg-blue-500 hover:bg-blue-600">
-                          Send Email Blast
-                        </Button>
-                        <Button className="w-full bg-green-500 hover:bg-green-600">
-                          View Email Templates
-                        </Button>
-                        <Button className="w-full bg-purple-500 hover:bg-purple-600">
-                          Email Reports
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4">SMS Notifications</h3>
-                      <div className="space-y-2">
-                        <Button className="w-full bg-orange-500 hover:bg-orange-600">
-                          Send SMS Alert
-                        </Button>
-                        <Button className="w-full bg-red-500 hover:bg-red-600">
-                          Emergency Broadcast
-                        </Button>
-                        <Button className="w-full bg-indigo-500 hover:bg-indigo-600">
-                          SMS Reports
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold mb-3">Notification Statistics</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-400">1,234</div>
-                      <p className="text-sm text-gray-400">Emails Sent</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-400">567</div>
-                      <p className="text-sm text-gray-400">SMS Sent</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-orange-400">89%</div>
-                      <p className="text-sm text-gray-400">Delivery Rate</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-400">45%</div>
-                      <p className="text-sm text-gray-400">Open Rate</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="templates">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle>Message Templates Management</CardTitle>
-                <div className="flex gap-2">
-                  <Button className="bg-green-500 hover:bg-green-600">
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Template
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold mb-3">Available Templates</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center p-2 bg-[#1A1F2C] dark:bg-white rounded">
-                      <div>
-                        <span className="font-medium">Parent Meeting Request</span>
-                        <p className="text-sm text-gray-400">Email template for scheduling meetings</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">Edit</Button>
-                        <Button size="sm" variant="outline">Use</Button>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center p-2 bg-[#1A1F2C] dark:bg-white rounded">
-                      <div>
-                        <span className="font-medium">Emergency Alert</span>
-                        <p className="text-sm text-gray-400">SMS template for urgent notifications</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">Edit</Button>
-                        <Button size="sm" variant="outline">Use</Button>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center p-2 bg-[#1A1F2C] dark:bg-white rounded">
-                      <div>
-                        <span className="font-medium">Grade Report</span>
-                        <p className="text-sm text-gray-400">Email template for grade notifications</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">Edit</Button>
-                        <Button size="sm" variant="outline">Use</Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
-      
-      <footer className="bg-[#1A1F2C] dark:bg-white border-t border-gray-800 dark:border-gray-200 py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-600">
-          &copy; {new Date().getFullYear()} School Management System
-        </div>
-      </footer>
-    </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
   );
 }

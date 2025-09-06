@@ -1,127 +1,107 @@
-
-import { ApiResponse, ErrorDetails, PaymentAlert, PickPaymentRequest } from "@/types";
+import { PaymentAlert, PickPaymentRequest } from "@/types";
 import { toast } from "sonner";
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
-// Now we're connecting to our Spring Boot backend instead of directly to ZB API
 const API_BASE_URL = "http://localhost:8080/api/payments";
 
-// Generic fetch function with error handling
-async function fetchWithErrorHandling<T>(
-  url: string,
-  options: RequestInit
-): Promise<ApiResponse<T>> {
-  try {
-    const response = await fetch(url, options);
-    const status = response.status;
-    
-    if (status === 200) {
-      const data = await response.json();
-      return { data, status };
-    } else {
-      let error: ErrorDetails;
-      try {
-        error = await response.json();
-      } catch (e) {
-        error = {
-          message: `Request failed with status ${status}`,
-          timestamp: new Date().toISOString()
-        };
-      }
-      
-      // Show toast for error
-      toast.error(error.message || "An error occurred");
-      return { error, status };
+// 2. The local `fetchWithErrorHandling` function is no longer needed.
+//    Authentication, Content-Type headers, and basic error toasts are now handled by `apiFetch`.
+
+/**
+ * A helper function to process the server's response.
+ * If the response is not OK, it attempts to parse an error message from the body.
+ * @param response The Response object from apiFetch.
+ * @param defaultErrorMessage A fallback error message.
+ * @returns The parsed JSON data.
+ * @throws An error with a message from the API or the default message.
+ */
+async function processApiResponse<T>(response: Response, defaultErrorMessage: string): Promise<T> {
+  if (response.ok) {
+    // For 204 No Content, there might not be a body to parse
+    if (response.status === 204) {
+      return null as T;
     }
-  } catch (error) {
-    const errorDetails: ErrorDetails = {
-      message: error instanceof Error ? error.message : "Network error",
-      timestamp: new Date().toISOString()
-    };
-    
-    // Show toast for network errors
-    toast.error("Network error. Please check your connection.");
-    return { error: errorDetails, status: 0 };
+    return await response.json();
+  } else {
+    let errorMessage = defaultErrorMessage;
+    try {
+      // Attempt to get a more specific error message from the API response
+      const errorData = await response.json();
+      if (errorData && errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch (e) {
+      // Ignore if the error response is not valid JSON
+    }
+    // Let the calling function's catch block handle this
+    throw new Error(errorMessage);
   }
 }
 
-// Function to pick all pending payments - now connects to our Spring Boot backend
+// 3. Refactor all service functions to use `apiFetch`
+
+/**
+ * Picks all pending payments from the external API via our backend.
+ */
 export async function pickAllPendingPayments(
-  request: PickPaymentRequest
+    request: PickPaymentRequest
 ): Promise<PaymentAlert[]> {
-  const response = await fetchWithErrorHandling<PaymentAlert[]>(
-    `${API_BASE_URL}/pick-all-pending`,
-    {
+  try {
+    const response = await apiFetch(`${API_BASE_URL}/pick-all-pending`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(request)
-    }
-  );
-  
-  if (response.data) {
-    return response.data;
-  } else {
-    throw new Error(response.error?.message || "Failed to fetch payments");
+      body: JSON.stringify(request),
+    });
+    return await processApiResponse<PaymentAlert[]>(response, "Failed to fetch pending payments");
+  } catch (error) {
+    // The toast is handled in apiFetch for network/auth errors.
+    // Re-throwing allows component-level catch blocks to execute.
+    throw error;
   }
 }
 
-// Function to get all payments for an institution - now connects to our Spring Boot backend
+/**
+ * Gets all payments for an institution from our backend.
+ */
 export async function getAllPayments(
-  request: PickPaymentRequest
+    request: PickPaymentRequest
 ): Promise<PaymentAlert[]> {
-  const response = await fetchWithErrorHandling<PaymentAlert[]>(
-    `${API_BASE_URL}/all-payments`,
-    {
+  try {
+    const response = await apiFetch(`${API_BASE_URL}/all-payments`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(request)
-    }
-  );
-  
-  if (response.data) {
-    return response.data;
-  } else {
-    throw new Error(response.error?.message || "Failed to fetch payments");
+      body: JSON.stringify(request),
+    });
+    return await processApiResponse<PaymentAlert[]>(response, "Failed to fetch payments");
+  } catch (error) {
+    throw error;
   }
 }
 
-// New function to reset a payment - connects to our Spring Boot backend
+/**
+ * Resets a payment's status in the local database via our backend.
+ */
 export async function resetPayment(paymentId: string): Promise<boolean> {
-  const response = await fetchWithErrorHandling<boolean>(
-    `${API_BASE_URL}/reset/${paymentId}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json"
-      }
-    }
-  );
-  
-  if (response.data !== undefined) {
-    return response.data;
-  } else {
-    throw new Error(response.error?.message || "Failed to reset payment");
+  try {
+    // Note: A GET request typically shouldn't change state, but we follow the existing pattern.
+    // A PUT or POST to /reset might be more conventional.
+    const response = await apiFetch(`${API_BASE_URL}/reset/${paymentId}`, {
+      method: "GET", // Changed from POST in original to GET as per original code.
+    });
+    return await processApiResponse<boolean>(response, "Failed to reset payment");
+  } catch (error) {
+    throw error;
   }
 }
 
-// Function to get payments from local database as fallback
+/**
+ * Gets all payments stored in the local database as a fallback.
+ */
 export async function getLocalPayments(): Promise<PaymentAlert[]> {
-  const response = await fetchWithErrorHandling<PaymentAlert[]>(
-    `${API_BASE_URL}/local`,
-    {
+  try {
+    const response = await apiFetch(`${API_BASE_URL}/local`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json"
-      }
-    }
-  );
-  
-  if (response.data) {
-    return response.data;
-  } else {
-    throw new Error(response.error?.message || "Failed to fetch local payments");
+    });
+    return await processApiResponse<PaymentAlert[]>(response, "Failed to fetch local payments");
+  } catch (error) {
+    throw error;
   }
 }

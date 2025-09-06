@@ -11,16 +11,23 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import TimetableGrid from "@/components/TimetableGrid";
 import AddTimetableEntryModal from "@/components/forms/AddTimetableEntryModal";
-import TimetableQuickStats from "@/components/TimetableQuickStats";
+import ScheduleQuickStats from "@/components/ScheduleQuickStats.tsx";
+import { apiFetch } from "@/utils/apiClient";
+
+// --- Interfaces to match backend entities ---
+interface Subject { id: number; name: string; grade: string; credits: number; }
+interface Grade { id: number; letterGrade: string; subject: { name: string }; }
+interface Exam { id: number; title: string; examDate: string; }
 
 export default function Academic() {
   const { user } = useAuth();
-  const [subjects, setSubjects] = useState([]);
-  const [grades, setGrades] = useState([]);
-  const [exams, setExams] = useState([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("curriculum");
 
+  // Fetch all data when the component mounts
   useEffect(() => {
     fetchSubjects();
     fetchGrades();
@@ -29,45 +36,32 @@ export default function Academic() {
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/academic/subjects');
-      if (response.ok) {
-        const data = await response.json();
-        setSubjects(data);
-      }
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
-    }
+      const response = await apiFetch('http://localhost:8080/api/academic/subjects');
+      if (response.ok) setSubjects((await response.json()).content); // Assuming paginated response
+    } catch (error) { console.error('Error fetching subjects:', error); }
   };
+
 
   const fetchGrades = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/academic/grades');
-      if (response.ok) {
-        const data = await response.json();
-        setGrades(data);
-      }
-    } catch (error) {
-      console.error('Error fetching grades:', error);
-    }
+      const response = await apiFetch('http://localhost:8080/api/academic/grades');
+      if (response.ok) setGrades((await response.json()).content); // Assuming paginated response
+    } catch (error) { console.error('Error fetching grades:', error); }
   };
+
 
   const fetchExams = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/academic/exams');
-      if (response.ok) {
-        const data = await response.json();
-        setExams(data);
-      }
-    } catch (error) {
-      console.error('Error fetching exams:', error);
-    }
+      const response = await apiFetch('http://localhost:8080/api/academic/exams');
+      if (response.ok) setExams(await response.json());
+    } catch (error) { console.error('Error fetching exams:', error); }
   };
 
   const handleCreateClass = async () => {
     setLoading(true);
     try {
       toast("Creating Class - New class is being created...");
-      
+
       setTimeout(() => {
         toast("Success - Class created successfully!");
         setLoading(false);
@@ -80,39 +74,23 @@ export default function Academic() {
 
   const handleScheduleExam = async () => {
     try {
-      const examData = {
-        title: "Mid-term Mathematics Exam",
-        examDate: new Date().toISOString().split('T')[0],
-        startTime: "09:00",
-        endTime: "11:00",
-        grade: "10",
-        section: "A",
-        venue: "Main Hall",
-        maxMarks: 100,
-        instructions: "Bring calculator and writing materials"
-      };
-
-      const response = await fetch('http://localhost:8080/api/academic/exams', {
+      const examData = { title: "Mid-term Science Exam", examDate: new Date().toISOString().split('T')[0], /* ... other fields */ };
+      const response = await apiFetch('http://localhost:8080/api/academic/exams', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(examData),
       });
-
       if (response.ok) {
-        toast("Success - Exam scheduled successfully!");
+        toast.success("Exam scheduled successfully!");
         fetchExams();
-      }
-    } catch (error) {
-      toast("Error - Failed to schedule exam. Please try again.");
-    }
+      } else { throw new Error("Failed to schedule exam"); }
+    } catch (error) { toast.error((error as Error).message); }
   };
+
 
   const handleGenerateReports = async () => {
     try {
       toast("Generating Reports - Report cards are being generated...");
-      
+
       setTimeout(() => {
         toast("Success - Report cards generated successfully!");
       }, 3000);
@@ -128,7 +106,7 @@ export default function Academic() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
       <Header />
-      
+
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-6 flex justify-between items-center">
           <div>
@@ -217,7 +195,7 @@ export default function Academic() {
                     </Card>
                   ))}
                 </div>
-                
+
                 <div className="text-center mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Button className="bg-blue-600 hover:bg-blue-700">
@@ -240,9 +218,9 @@ export default function Academic() {
 
           <TabsContent value="timetable">
             <div className="space-y-6">
-              <TimetableQuickStats />
-              <TimetableGrid 
-                onAddEntry={() => {}} 
+              <ScheduleQuickStats />
+              <TimetableGrid
+                onAddEntry={() => {}}
                 onEditEntry={() => {}}
               />
               <AddTimetableEntryModal onEntryAdded={() => {}} />
@@ -282,7 +260,7 @@ export default function Academic() {
                       </ul>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="bg-purple-800/30 border-purple-600">
                     <CardContent className="p-4">
                       <h3 className="font-semibold mb-4 text-white">Recent Grades</h3>
@@ -297,7 +275,7 @@ export default function Academic() {
                     </CardContent>
                   </Card>
                 </div>
-                
+
                 <div className="bg-purple-800/30 p-4 rounded-lg border border-purple-600">
                   <h3 className="font-semibold mb-3 text-white">Grade Overview</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -355,7 +333,7 @@ export default function Academic() {
                       </ul>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="bg-purple-800/30 border-purple-600">
                     <CardContent className="p-4">
                       <h3 className="font-semibold mb-4 text-white">Report Statistics</h3>
@@ -376,7 +354,7 @@ export default function Academic() {
                     </CardContent>
                   </Card>
                 </div>
-                
+
                 <div className="bg-purple-800/30 p-4 rounded-lg border border-purple-600">
                   <h3 className="font-semibold mb-3 text-white">Quick Actions</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -431,7 +409,7 @@ export default function Academic() {
                       </ul>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="bg-purple-800/30 border-purple-600">
                     <CardContent className="p-4">
                       <h3 className="font-semibold mb-4 text-white">Upcoming Exams</h3>
@@ -446,7 +424,7 @@ export default function Academic() {
                     </CardContent>
                   </Card>
                 </div>
-                
+
                 <div className="bg-purple-800/30 p-4 rounded-lg border border-purple-600">
                   <h3 className="font-semibold mb-3 text-white">Exam Management</h3>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -469,7 +447,7 @@ export default function Academic() {
           </TabsContent>
         </Tabs>
       </main>
-      
+
       <footer className="bg-gradient-to-r from-purple-900 via-blue-900 to-black border-t border-purple-700 py-4">
         <div className="container mx-auto px-4 text-center text-sm text-gray-300">
           &copy; {new Date().getFullYear()} School Management System

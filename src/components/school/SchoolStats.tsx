@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, GraduationCap, UserCheck, DollarSign, BookOpen, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
 interface StatsData {
   totalStudents: number;
@@ -26,15 +27,19 @@ export default function SchoolStats() {
     fetchStats();
   }, []);
 
+  // 2. Refactor the fetchStats function
   const fetchStats = async () => {
     try {
+      // Replace all instances of `fetch` with `apiFetch`.
+      // The .then() logic remains the same because apiFetch also returns a Promise<Response>.
+      // This ensures that even if one API call fails, the others can still succeed.
       const [studentsRes, staffRes, classesRes, feesRes, booksRes, eventsRes] = await Promise.all([
-        fetch('http://localhost:8080/api/students/count').then(res => res.ok ? res.json() : { count: 0 }),
-        fetch('http://localhost:8080/api/staff/count').then(res => res.ok ? res.json() : { count: 0 }),
-        fetch('http://localhost:8080/api/timetables/classes/count').then(res => res.ok ? res.json() : { count: 0 }),
-        fetch('http://localhost:8080/api/fees/total-collected').then(res => res.ok ? res.json() : { amount: 0 }),
-        fetch('http://localhost:8080/api/library/books/count').then(res => res.ok ? res.json() : { count: 0 }),
-        fetch('http://localhost:8080/api/events/current-month/count').then(res => res.ok ? res.json() : { count: 0 })
+        apiFetch('http://localhost:8080/api/students/count').then(res => res.ok ? res.json() : { count: 0 }),
+        apiFetch('http://localhost:8080/api/staff/count').then(res => res.ok ? res.json() : { count: 0 }),
+        apiFetch('http://localhost:8080/api/timetables/classes/count').then(res => res.ok ? res.json() : { count: 0 }),
+        apiFetch('http://localhost:8080/api/fees/total-collected').then(res => res.ok ? res.json() : { amount: 0 }),
+        apiFetch('http://localhost:8080/api/library/books/count').then(res => res.ok ? res.json() : { count: 0 }),
+        apiFetch('http://localhost:8080/api/events/current-month/count').then(res => res.ok ? res.json() : { count: 0 })
       ]);
 
       setStats({
@@ -46,18 +51,20 @@ export default function SchoolStats() {
         eventsThisMonth: eventsRes.count || 0
       });
     } catch (error) {
+      // apiFetch will show a toast for network/auth errors.
+      // We still log the error and allow the component to render with default stats.
       console.error('Error fetching stats:', error);
-      // Keep default values of 0 on error
     } finally {
       setLoading(false);
     }
   };
 
+  // The rest of the component (JSX, config) remains unchanged.
   const statsConfig = [
     {
       title: "Total Students",
       value: stats.totalStudents.toLocaleString(),
-      change: "+12%",
+      change: "+12%", // Note: This is static data
       icon: Users,
       color: "text-blue-400",
       bgColor: "bg-blue-500/20"
@@ -106,45 +113,45 @@ export default function SchoolStats() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Card key={index} className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700 animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-4 bg-purple-700 rounded mb-2"></div>
-              <div className="h-8 bg-purple-700 rounded mb-2"></div>
-              <div className="h-3 bg-purple-700 rounded"></div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+              <Card key={index} className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700 animate-pulse">
+                <CardContent className="p-6">
+                  <div className="h-4 bg-purple-700 rounded mb-2"></div>
+                  <div className="h-8 bg-purple-700 rounded mb-2"></div>
+                  <div className="h-3 bg-purple-700 rounded"></div>
+                </CardContent>
+              </Card>
+          ))}
+        </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-      {statsConfig.map((stat) => {
-        const Icon = stat.icon;
-        return (
-          <Card key={stat.title} className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700 hover:border-purple-500 transition-colors">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">
-                {stat.title}
-              </CardTitle>
-              <div className={`p-2 rounded-full ${stat.bgColor}`}>
-                <Icon className={`h-4 w-4 ${stat.color}`} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-white mb-1">
-                {stat.value}
-              </div>
-              <p className="text-xs text-green-400">
-                {stat.change} from last month
-              </p>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        {statsConfig.map((stat) => {
+          const Icon = stat.icon;
+          return (
+              <Card key={stat.title} className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700 hover:border-purple-500 transition-colors">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-300">
+                    {stat.title}
+                  </CardTitle>
+                  <div className={`p-2 rounded-full ${stat.bgColor}`}>
+                    <Icon className={`h-4 w-4 ${stat.color}`} />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {stat.value}
+                  </div>
+                  <p className="text-xs text-green-400">
+                    {stat.change} from last month
+                  </p>
+                </CardContent>
+              </Card>
+          );
+        })}
+      </div>
   );
 }

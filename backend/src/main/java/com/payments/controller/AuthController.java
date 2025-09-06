@@ -1,90 +1,105 @@
-
 package com.payments.controller;
 
+import com.payments.config.JwtUtil;
+import com.payments.dto.JwtRequest;
+import com.payments.dto.JwtResponse;
+import com.payments.dto.UserCreationDto;
 import com.payments.model.User;
+import com.payments.service.CustomUserDetailsService;
 import com.payments.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*") // Be more specific in production
 public class AuthController {
 
-    private final UserService userService;
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     @Autowired
-    public AuthController(UserService userService) {
-        this.userService = userService;
-    }
+    private JwtUtil jwtUtil;
 
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * Authenticates a user and returns a JWT token upon success.
+     * This is the primary login endpoint for the JWT system.
+     *
+     * @param authRequest The request body containing username and password.
+     * @return A JWT token in the response.
+     */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
-        String username = credentials.get("username");
-        String password = credentials.get("password");
-
-        if (username == null || password == null) {
-            return ResponseEntity.badRequest().body("Username and password are required");
-        }
-
+    public ResponseEntity<?> createAuthenticationToken(@RequestBody JwtRequest authRequest) throws Exception {
         try {
-            Optional<User> userOpt = userService.authenticateUser(username, password);
-            
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
-                if (!user.isEnabled()) {
-                    return ResponseEntity.badRequest().body("User account is disabled");
-                }
-                
-                // Return user info (excluding password)
-                Map<String, Object> response = new HashMap<>();
-                response.put("id", user.getId());
-                response.put("username", user.getUsername());
-                response.put("enabled", user.isEnabled());
-                response.put("roles", user.getRoles());
-                
-                return ResponseEntity.ok(response);
-            } else {
-                return ResponseEntity.badRequest().body("Invalid username or password");
-            }
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Authentication failed");
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword())
+            );
+        } catch (DisabledException e) {
+            return new ResponseEntity<>("USER_DISABLED", HttpStatus.UNAUTHORIZED);
+        } catch (BadCredentialsException e) {
+            return new ResponseEntity<>("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED);
         }
+
+        final UserDetails userDetails = userDetailsService.loadUserByUsername(authRequest.getUsername());
+        final String token = jwtUtil.generateToken(userDetails);
+
+        // You can also return the user object along with the token if needed
+        User user = userService.getUserByUsername(authRequest.getUsername()).orElseThrow();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("user", user); // Sending user details back on login
+
+        return ResponseEntity.ok(response);
     }
 
+    /**
+     * Registers a new user in the system.
+     */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Map<String, Object> userData) {
+    public ResponseEntity<?> register(@RequestBody UserCreationDto registrationDto) {
         try {
-            String username = (String) userData.get("username");
-            String password = (String) userData.get("password");
-            String email = (String) userData.get("email");
-            
-            if (username == null || password == null) {
+            if (registrationDto.getUsername() == null || registrationDto.getPassword() == null) {
                 return ResponseEntity.badRequest().body("Username and password are required");
             }
 
-            // Check if user already exists
-            if (userService.getUserByUsername(username).isPresent()) {
-                return ResponseEntity.badRequest().body("Username already exists");
+            if (userService.getUserByUsername(registrationDto.getUsername()).isPresent()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("Username already exists");
             }
 
-            User newUser = userService.registerUser(username, password, email);
-            
-            // Return user info (excluding password)
+            User newUser = userService.registerUser(
+                    registrationDto.getUsername(),
+                    registrationDto.getPassword(),
+                    registrationDto.getEmail()
+            );
+
+            // Return a clean representation of the new user
             Map<String, Object> response = new HashMap<>();
             response.put("id", newUser.getId());
             response.put("username", newUser.getUsername());
-            response.put("enabled", newUser.isEnabled());
+            response.put("email", newUser.getEmail());
             response.put("roles", newUser.getRoles());
-            
-            return ResponseEntity.ok(response);
+
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Registration failed");
+            return ResponseEntity.internalServerError().body("Registration failed due to an internal error.");
         }
     }
 }

@@ -1,138 +1,120 @@
-
-import { ApiResponse, ErrorDetails, StudentRegistration, StudentRegistrationRequest } from "@/types";
+import { StudentRegistration, StudentRegistrationRequest } from "@/types";
 import { toast } from "sonner";
+import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
 const API_BASE_URL = "http://localhost:8080/api/billpay";
 
-// Generic fetch function with error handling (similar to apiService)
-async function fetchWithErrorHandling<T>(
-  url: string,
-  options: RequestInit
-): Promise<ApiResponse<T>> {
-  try {
-    const response = await fetch(url, options);
-    const status = response.status;
-    
-    if (status === 200 || status === 201) {
-      const data = await response.json();
-      return { data, status };
-    } else {
-      let error: ErrorDetails;
-      try {
-        error = await response.json();
-      } catch (e) {
-        error = {
-          message: `Request failed with status ${status}`,
-          timestamp: new Date().toISOString()
-        };
-      }
-      
-      // Show toast for error
-      toast.error(error.message || "An error occurred");
-      return { error, status };
-    }
-  } catch (error) {
-    console.error("Network error:", error);
-    const errorDetails: ErrorDetails = {
-      message: error instanceof Error ? error.message : "Network error",
-      timestamp: new Date().toISOString()
-    };
-    
-    // Show toast for network errors
-    toast.error("Network error. Please check your connection.");
-    return { error: errorDetails, status: 0 };
-  }
-}
+// 2. The local `fetchWithErrorHandling` function has been removed.
+//    Authentication, headers, and network error toasts are now handled by `apiFetch`.
 
-// Create or update student registration
+/**
+ * Creates or updates a student registration record for bill payments.
+ * @param request The student registration data.
+ * @returns The created/updated StudentRegistration object, or null on failure.
+ */
 export async function createOrUpdateStudentRegistration(
-  request: StudentRegistrationRequest
+    request: StudentRegistrationRequest
 ): Promise<StudentRegistration | null> {
   console.log("Sending student registration request:", request);
-  
+
   try {
-    const response = await fetchWithErrorHandling<StudentRegistration>(
-      `${API_BASE_URL}/student-details`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(request)
-      }
-    );
-    
-    if (response.data) {
-      console.log("Student registration successful:", response.data);
-      return response.data;
-    } else {
-      console.error("Failed to register student:", response.error);
-      return null;
+    const response = await apiFetch(`${API_BASE_URL}/student-details`, {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      // Try to get a specific error message from the server
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.message || `Failed with status ${response.status}`);
     }
+
+    const data: StudentRegistration = await response.json();
+    console.log("Student registration successful:", data);
+    return data;
   } catch (error) {
+    // apiFetch will have already shown a toast for network/auth errors.
+    // We log the specific error here and return null as per the function's contract.
     console.error("Error in createOrUpdateStudentRegistration:", error);
+    toast.error((error as Error).message || "Failed to save student registration.");
     return null;
   }
 }
 
-// Get all student registrations
+/**
+ * Retrieves all student registration records.
+ * @returns An array of StudentRegistration objects, or an empty array on failure.
+ */
 export async function getAllStudentRegistrations(): Promise<StudentRegistration[]> {
-  const response = await fetchWithErrorHandling<StudentRegistration[]>(
-    `${API_BASE_URL}/student-details`,
-    {
+  try {
+    const response = await apiFetch(`${API_BASE_URL}/student-details`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json"
-      }
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch student registrations");
     }
-  );
-  
-  if (response.data) {
-    return response.data;
-  } else {
-    return [];
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching all student registrations:", error);
+    return []; // Return an empty array on failure as per the original contract.
   }
 }
 
-// Get student registrations by biller ID
+/**
+ * Retrieves student registrations for a specific biller ID.
+ * @param billerId The ID of the biller.
+ * @returns An array of StudentRegistration objects, or an empty array on failure.
+ */
 export async function getStudentRegistrationsByBillerId(
-  billerId: string
+    billerId: string
 ): Promise<StudentRegistration[]> {
-  const response = await fetchWithErrorHandling<StudentRegistration[]>(
-    `${API_BASE_URL}/student-details/${billerId}`,
-    {
+  try {
+    const response = await apiFetch(`${API_BASE_URL}/student-details/${billerId}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json"
-      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch registrations for biller ID ${billerId}`);
     }
-  );
-  
-  if (response.data) {
-    return response.data;
-  } else {
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching registrations for biller ${billerId}:`, error);
     return [];
   }
 }
 
-// Get student registration by biller ID and customer account
+/**
+ * Retrieves a specific student registration by biller ID and customer account.
+ * @param billerId The ID of the biller.
+ * @param customerAccount The student's account number with the biller.
+ * @returns A StudentRegistration object, or null on failure.
+ */
 export async function getStudentRegistration(
-  billerId: string,
-  customerAccount: string
+    billerId: string,
+    customerAccount: string
 ): Promise<StudentRegistration | null> {
-  const response = await fetchWithErrorHandling<StudentRegistration>(
-    `${API_BASE_URL}/student-details/${billerId}/${customerAccount}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json"
+  try {
+    const response = await apiFetch(
+        `${API_BASE_URL}/student-details/${billerId}/${customerAccount}`,
+        {
+          method: "GET",
+        }
+    );
+
+    if (!response.ok) {
+      // A 404 Not Found is a valid case here, so we don't need to throw an error.
+      if (response.status === 404) {
+        return null;
       }
+      throw new Error("Failed to fetch student registration");
     }
-  );
-  
-  if (response.data) {
-    return response.data;
-  } else {
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching registration for ${billerId}/${customerAccount}:`, error);
     return null;
   }
 }

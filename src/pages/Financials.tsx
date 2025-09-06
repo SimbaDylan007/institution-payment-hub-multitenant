@@ -13,6 +13,7 @@ import { Home, Plus, DollarSign, BookUser, FileText, UserSearch, Download, Edit,
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { CSVLink } from "react-csv";
+import { apiFetch } from "@/utils/apiClient";
 
 // --- Interfaces ---
 interface FeeType { id: number; name: string; defaultAmount: number; description: string; currency: 'USD' | 'ZWG'; }
@@ -39,177 +40,115 @@ export default function Financials() {
 
     // --- Data Fetching ---
     useEffect(() => {
-        fetchFeeTypes();
-        fetchAllStudentBalances();
-    }, []);
+        if(user) { // Only fetch if logged in
+            fetchFeeTypes();
+            fetchAllStudentBalances();
+        }
+    }, [user]);
 
     const fetchAllStudentBalances = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:8080/api/financials/students/balances');
-            if (response.ok) {
-                setAllStudents(await response.json());
-            } else {
-                toast.error('Failed to fetch student financial overview.');
-            }
-        } catch (error) {
-            toast.error('An error occurred while fetching student data.');
-        } finally {
-            setLoading(false);
-        }
+            const response = await apiFetch('http://localhost:8080/api/financials/students/balances');
+            if (response.ok) setAllStudents(await response.json());
+            else toast.error('Failed to fetch student financial overview.');
+        } catch (error) { /* apiFetch handles toast */ }
+        finally { setLoading(false); }
     };
 
     const fetchFeeTypes = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/financials/fee-types');
-            if (response.ok) {
-                setFeeTypes(await response.json());
-            } else {
-                toast.error('Failed to fetch fee types. Please check backend logs.');
-            }
-        } catch (error) {
-            toast.error('Failed to fetch fee types.');
-        }
+            const response = await apiFetch('http://localhost:8080/api/financials/fee-types');
+            if (response.ok) setFeeTypes(await response.json());
+            else toast.error('Failed to fetch fee types.');
+        } catch (error) { /* apiFetch handles toast */ }
     };
 
     const handleViewLedger = async (student: StudentBalance) => {
         setLoading(true);
         setCurrentStudent(student);
         try {
-            const response = await fetch(`http://localhost:8080/api/financials/students/${student.studentId}/ledger`);
+            const response = await apiFetch(`http://localhost:8080/api/financials/students/${student.studentId}/ledger`);
             if (response.ok) {
                 setCurrentLedger(await response.json());
                 setView('ledger');
-            } else {
-                toast.error('Failed to load student ledger.');
-            }
-        } catch (error) {
-            toast.error('An error occurred while loading the ledger.');
-        } finally {
-            setLoading(false);
-        }
+            } else { toast.error('Failed to load student ledger.'); }
+        } catch (error) { /* apiFetch handles toast */ }
+        finally { setLoading(false); }
     };
 
     // --- Form Submissions ---
     const handleFeeTypeSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setLoading(true);
+        e.preventDefault(); setLoading(true);
         const formData = new FormData(e.currentTarget);
-        const feeTypeData = {
-            name: formData.get('name'),
-            defaultAmount: parseFloat(formData.get('defaultAmount') as string),
-            description: formData.get('description'),
-            currency: formData.get('currency'),
-        };
-
-        const isEditing = selectedFeeType !== null;
-        const url = isEditing
-            ? `http://localhost:8080/api/financials/fee-types/${selectedFeeType.id}`
-            : 'http://localhost:8080/api/financials/fee-types';
-        const method = isEditing ? 'PUT' : 'POST';
-
+        const feeTypeData = { name: formData.get('name'), defaultAmount: parseFloat(formData.get('defaultAmount') as string), description: formData.get('description'), currency: formData.get('currency') };
+        const url = selectedFeeType ? `http://localhost:8080/api/financials/fee-types/${selectedFeeType.id}` : 'http://localhost:8080/api/financials/fee-types';
+        const method = selectedFeeType ? 'PUT' : 'POST';
         try {
-            const response = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(feeTypeData)
-            });
+            const response = await apiFetch(url, { method, body: JSON.stringify(feeTypeData) });
             if (response.ok) {
-                toast.success(`Fee type ${isEditing ? 'updated' : 'created'} successfully!`);
-                setIsFeeTypeDialogOpen(false);
-                setSelectedFeeType(null);
-                fetchFeeTypes();
-            } else {
-                const errorData = await response.json().catch(() => ({ message: `Failed to ${isEditing ? 'update' : 'create'} fee type` }));
-                throw new Error(errorData.message);
-            }
-        } catch (error) {
-            toast.error((error as Error).message);
-        } finally {
-            setLoading(false);
-        }
+                toast.success(`Fee type ${selectedFeeType ? 'updated' : 'created'} successfully!`);
+                setIsFeeTypeDialogOpen(false); setSelectedFeeType(null); fetchFeeTypes();
+            } else { const err = await response.json(); throw new Error(err.message); }
+        } catch (error) { toast.error((error as Error).message); }
+        finally { setLoading(false); }
     };
 
     const handleDeleteFeeType = async (feeTypeId: number) => {
-        if (!window.confirm('Are you sure you want to delete this fee type? This action cannot be undone.')) return;
+        if (!window.confirm('Are you sure you want to delete this fee type?')) return;
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/financials/fee-types/${feeTypeId}`, {
-                method: 'DELETE'
-            });
+            const response = await apiFetch(`http://localhost:8080/api/financials/fee-types/${feeTypeId}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success('Fee type deleted successfully!');
                 fetchFeeTypes();
-            } else {
-                const errorData = await response.json().catch(() => ({ message: 'Failed to delete fee type.' }));
-                throw new Error(errorData.message);
-            }
-        } catch (error) {
-            toast.error((error as Error).message);
-        } finally {
-            setLoading(false);
-        }
+            } else { const err = await response.json(); throw new Error(err.message); }
+        } catch (error) { toast.error((error as Error).message); }
+        finally { setLoading(false); }
     };
 
     const handleTransactionSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!currentStudent) return;
+        e.preventDefault(); if (!currentStudent) return;
         setLoading(true);
         const formData = new FormData(e.currentTarget);
-        const requestData = {
-            studentId: currentStudent.studentId,
-            amount: parseFloat(formData.get('amount') as string),
-            description: formData.get('description'),
-            transactionDate: formData.get('transactionDate'),
-            feeTypeId: formData.get('feeTypeId') ? parseInt(formData.get('feeTypeId') as string) : null
-        };
+        const requestData = { studentId: currentStudent.studentId, amount: parseFloat(formData.get('amount') as string), description: formData.get('description'), transactionDate: formData.get('transactionDate'), feeTypeId: formData.get('feeTypeId') ? parseInt(formData.get('feeTypeId') as string) : null };
         const url = transactionType === 'DEBIT' ? 'http://localhost:8080/api/financials/students/charges' : 'http://localhost:8080/api/financials/students/payments';
         try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestData)
-            });
+            const response = await apiFetch(url, { method: 'POST', body: JSON.stringify(requestData) });
             if (response.ok) {
                 toast.success(`Transaction added successfully!`);
                 setIsTransactionDialogOpen(false);
                 await handleViewLedger(currentStudent);
                 await fetchAllStudentBalances();
             } else { throw new Error('Failed to add transaction'); }
-        } catch (error) {
-            toast.error('Failed to add transaction.');
-        } finally {
-            setLoading(false);
-        }
+        } catch (error) { toast.error((error as Error).message); }
+        finally { setLoading(false); }
     };
 
+
     const handleBulkChargeSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setLoading(true);
+        e.preventDefault(); setLoading(true);
         const formData = new FormData(e.currentTarget);
         const manualIds = (formData.get('studentIds_manual') as string).split(/[\n,]/).map(id => id.trim()).filter(Boolean);
         formData.delete('studentIds_manual');
         manualIds.forEach(id => formData.append('studentIds', id));
 
         try {
-            const response = await fetch('http://localhost:8080/api/financials/charges/bulk', {
-                method: 'POST',
-                body: formData
-            });
+            // apiFetch needs a small adjustment for multipart/form-data
+            const token = localStorage.getItem("jwt_token");
+            const headers = new Headers();
+            if (token) { headers.append("Authorization", "Bearer " + token); }
+            const response = await fetch('http://localhost:8080/api/financials/charges/bulk', { method: 'POST', body: formData, headers });
+
             if (response.ok) {
-                toast.success('Bulk charge applied successfully! Student balances are being updated.');
-                setIsBulkChargeDialogOpen(false);
-                fetchAllStudentBalances();
-            } else {
-                const errorData = await response.json().catch(() => ({ message: 'Failed to apply bulk charge.' }));
-                throw new Error(errorData.message);
-            }
-        } catch (error) {
-            toast.error((error as Error).message);
-        } finally {
-            setLoading(false);
-        }
+                toast.success('Bulk charge applied successfully!');
+                setIsBulkChargeDialogOpen(false); fetchAllStudentBalances();
+            } else { const err = await response.json(); throw new Error(err.message); }
+        } catch (error) { toast.error((error as Error).message); }
+        finally { setLoading(false); }
     };
+
+
 
     // --- Memoized Calculations ---
     const filteredStudents = useMemo(() => {

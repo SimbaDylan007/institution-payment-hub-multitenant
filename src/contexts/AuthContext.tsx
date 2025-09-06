@@ -1,8 +1,9 @@
-
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, LoginCredentials, RegisterData } from "../types";
 import { toast } from "sonner";
+import { apiFetch } from "@/utils/apiClient";
 
+// --- Context Type Definition ---
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -21,119 +22,113 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// --- AuthProvider Component ---
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing session on component mount
   useEffect(() => {
+    // On initial app load, check if user data and token are in storage
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    const token = localStorage.getItem("jwt_token");
+    if (storedUser && token) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (e) {
-        console.error("Failed to parse stored user", e);
-        localStorage.removeItem("user");
+        // If stored data is corrupt, clear it
+        localStorage.clear();
       }
     }
     setIsLoading(false);
   }, []);
 
-  // Real login function using your backend
   const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
+    const loginUsername = credentials.username || credentials.email;
+    if (!loginUsername) {
+      toast.error("Username or email is required.");
+      setIsLoading(false);
+      return false;
+    }
+
     try {
-      // First, get all users from your backend
-      const usersResponse = await fetch('http://localhost:8080/api/users');
-      
-      if (!usersResponse.ok) {
-        toast.error("Unable to connect to authentication server");
+      // The login endpoint is a special case that doesn't use the apiFetch wrapper
+      // because we don't have a token yet. We use the raw fetch here.
+      const response = await fetch("http://localhost:8080/api/auth/login", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: loginUsername,
+          password: credentials.password
+        })
+      });
+
+      if (!response.ok) {
+        toast.error("Invalid username or password.");
         return false;
       }
 
-      const users = await usersResponse.json();
-      
-      // Find user by username
-      const foundUser = users.find((u: any) => 
-        u.username === credentials.username && u.enabled
-      );
+      const data = await response.json();
+      const token = data.token;
+      const foundUser = data.user;
 
-      if (!foundUser) {
-        toast.error("Invalid username or user is disabled");
+      if (!token || !foundUser) {
+        toast.error("Login failed: Invalid response from server.");
         return false;
       }
 
-      // In a real application, you would verify the password hash
-      // For now, we'll use a simple password check
-      if (credentials.password !== foundUser.password) {
-        toast.error("Invalid password");
-        return false;
-      }
+      const userRole = foundUser.roles && Array.isArray(foundUser.roles) && foundUser.roles.length > 0
+          ? foundUser.roles[0].name.replace('ROLE_', '')
+          : "USER";
 
-      // Convert backend user to frontend user format
       const authUser: User = {
         id: foundUser.id.toString(),
-        email: foundUser.email || `${foundUser.username}@school.edu`,
+        email: foundUser.email,
         name: foundUser.username,
-        role: foundUser.roles && foundUser.roles.length > 0 
-          ? foundUser.roles[0].name.replace('ROLE_', '').toLowerCase()
-          : "user",
-        username: foundUser.username
+        role: userRole.toUpperCase(),
+        username: foundUser.username,
       };
-      
+
       setUser(authUser);
+
+      // Store the token and user details separately in localStorage
+      localStorage.setItem("jwt_token", token);
       localStorage.setItem("user", JSON.stringify(authUser));
-      toast.success("Login successful!");
+
+      toast.success("Login successful! Redirecting...");
       return true;
+
     } catch (error) {
-      console.error("Login error:", error);
-      toast.error("An error occurred during login");
+      toast.error("Unable to connect to the authentication server.");
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Register function using your backend
   const register = async (data: RegisterData) => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/users', {
+      // Registration is an unauthenticated endpoint, so we use raw fetch.
+      const response = await fetch('http://localhost:8080/api/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: data.username || data.email.split('@')[0],
           email: data.email,
-          password: data.password,
-          enabled: true,
-          roleNames: ['ROLE_STUDENT'] // Default role for new registrations
+          password: data.password
         })
       });
 
       if (response.ok) {
-        const createdUser = await response.json();
-        
-        // Convert backend user to frontend user format
-        const authUser: User = {
-          id: createdUser.id.toString(),
-          email: createdUser.email || data.email,
-          name: data.name,
-          role: "student",
-          username: createdUser.username
-        };
-        
-        setUser(authUser);
-        localStorage.setItem("user", JSON.stringify(authUser));
-        toast.success("Registration successful!");
+        toast.success("Registration successful! Please sign in.");
         return true;
       } else {
-        toast.error("Registration failed. Username may already exist.");
+        const errorData = await response.json().catch(() => ({ message: "Registration failed." }));
+        toast.error(errorData.message || "Registration failed. Username or email may already exist.");
         return false;
       }
     } catch (error) {
-      console.error("Registration error:", error);
       toast.error("An error occurred during registration");
       return false;
     } finally {
@@ -144,12 +139,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
-    toast.success("Logged out successfully");
+    localStorage.removeItem("jwt_token");
+    toast.info("You have been logged out.");
+    // Force a redirect to the login page to clear all state
+    window.location.href = '/auth';
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
+      <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+        {children}
+      </AuthContext.Provider>
   );
 };
