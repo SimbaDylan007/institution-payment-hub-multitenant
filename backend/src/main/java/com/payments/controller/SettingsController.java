@@ -3,13 +3,14 @@ package com.payments.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/settings")
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN')")
 public class SettingsController {
     
     @GetMapping

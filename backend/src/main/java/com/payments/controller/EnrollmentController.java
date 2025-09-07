@@ -6,13 +6,14 @@ import com.payments.service.EnrollmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/enrollments")
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN')")
 public class EnrollmentController {
     
     @Autowired

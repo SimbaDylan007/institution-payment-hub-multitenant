@@ -6,6 +6,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import com.payments.service.UserService;
+import java.util.Arrays;
+import java.util.List;
+
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -35,14 +38,23 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        // Initialize Roles (example)
-        if (roleRepository.findByName(UserService.ROLE_NAME_ADMIN).isEmpty()) {
-            roleRepository.save(new Role(UserService.ROLE_NAME_ADMIN));
+        // --- Initialize Roles ---
+        // Using the "ROLE_" prefix is a common convention for Spring Security
+        List<String> roleNames = Arrays.asList(
+                "ROLE_ADMIN",
+                "ROLE_IT_ADMIN",
+                "ROLE_FINANCE_ADMIN",
+                "ROLE_ADMINISTRATOR",
+                "ROLE_TEACHER",
+                "ROLE_STUDENT" // It's good to have a default role for new users
+        );
+
+        for (String roleName : roleNames) {
+            if (roleRepository.findByName(roleName).isEmpty()) {
+                roleRepository.save(new Role(roleName));
+                System.out.println("Created role: " + roleName);
+            }
         }
-        if (roleRepository.findByName(UserService.ROLE_NAME_TEACHER).isEmpty()) {
-            roleRepository.save(new Role(UserService.ROLE_NAME_TEACHER));
-        }
-        // Add other roles like ROLE_STUDENT if needed
 
         // Initialize Password Policy if not present
         if (passwordPolicyRepository.findById(1L).isEmpty()) {

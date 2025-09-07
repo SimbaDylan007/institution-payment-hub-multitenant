@@ -19,17 +19,22 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder; // Added for password hashing
+    private final PasswordEncoder passwordEncoder;
 
-    public static final String ROLE_NAME_ADMIN = "ROLE_ADMIN";
-    public static final String ROLE_NAME_TEACHER = "ROLE_TEACHER";
-    public static final String ROLE_NAME_STUDENT = "ROLE_STUDENT";
+    // --- COMPLETE ROLE CONSTANTS ---
+    public static final String ROLE_NAME_ADMIN = "ROLE_ADMIN"; // Super User
+    public static final String ROLE_NAME_IT_ADMIN = "ROLE_IT_ADMIN"; // User management, settings
+    public static final String ROLE_NAME_FINANCE_ADMIN = "ROLE_FINANCE_ADMIN"; // Finance, reconciliation
+    public static final String ROLE_NAME_ADMINISTRATOR = "ROLE_ADMINISTRATOR"; // Facilities, Academics, Library
+    public static final String ROLE_NAME_TEACHER = "ROLE_TEACHER"; // Academics, Schedule
+    public static final String ROLE_NAME_STUDENT = "ROLE_STUDENT"; // Default role for new users
 
     @Autowired
     public UserService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
@@ -63,8 +68,8 @@ public class UserService {
     public User createUser(UserCreationDto dto) {
         User user = new User();
         user.setUsername(dto.getUsername());
-        user.setPassword(passwordEncoder.encode(dto.getPassword())); // Hash the password
-        user.setEmail(dto.getEmail()); // Assuming email is part of DTO
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setEmail(dto.getEmail());
         user.setEnabled(dto.isEnabled());
 
         Set<Role> roles = new HashSet<>();
@@ -106,11 +111,13 @@ public class UserService {
         User user = userRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getUserId()));
 
-        Set<Role> roles = new HashSet<>();
-        for (String roleName : dto.getRoleNames()) {
-            roleRepository.findByName(roleName).ifPresent(roles::add);
-        }
-        user.setRoles(roles);
+        Set<Role> rolesToAssign = dto.getRoleNames().stream()
+                .map(roleName -> roleRepository.findByName(roleName)
+                        .orElseThrow(() -> new RuntimeException("Role not found: " + roleName)))
+                .collect(Collectors.toSet());
+
+        user.setRoles(rolesToAssign);
+
         return userRepository.save(user);
     }
 
@@ -142,7 +149,17 @@ public class UserService {
 
     @Transactional
     public Role createRole(String roleName) {
-        return roleRepository.save(new Role(roleName));
+        String formattedRoleName = roleName.trim().toUpperCase();
+        if (!formattedRoleName.startsWith("ROLE_")) {
+            formattedRoleName = "ROLE_" + formattedRoleName;
+        }
+
+        if (roleRepository.findByName(formattedRoleName).isPresent()) {
+            throw new IllegalStateException("Role '" + formattedRoleName + "' already exists.");
+        }
+
+        Role newRole = new Role(formattedRoleName);
+        return roleRepository.save(newRole);
     }
 
     public Optional<User> getUserByUsername(String username) {

@@ -2,13 +2,14 @@ package com.payments.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reports")
+@PreAuthorize("hasAnyRole('ADMIN', 'FINANCE_ADMIN', 'ADMINISTRATOR', 'TEACHER')")
 public class ReportsController {
 
     // You would inject a ReportsService here to do the actual work

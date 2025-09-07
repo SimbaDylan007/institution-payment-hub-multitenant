@@ -1,256 +1,163 @@
-import { PaymentAlert, PickPaymentRequest, SearchFilters } from "../types";
-import { getAllPayments, pickAllPendingPayments, resetPayment as resetPaymentApi, getLocalPayments } from "./apiService";
+// src/services/paymentService.ts
+
+// FIX 1: Import the renamed 'SearchFiltersType' and other necessary types
+import { PaymentAlert, SearchFiltersType } from "../types";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import autoTable from "jspdf-autotable";
-// Mock data for development and fallback
-const mockPayments: PaymentAlert[] = [
-  {
-    id: "ALERT_54321",
-    amount: 250.0,
-    date: {
-      date: 15,
-      day: 5,
-      hours: 12,
-      minutes: 0,
-      month: 2,
-      nanos: 0,
-      seconds: 0,
-      time: 1615798800000,
-      timezoneOffset: 0,
-      year: 124
-    },
-    narrative: "Student Fees Term 1",
-    picked: 0,
-    reference: "STUDENT12345",
-    source: "BANK_TRANSFER",
-    status: "pending",
-    transactionDate: "2024-03-10",
-    studentName: "John",
-    studentSurname: "Doe",
-    regNumber: "R12345"
-  },
-  {
-    id: "ALERT_54322",
-    amount: 300.0,
-    date: {
-      date: 16,
-      day: 6,
-      hours: 14,
-      minutes: 30,
-      month: 2,
-      nanos: 0,
-      seconds: 0,
-      time: 1615892400000,
-      timezoneOffset: 0,
-      year: 124
-    },
-    narrative: "Student Fees Term 1",
-    picked: 0,
-    reference: "STUDENT12346",
-    source: "BANK_TRANSFER",
-    status: "pending",
-    transactionDate: "2024-03-11",
-    studentName: "Jane",
-    studentSurname: "Smith",
-    regNumber: "R12346"
-  },
-  {
-    id: "ALERT_54323",
-    amount: 350.0,
-    date: {
-      date: 17,
-      day: 0,
-      hours: 9,
-      minutes: 15,
-      month: 2,
-      nanos: 0,
-      seconds: 0,
-      time: 1615964400000,
-      timezoneOffset: 0,
-      year: 124
-    },
-    narrative: "Student Fees Term 2",
-    picked: 1,
-    reference: "STUDENT12347",
-    source: "BANK_TRANSFER",
-    status: "completed",
-    transactionDate: "2024-03-12",
-    studentName: "Michael",
-    studentSurname: "Johnson",
-    regNumber: "R12347"
-  }
-];
 
-// Add more mock data for development (30 records)
-for (let i = 0; i < 27; i++) {
-  const id = `ALERT_${54324 + i}`;
-  const regNumber = `R${12348 + i}`;
-  const amount = 200 + Math.floor(Math.random() * 300);
-  const names = ["Alice", "Bob", "Charlie", "Diana", "Edward", "Fiona", "George", "Hannah"];
-  const surnames = ["Wilson", "Brown", "Davis", "Miller", "Moore", "Taylor", "Anderson", "Thomas"];
-  const name = names[Math.floor(Math.random() * names.length)];
-  const surname = surnames[Math.floor(Math.random() * surnames.length)];
-  const dayOffset = i % 14;
-  const picked = i % 3 === 0 ? 1 : 0;
-  const status = picked ? "completed" : "pending";
-  
-  const dateObj = new Date(2024, 2, 13 + dayOffset);
-  const transactionDate = `2024-03-${13 + dayOffset < 10 ? '0' : ''}${13 + dayOffset}`;
-  
-  mockPayments.push({
-    id,
-    amount,
-    date: {
-      date: dateObj.getDate(),
-      day: dateObj.getDay(),
-      hours: 10,
-      minutes: 0,
-      month: dateObj.getMonth(),
-      nanos: 0,
-      seconds: 0,
-      time: dateObj.getTime(),
-      timezoneOffset: 0,
-      year: 124
-    },
-    narrative: `Student Fees ${i % 2 === 0 ? 'Term 1' : 'Term 2'}`,
-    picked,
-    reference: `STUDENT${12348 + i}`,
-    source: "BANK_TRANSFER",
-    status,
-    transactionDate,
-    studentName: name,
-    studentSurname: surname,
-    regNumber
-  });
-}
+// The base URL for your backend API, defined once for easy maintenance.
+const API_BASE_URL = "http://localhost:8080/api";
 
-// Function to fetch payments based on search filters
-export const fetchPayments = async (filters?: SearchFilters, credentials?: PickPaymentRequest): Promise<PaymentAlert[]> => {
-  try {
-    // If credentials are provided, try to get real payments from API
-    if (credentials?.institutionId && credentials?.password) {
-      const payments = await getAllPayments(credentials);
-      return filterPayments(payments, filters);
-    } else {
-      try {
-        // Try to get payments from local database first
-        const localPayments = await getLocalPayments();
-        return filterPayments(localPayments, filters);
-      } catch (error) {
-        console.error("Error fetching from local DB, using mock data:", error);
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Use mock data if local DB fails
-        return filterPayments(mockPayments, filters);
-      }
-    }
-  } catch (error) {
-    console.error("Error fetching payments:", error);
-    // Return filtered mock data as fallback
-    return filterPayments(mockPayments, filters);
-  }
-};
+/**
+ * A helper function for client-side filtering.
+ * This is used for the data returned from the local database endpoint.
+ */
+const filterLocalPayments = (payments: PaymentAlert[], filters?: SearchFiltersType): PaymentAlert[] => {
+  if (!filters) return payments;
 
-// Helper function to filter payments
-const filterPayments = (payments: PaymentAlert[], filters?: SearchFilters): PaymentAlert[] => {
-  // If no filters, return all payments
-  if (!filters) {
-    return payments;
-  }
-  
-  // Filter payments based on search criteria
   return payments.filter(payment => {
-    const paymentDate = new Date(payment.transactionDate);
-    
+    let matches = true;
+
+    // Filter by various fields if they exist in the filters object
+    if (filters.regNumber && !payment.regNumber?.toLowerCase().includes(filters.regNumber.toLowerCase())) matches = false;
+    if (filters.name && !payment.studentName?.toLowerCase().includes(filters.name.toLowerCase())) matches = false;
+    if (filters.surname && !payment.studentSurname?.toLowerCase().includes(filters.surname.toLowerCase())) matches = false;
+    if (filters.minAmount !== undefined && payment.amount < filters.minAmount) matches = false;
+    if (filters.maxAmount !== undefined && payment.amount > filters.maxAmount) matches = false;
+
     // Filter by date range
-    if (filters.startDate && paymentDate < filters.startDate) {
-      return false;
+    if (filters.startDate) {
+      const paymentDate = new Date(payment.transactionDate);
+      if (paymentDate < filters.startDate) matches = false;
     }
     if (filters.endDate) {
+      const paymentDate = new Date(payment.transactionDate);
       const endDateCopy = new Date(filters.endDate);
-      endDateCopy.setDate(endDateCopy.getDate() + 1); // Include the end date
-      if (paymentDate > endDateCopy) {
-        return false;
-      }
+      endDateCopy.setDate(endDateCopy.getDate() + 1);
+      if (paymentDate >= endDateCopy) matches = false;
     }
-    
-    // Filter by registration number
-    if (filters.regNumber && !payment.regNumber?.toLowerCase().includes(filters.regNumber.toLowerCase())) {
-      return false;
-    }
-    
-    // Filter by amount range
-    if (filters.minAmount !== undefined && payment.amount < filters.minAmount) {
-      return false;
-    }
-    if (filters.maxAmount !== undefined && payment.amount > filters.maxAmount) {
-      return false;
-    }
-    
-    // Filter by student name
-    if (filters.name && !payment.studentName?.toLowerCase().includes(filters.name.toLowerCase())) {
-      return false;
-    }
-    
-    // Filter by student surname
-    if (filters.surname && !payment.studentSurname?.toLowerCase().includes(filters.surname.toLowerCase())) {
-      return false;
-    }
-    
-    return true;
+
+    return matches;
   });
 };
 
-// Function to reset a payment (now uses the API)
+/**
+ * Main function to fetch payments from the backend.
+ * NO MOCK DATA is used.
+ */
+    // FIX 2: Use the renamed 'SearchFiltersType' in the function signature
+export const fetchPayments = async (
+        filters: SearchFiltersType,
+        action: 'pending' | 'all',
+        institutionIds?: string[]
+    ): Promise<PaymentAlert[]> => {
+
+      const token = localStorage.getItem('jwt_token');
+      if (!token) throw new Error("Authentication token not found. Please log in again.");
+
+      // --- SCENARIO 1: Remote Fetch from Bank Accounts ---
+      if (institutionIds && institutionIds.length > 0) {
+        const endpoint = action === 'all'
+            ? `${API_BASE_URL}/payments/get-multiple-all`
+            : `${API_BASE_URL}/payments/pick-multiple-pending`;
+
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ institutionIds })
+          });
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: "An API error occurred." }));
+            throw new Error(errorData.message);
+          }
+          // The backend's multi-account endpoints return pre-filtered data.
+          // However, we apply client-side filters as well for consistency if needed.
+          const remotePayments: PaymentAlert[] = await response.json();
+          return filterLocalPayments(remotePayments, filters);
+
+        } catch (error) {
+          console.error(`Error fetching remote payments:`, error);
+          throw error;
+        }
+      }
+
+      // --- SCENARIO 2: Fallback to Local Database ---
+      else {
+        const localEndpoint = `${API_BASE_URL}/payments/local`;
+        try {
+          const response = await fetch(localEndpoint, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: "Could not fetch from local database." }));
+            throw new Error(errorData.message);
+          }
+
+          const localPayments: PaymentAlert[] = await response.json();
+          return filterLocalPayments(localPayments, filters);
+
+        } catch (error) {
+          console.error(`Error fetching local payments:`, error);
+          throw error;
+        }
+      }
+    };
+
+/**
+ * Resets a single payment on the backend.
+ */
 export const resetPayment = async (paymentId: string): Promise<boolean> => {
   try {
-    return await resetPaymentApi(paymentId);
+    const response = await fetch(`${API_BASE_URL}/payments/reset/${paymentId}`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt_token')}` }
+    });
+    if (!response.ok) throw new Error("Failed to reset payment on the server.");
+    return await response.json();
   } catch (error) {
-    console.error("Error resetting payment, falling back to mock:", error);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Find the payment in mock data and update it as fallback
-    const paymentIndex = mockPayments.findIndex(p => p.id === paymentId);
-    if (paymentIndex !== -1) {
-      mockPayments[paymentIndex].picked = 0;
-      mockPayments[paymentIndex].status = "pending";
-      return true;
+    console.error("Error resetting payment:", error);
+    throw error;
+  }
+};
+
+/**
+ * Calls the backend to reset ALL payments in the database to 'pending'.
+ * @returns A promise that resolves to true if the operation was successful.
+ */
+export const resetAllPayments = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/payments/reset-all`, {
+      method: 'POST', // Match the @PostMapping on the backend
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+      }
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to reset all payments on the server.");
     }
-    
-    return false;
-  }
-};
-
-// Function to pick all pending payments using real API
-export const pickAllPendingPaymentsAPI = async (request: PickPaymentRequest): Promise<PaymentAlert[]> => {
-  try {
-    return await pickAllPendingPayments(request);
+    return true;
   } catch (error) {
-    console.error("Error picking payments:", error);
-    throw error;
+    console.error("Error resetting all payments:", error);
+    throw error; // Re-throw to be handled by the UI component
   }
 };
 
-// Function to pick all  payments using real API
-export const pickAllPaymentsAPI = async (request: PickPaymentRequest): Promise<PaymentAlert[]> => {
-  try {
-    return await getAllPayments(request);
-  } catch (error) {
-    console.error("Error picking payments:", error);
-    throw error;
-  }
-};
 
-// Function to export payments to specified format
-export const exportPayments = (payments: PaymentAlert[], format: string): void => {
-  if (format === 'csv') {
+/**
+ * A generic function to export payments to a specified format.
+ */
+export const exportPayments = (payments: PaymentAlert[], format: 'csv' | 'excel' | 'pdf'): void => {
+  if (!payments || payments.length === 0) {
+    console.warn("Export cancelled: No payment data to export.");
+    return;
+  }
+  if (format === 'csv' || format === 'excel') {
     exportToCSV(payments);
-  } else if (format === 'excel') {
-    exportToExcel(payments);
   } else if (format === 'pdf') {
     exportToPDF(payments);
   }
@@ -258,97 +165,39 @@ export const exportPayments = (payments: PaymentAlert[], format: string): void =
 
 // Helper function to export to CSV
 const exportToCSV = (payments: PaymentAlert[]): void => {
-  const headers = [
-    'ID', 'Amount', 'Date', 'Narrative', 'Picked', 'Reference', 
-    'Source', 'Status', 'Transaction Date', 'Student Name', 'Student Surname', 'Reg Number'
-  ];
-  
+  const headers = ['ID', 'Amount', 'Status', 'Transaction Date', 'Student Name', 'Reg Number', 'Reference', 'Narrative'];
   const csvRows = [
     headers.join(','),
-    ...payments.map(payment => [
-      payment.id,
-      payment.amount,
-      payment.transactionDate,
-      `"${payment.narrative}"`,
-      payment.picked,
-      payment.reference,
-      payment.source,
-      payment.status,
-      payment.transactionDate,
-      `"${payment.studentName || ''}"`,
-      `"${payment.studentSurname || ''}"`,
-      payment.regNumber
+    ...payments.map(p => [
+      p.id, p.amount, p.status, p.transactionDate, `"${p.studentName || 'N/A'}"`,
+      `"${p.regNumber || 'N/A'}"`, `"${p.reference || 'N/A'}"`, `"${p.narrative.replace(/"/g, '""')}"`
     ].join(','))
   ];
-  
   const csvContent = csvRows.join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  
   link.setAttribute('href', url);
   link.setAttribute('download', `student_payments_${new Date().toISOString().slice(0, 10)}.csv`);
-  link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 };
 
-// Helper function to export to Excel (simplified)
-const exportToExcel = (payments: PaymentAlert[]): void => {
-  // In a real implementation, you would use a library like xlsx
-  // For this demo, we'll just use CSV as a fallback
-  exportToCSV(payments);
-};
-
-
+// Helper function to export to PDF
 const exportToPDF = (payments: PaymentAlert[]): void => {
-  const doc = new jsPDF({
-    orientation: 'landscape', // This sets the orientation
-    unit: 'mm',
-    format: 'a4',
-  });
-
+  const doc = new jsPDF({ orientation: 'landscape' });
   doc.text('Payment Alerts Report', 14, 15);
-
-  const headers = [
-    'ID',
-    'Amount',
-    'Transaction Date',
-    'Narrative',
-    'Picked',
-    'Reference',
-    'Source',
-    'Status',
-    'Transaction Date',
-    'Student Name',
-    'Student Surname',
-    'Reg Number',
-  ];
-
-  const rows = payments.map(payment => [
-    payment.id,
-    payment.amount.toFixed(2),
-    payment.transactionDate,
-    payment.narrative,
-    payment.picked,
-    payment.reference,
-    payment.source,
-    payment.status,
-    payment.transactionDate,
-    payment.studentName || '',
-    payment.studentSurname || '',
-    payment.regNumber,
+  const head = [['Date', 'Student Name', 'Reg Number', 'Amount', 'Status', 'Narrative']];
+  const body = payments.map(p => [
+    p.transactionDate, p.studentName || 'N/A', p.regNumber || 'N/A',
+    p.amount.toFixed(2), p.status, p.narrative,
   ]);
-
   autoTable(doc, {
-    head: [headers],
-    body: rows,
-    startY: 20,
-    styles: { fontSize: 8 },
-    headStyles: { fillColor: [22, 160, 133] },
+    head: head, body: body, startY: 20,
+    styles: { fontSize: 8, cellPadding: 1.5 },
+    headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+    columnStyles: { 5: { cellWidth: 'auto' } }
   });
-
   doc.save('payment-alerts.pdf');
 };
-

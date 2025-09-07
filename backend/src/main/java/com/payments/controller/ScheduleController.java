@@ -11,10 +11,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 import com.payments.dto.ScheduleStatsDto;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/schedule")
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'TEACHER')")
 public class ScheduleController {
 
     @Autowired

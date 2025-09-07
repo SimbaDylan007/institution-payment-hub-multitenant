@@ -10,7 +10,7 @@ import com.payments.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.List;
 import java.util.Map; // Import Map for the new endpoint
 import java.util.Optional;
@@ -18,6 +18,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/users")
 @CrossOrigin(origins = "*") // Note: Consider making this more specific than "*" for production
+@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN')") // Only ADMIN and IT_ADMIN can access these endpoints
 public class UserController {
 
     private final UserService userService;

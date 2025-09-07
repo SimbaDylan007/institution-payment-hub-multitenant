@@ -66,7 +66,8 @@ export interface ErrorDetails {
 
 export type ExportFormat = 'csv' | 'excel' | 'pdf';
 
-export interface SearchFilters {
+export interface SearchFiltersType {
+  searchTerm?: string;
   startDate?: Date;
   endDate?: Date;
   regNumber?: string;
@@ -74,6 +75,7 @@ export interface SearchFilters {
   maxAmount?: number;
   name?: string;
   surname?: string;
+  status?: string;
 }
 
 export interface ApiResponse<T> {

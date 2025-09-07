@@ -1,141 +1,124 @@
+// src/pages/Facilities.tsx
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Building, Wrench, MapPin, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Home, Building, Trash2, Search, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
 import AddFacilityModal from "@/components/forms/AddFacilityModal";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import { apiFetch } from "@/utils/apiClient";
+
+// --- Interfaces ---
+interface Facility { id: number; name: string; description?: string; type: string; capacity?: number; location?: string; status: string; equipment?: string; }
+interface Page<T> { content: T[]; totalPages: number; number: number; }
 
 export default function Facilities() {
   const { user } = useAuth();
+  const [facilityPage, setFacilityPage] = useState<Page<Facility> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({ status: 'ALL', type: 'ALL', searchTerm: '' });
+  const [currentPage, setCurrentPage] = useState(0);
 
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
+  const fetchFacilities = useCallback((page = 0, currentFilters = filters) => {
+    setLoading(true);
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: '10',
+      sort: 'name,asc',
+      ...currentFilters
+    }).toString();
+
+    apiFetch(`/api/facilities?${params}`)
+        .then(res => res.json())
+        .then(data => setFacilityPage(data))
+        .catch(() => toast.error("Failed to fetch facilities."))
+        .finally(() => setLoading(false));
+  }, [filters]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchFacilities(currentPage, filters), 300);
+    return () => clearTimeout(timer);
+  }, [currentPage, filters, fetchFacilities]);
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this facility?")) return;
+    try {
+      const response = await apiFetch(`/api/facilities/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        toast.success("Facility deleted successfully.");
+        fetchFacilities(currentPage); // Refresh
+      } else {
+        throw new Error("Failed to delete facility.");
+      }
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
+
+  if (!user) return <Navigate to="/" replace />;
+  // Add role check if needed
+  if (!['ADMIN', 'ADMINISTRATOR'].includes(user.role)) return <div>Access Denied</div>;
 
   return (
-    <div className="min-h-screen bg-[#121828] text-white dark:bg-gray-100 dark:text-gray-900 flex flex-col">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Facilities Management</h1>
-            <p className="text-gray-400 dark:text-gray-600">
-              Manage school infrastructure and resources
-            </p>
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="mb-6 flex justify-between items-center">
+            <div><h1 className="text-2xl font-bold">Facilities Management</h1><p className="text-gray-300">Manage school infrastructure and resources</p></div>
+            <div className="flex gap-2"><AddFacilityModal onSuccess={() => fetchFacilities(currentPage)} /><Button asChild><Link to="/dashboard" className="flex items-center gap-2"><Home size={16}/>Dashboard</Link></Button></div>
           </div>
-          <div className="flex gap-2">
-            <AddFacilityModal />
-            <Button
-              className="bg-purple-500 text-white hover:bg-purple-600"
-              asChild
-            >
-              <Link to="/dashboard" className="flex items-center gap-2">
-                <Home className="h-4 w-4" />
-                Dashboard
-              </Link>
-            </Button>
-          </div>
-        </div>
 
-        <Tabs defaultValue="rooms" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="rooms">Rooms & Spaces</TabsTrigger>
-            <TabsTrigger value="equipment">Equipment</TabsTrigger>
-            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="rooms">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building className="h-5 w-5" />
-                  Rooms & Spaces Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-blue-400">42</div>
-                      <p className="text-sm text-gray-400">Classrooms</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-green-400">8</div>
-                      <p className="text-sm text-gray-400">Laboratories</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-200">
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold text-purple-400">15</div>
-                      <p className="text-sm text-gray-400">Special Rooms</p>
-                    </CardContent>
-                  </Card>
-                </div>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Room and space management will be implemented here.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="equipment">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Equipment Inventory
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Equipment inventory management will be implemented here.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="maintenance">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wrench className="h-5 w-5" />
-                  Maintenance Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Maintenance tracking and scheduling will be implemented here.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="bookings">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle>Facility Bookings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Facility booking system will be implemented here.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
-      
-      <footer className="bg-[#1A1F2C] dark:bg-white border-t border-gray-800 dark:border-gray-200 py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-600">
-          &copy; {new Date().getFullYear()} School Management System
-        </div>
-      </footer>
-    </div>
+          <Card className="bg-gray-900/50 border-gray-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Building/>Facility Directory</CardTitle>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                <Input placeholder="Search by name or location..." value={filters.searchTerm} onChange={e => setFilters(f => ({...f, searchTerm: e.target.value}))} className="dark:bg-gray-800"/>
+                <Select value={filters.type} onValueChange={v => setFilters(f => ({...f, type: v}))}><SelectTrigger className="dark:bg-gray-800"><SelectValue/></SelectTrigger><SelectContent className="dark:bg-gray-800"><SelectItem value="ALL">All Types</SelectItem><SelectItem value="CLASSROOM">Classroom</SelectItem><SelectItem value="LABORATORY">Laboratory</SelectItem><SelectItem value="LIBRARY">Library</SelectItem><SelectItem value="AUDITORIUM">Auditorium</SelectItem><SelectItem value="SPORTS">Sports</SelectItem><SelectItem value="OFFICE">Office</SelectItem></SelectContent></Select>
+                <Select value={filters.status} onValueChange={v => setFilters(f => ({...f, status: v}))}><SelectTrigger className="dark:bg-gray-800"><SelectValue/></SelectTrigger><SelectContent className="dark:bg-gray-800"><SelectItem value="ALL">All Statuses</SelectItem><SelectItem value="AVAILABLE">Available</SelectItem><SelectItem value="OCCUPIED">Occupied</SelectItem><SelectItem value="MAINTENANCE">Maintenance</SelectItem></SelectContent></Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader><TableRow className="hover:bg-transparent"><TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Location</TableHead><TableHead>Capacity</TableHead><TableHead>Status</TableHead><TableHead className="text-center">Actions</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {loading && (<tr><td colSpan={6} className="text-center p-8">Loading facilities...</td></tr>)}
+                    {!loading && facilityPage?.content.map(facility => (
+                        <TableRow key={facility.id} className="border-gray-800">
+                          <TableCell className="font-medium">{facility.name}</TableCell>
+                          <TableCell>{facility.type}</TableCell>
+                          <TableCell>{facility.location}</TableCell>
+                          <TableCell>{facility.capacity}</TableCell>
+                          <TableCell><Badge variant={facility.status === 'AVAILABLE' ? 'default' : (facility.status === 'MAINTENANCE' ? 'destructive' : 'secondary')}>{facility.status}</Badge></TableCell>
+                          <TableCell className="flex justify-center gap-2">
+                            <AddFacilityModal facilityToEdit={facility} onSuccess={() => fetchFacilities(currentPage)} />
+                            <Button variant="outline" size="sm" onClick={() => handleDelete(facility.id)}><Trash2 size={16}/></Button>
+                          </TableCell>
+                        </TableRow>
+                    ))}
+                    {!loading && facilityPage?.content.length === 0 && (<tr><td colSpan={6} className="text-center p-8 text-gray-400">No facilities found matching your criteria.</td></tr>)}
+                  </TableBody>
+                </Table>
+              </div>
+              {facilityPage && facilityPage.totalPages > 1 && (
+                  <div className="flex items-center justify-end space-x-2 py-4">
+                    <span className="text-sm text-gray-400">Page {facilityPage.number + 1} of {facilityPage.totalPages}</span>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(0)} disabled={currentPage === 0}><ChevronsLeft size={16}/></Button>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 0}><ChevronLeft size={16}/></Button>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= facilityPage.totalPages - 1}><ChevronRight size={16}/></Button>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(facilityPage.totalPages - 1)} disabled={currentPage >= facilityPage.totalPages - 1}><ChevronsRight size={16}/></Button>
+                  </div>
+              )}
+            </CardContent>
+          </Card>
+        </main>
+      </div>
   );
 }

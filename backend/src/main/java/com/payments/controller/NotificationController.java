@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.Map;
 
 @RestController
@@ -22,6 +22,7 @@ public class NotificationController {  // <-- THIS MUST MATCH THE FILE NAME
     private NotificationService notificationService;
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<Notification>> getMyNotifications(
             @AuthenticationPrincipal UserDetails currentUser,
             Pageable pageable) {
@@ -36,6 +37,7 @@ public class NotificationController {  // <-- THIS MUST MATCH THE FILE NAME
     }
 
     @GetMapping("/unread-count")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Long>> getMyUnreadCount(@AuthenticationPrincipal UserDetails currentUser) {
         if (currentUser == null) {
             return ResponseEntity.status(401).build();
@@ -46,6 +48,7 @@ public class NotificationController {  // <-- THIS MUST MATCH THE FILE NAME
     }
 
     @PostMapping("/{id}/read")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> markAsRead(@PathVariable Long id, @AuthenticationPrincipal UserDetails currentUser) {
         if (currentUser == null) {
             return ResponseEntity.status(401).build();
@@ -56,6 +59,7 @@ public class NotificationController {  // <-- THIS MUST MATCH THE FILE NAME
     }
 
     @PostMapping("/announcements")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> sendAnnouncement(
             @RequestBody AnnouncementRequest request,
             @AuthenticationPrincipal UserDetails sender) {

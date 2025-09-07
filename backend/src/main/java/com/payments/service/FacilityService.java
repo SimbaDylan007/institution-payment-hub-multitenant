@@ -1,54 +1,44 @@
-
 package com.payments.service;
 
 import com.payments.model.Facility;
 import com.payments.repository.FacilityRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 import java.util.Optional;
 
 @Service
 public class FacilityService {
-    
+
     @Autowired
     private FacilityRepository facilityRepository;
-    
-    public List<Facility> getAllFacilities() {
-        return facilityRepository.findAll();
+
+    // UPDATED: This method now handles all filtering and pagination
+    public Page<Facility> getAllFacilities(String status, String type, String searchTerm, Pageable pageable) {
+        String statusFilter = (status != null && !status.isEmpty() && !status.equalsIgnoreCase("ALL")) ? status : null;
+        String typeFilter = (type != null && !type.isEmpty() && !type.equalsIgnoreCase("ALL")) ? type : null;
+        String searchFilter = (searchTerm != null && !searchTerm.isEmpty()) ? searchTerm : null;
+
+        return facilityRepository.findWithFilters(statusFilter, typeFilter, searchFilter, pageable);
     }
-    
+
     public Optional<Facility> getFacilityById(Long id) {
         return facilityRepository.findById(id);
     }
-    
-    public List<Facility> getFacilitiesByType(String type) {
-        return facilityRepository.findByType(type);
-    }
-    
-    public List<Facility> getFacilitiesByStatus(String status) {
-        return facilityRepository.findByStatus(status);
-    }
-    
-    public List<Facility> getAvailableFacilities() {
-        return facilityRepository.findByStatus("AVAILABLE");
-    }
-    
+
     @Transactional
     public Facility createFacility(Facility facility) {
-        if (facility.getStatus() == null) {
+        if (facility.getStatus() == null || facility.getStatus().isEmpty()) {
             facility.setStatus("AVAILABLE");
         }
         return facilityRepository.save(facility);
     }
-    
+
     @Transactional
     public Facility updateFacility(Long id, Facility facilityDetails) {
-        Optional<Facility> optionalFacility = facilityRepository.findById(id);
-        if (optionalFacility.isPresent()) {
-            Facility facility = optionalFacility.get();
+        return facilityRepository.findById(id).map(facility -> {
             facility.setName(facilityDetails.getName());
             facility.setDescription(facilityDetails.getDescription());
             facility.setType(facilityDetails.getType());
@@ -57,16 +47,14 @@ public class FacilityService {
             facility.setStatus(facilityDetails.getStatus());
             facility.setEquipment(facilityDetails.getEquipment());
             return facilityRepository.save(facility);
-        }
-        return null;
+        }).orElse(null);
     }
-    
+
     @Transactional
-    public boolean deleteFacility(Long id) {
-        if (facilityRepository.existsById(id)) {
-            facilityRepository.deleteById(id);
-            return true;
+    public void deleteFacility(Long id) {
+        if (!facilityRepository.existsById(id)) {
+            throw new RuntimeException("Facility not found with id: " + id);
         }
-        return false;
+        facilityRepository.deleteById(id);
     }
 }

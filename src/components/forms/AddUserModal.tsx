@@ -1,164 +1,106 @@
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+// src/components/forms/AddUserModal.tsx
+
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
+import { Switch } from "@/components/ui/switch";
+import { toast } from 'sonner';
+import { apiFetch } from '@/utils/apiClient';
 
-export interface AddUserModalProps {
-  onUserAdded: () => void;
+interface Role { id: number; name: string; }
+interface User { id: number; username: string; email: string; enabled: boolean; roles: Role[]; }
+
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  userToEdit: User | null;
 }
 
-export const AddUserModal: React.FC<AddUserModalProps> = ({ onUserAdded }) => {
-  const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-    email: "",
-    enabled: true,
-    roleNames: [] as string[]
-  });
+export const AddUserModal = ({ isOpen, onClose, onSuccess, userToEdit }: Props) => {
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [enabled, setEnabled] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Fetch roles when the component mounts or is first opened, if not already fetched.
-    if (roles.length === 0) {
-      fetchRoles();
-    }
-  }, []);
-
-  // 2. Refactor fetchRoles
-  const fetchRoles = async () => {
-    try {
-      const response = await apiFetch('http://localhost:8080/api/users/roles');
-      if (response.ok) {
-        const data = await response.json();
-        setRoles(data);
-      } else {
-        toast.error("Could not load user roles.");
-      }
-    } catch (error) {
-      // apiFetch will have already shown a toast for network/auth errors
-      console.error('Error fetching roles:', error);
-    }
-  };
-
-  const handleRoleChange = (roleName: string, checked: boolean) => {
-    if (checked) {
-      setFormData({ ...formData, roleNames: [...formData.roleNames, roleName] });
+    if (userToEdit) {
+      setUsername(userToEdit.username);
+      setEmail(userToEdit.email);
+      setEnabled(userToEdit.enabled);
+      setPassword(''); // Don't show existing password hash
     } else {
-      setFormData({ ...formData, roleNames: formData.roleNames.filter(r => r !== roleName) });
+      // Reset form for new user
+      setUsername('');
+      setEmail('');
+      setPassword('');
+      setEnabled(true);
     }
-  };
+  }, [userToEdit, isOpen]);
 
-  // 3. Refactor handleSubmit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    if (!username || !email || (!userToEdit && !password)) {
+      return toast.error("Please fill in all required fields.");
+    }
+    setLoading(true);
+
+    const userData = {
+      username,
+      email,
+      password: password || null, // Send null if password is not being changed
+      enabled,
+      roleNames: userToEdit ? userToEdit.roles.map(r => r.name) : ["ROLE_STUDENT"] // Assign default role on creation
+    };
+
+    const url = userToEdit ? `http://localhost:8080/api/users/${userToEdit.id}` : 'http://localhost:8080/api/users';
+    const method = userToEdit ? 'PUT' : 'POST';
 
     try {
-      // Use apiFetch and remove the manual headers
-      const response = await apiFetch('http://localhost:8080/api/users', {
-        method: 'POST',
-        body: JSON.stringify(formData)
-      });
-
+      const response = await apiFetch(url, { method, body: JSON.stringify(userData) });
       if (response.ok) {
-        toast.success("User created successfully");
-        setFormData({ // Reset form on success
-          username: "",
-          password: "",
-          email: "",
-          enabled: true,
-          roleNames: []
-        });
-        setOpen(false);
-        onUserAdded();
+        toast.success(`User successfully ${userToEdit ? 'updated' : 'created'}.`);
+        onSuccess();
       } else {
-        // Provide more specific error feedback from the server
-        const errorData = await response.json().catch(() => ({ message: "Failed to create user. Please check the details and try again." }));
-        throw new Error(errorData.message);
+        const error = await response.json();
+        throw new Error(error.message || `Failed to ${userToEdit ? 'update' : 'create'} user.`);
       }
     } catch (error) {
-      console.error('Error creating user:', error);
       toast.error((error as Error).message);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // The JSX for the component remains unchanged
   return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button>Add User</Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-md">
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="bg-gray-900 text-white border-gray-700">
           <DialogHeader>
-            <DialogTitle>Add New User</DialogTitle>
+            <DialogTitle>{userToEdit ? 'Edit User' : 'Create New User'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 py-4">
             <div>
               <Label htmlFor="username">Username</Label>
-              <Input
-                  id="username"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  required
-              />
+              <Input id="username" value={username} onChange={e => setUsername(e.target.value)} className="bg-gray-800" required />
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
+              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="bg-gray-800" required />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-              />
+              <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={userToEdit ? "Leave blank to keep current password" : "Required"} className="bg-gray-800" required={!userToEdit} />
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox
-                  id="enabled"
-                  checked={formData.enabled}
-                  onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked === true })}
-              />
+              <Switch id="enabled" checked={enabled} onCheckedChange={setEnabled} />
               <Label htmlFor="enabled">User Enabled</Label>
             </div>
-            <div>
-              <Label>Roles</Label>
-              <div className="space-y-2">
-                {roles.map((role) => (
-                    <div key={role.id} className="flex items-center space-x-2">
-                      <Checkbox
-                          id={`role-${role.id}`}
-                          checked={formData.roleNames.includes(role.name)}
-                          onCheckedChange={(checked) => handleRoleChange(role.name, checked === true)}
-                      />
-                      <Label htmlFor={`role-${role.id}`}>{role.name}</Label>
-                    </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Creating..." : "Create User"}
-              </Button>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save User'}</Button>
             </div>
           </form>
         </DialogContent>

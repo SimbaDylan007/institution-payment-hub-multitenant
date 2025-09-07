@@ -26,6 +26,7 @@ com\payments\model\Event.class
 com\payments\model\ScheduleEvent.class
 com\payments\repository\UserRepository.class
 com\payments\repository\ExamRepository.class
+com\payments\controller\AuditLogController.class
 com\payments\controller\AcademicController.class
 com\payments\model\LeaveRequest.class
 com\payments\model\Subject.class
@@ -37,15 +38,18 @@ com\payments\model\Timetable.class
 com\payments\controller\EnrollmentController.class
 com\payments\model\StudentRegistrationId.class
 com\payments\service\AcademicService.class
+com\payments\model\AuditLog.class
 com\payments\model\Enrollment.class
 com\payments\model\MedicalRecord.class
 com\payments\controller\ScheduleController.class
 com\payments\repository\ResourceUsageLogRepository.class
+com\payments\config\AuditAspect.class
 com\payments\model\FinancialLedger.class
 com\payments\repository\GradeRepository.class
 com\payments\dto\UserCreationDto.class
 com\payments\exception\ResourceNotFoundException.class
 com\payments\dto\PasswordPolicyDto.class
+com\payments\repository\AuditLogRepository.class
 com\payments\service\EnrollmentService.class
 com\payments\controller\PaymentController.class
 com\payments\model\StudentRegistration.class
@@ -53,6 +57,7 @@ com\payments\service\ReconciliationService.class
 com\payments\model\StaffAttendance.class
 com\payments\config\JwtRequestFilter.class
 com\payments\model\SystemPreferences.class
+com\payments\service\AuditLogService.class
 com\payments\controller\StaffManagementController.class
 com\payments\service\CustomUserDetailsService.class
 com\payments\controller\StudentManagementController.class
@@ -62,6 +67,7 @@ com\payments\dto\UserStatisticsDto.class
 com\payments\repository\NotificationPreferencesRepository.class
 com\payments\service\StaffService$1.class
 com\payments\repository\PaymentRepository.class
+com\payments\controller\StudentPortalController.class
 com\payments\model\Staff.class
 com\payments\repository\FeeTypeRepository.class
 com\payments\service\ScheduleService.class
@@ -82,11 +88,13 @@ com\payments\dto\SubjectAnalyticsDto.class
 com\payments\model\Fee.class
 com\payments\controller\UserController.class
 com\payments\dto\StudentPerformanceDto.class
+com\payments\service\StudentPortalService.class
 com\payments\dto\ClassPerformanceDto.class
 com\payments\dto\SchoolInformationDto.class
 com\payments\model\SchoolInformation.class
 com\example\schoolschedule\repository\TimetableEntryRepository.class
 com\payments\repository\FacilityRepository.class
+com\payments\dto\MultiPickPaymentRequest.class
 com\payments\model\Timestamp.class
 com\payments\repository\EventRepository.class
 com\payments\model\SecurityFeatures.class

@@ -2,7 +2,7 @@ package com.payments.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.payments.repository.StudentRepository;
 import com.payments.repository.StaffRepository;
 import com.payments.repository.BookRepository;
@@ -22,6 +22,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN', 'FINANCE_ADMIN', 'ADMINISTRATOR', 'TEACHER')")
 public class StatsController {
 
     private final StudentRepository studentRepository;

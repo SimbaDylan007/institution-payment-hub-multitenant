@@ -1,171 +1,88 @@
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
+// src/components/forms/ManageRolesModal.tsx
 
-export interface ManageRolesModalProps {
-  onRolesUpdated: () => void;
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from 'sonner';
+import { apiFetch } from '@/utils/apiClient';
+import { Badge } from '@/components/ui/badge';
+
+interface Role { id: number; name: string; }
+
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export const ManageRolesModal: React.FC<ManageRolesModalProps> = ({ onRolesUpdated }) => {
-  const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+export const ManageRolesModal = ({ isOpen, onClose }: Props) => {
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [newRoleName, setNewRoleName] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      fetchUsers();
-      fetchRoles();
-    }
-  }, [open]);
-
-  // 2. Refactor fetchUsers
-  const fetchUsers = async () => {
-    try {
-      const response = await apiFetch('http://localhost:8080/api/users');
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      } else {
-        toast.error("Failed to fetch users.");
-      }
-    } catch (error) {
-      // apiFetch will have already shown a toast for network/auth errors
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  // 3. Refactor fetchRoles
   const fetchRoles = async () => {
+    setLoading(true);
     try {
       const response = await apiFetch('http://localhost:8080/api/users/roles');
-      if (response.ok) {
-        const data = await response.json();
-        setRoles(data);
-      } else {
-        toast.error("Failed to fetch roles.");
-      }
-    } catch (error) {
-      console.error('Error fetching roles:', error);
+      if(response.ok) setRoles(await response.json());
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleUserSelect = (userId: string) => {
-    setSelectedUserId(userId);
-    const user = users.find(u => u.id.toString() === userId);
-    if (user && user.roles) {
-      setSelectedRoles(user.roles.map((r: any) => r.name));
-    } else {
-      setSelectedRoles([]);
+  useEffect(() => {
+    if (isOpen) {
+      fetchRoles();
     }
-  };
+  }, [isOpen]);
 
-  const handleRoleChange = (roleName: string, checked: boolean) => {
-    if (checked) {
-      setSelectedRoles([...selectedRoles, roleName]);
-    } else {
-      setSelectedRoles(selectedRoles.filter(r => r !== roleName));
-    }
-  };
-
-  // 4. Refactor handleSubmit
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateRole = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUserId) {
-      toast.error("Please select a user");
-      return;
-    }
-
-    setIsLoading(true);
-
+    if (!newRoleName.trim()) return toast.warning("Role name cannot be empty.");
+    setLoading(true);
     try {
-      // Use apiFetch and remove the manual headers
-      const response = await apiFetch('http://localhost:8080/api/users/assign-roles', {
+      const response = await apiFetch('http://localhost:8080/api/users/roles', {
         method: 'POST',
-        body: JSON.stringify({
-          userId: parseInt(selectedUserId),
-          roleNames: selectedRoles
-        })
+        body: newRoleName // Sending as raw string as per backend
       });
 
       if (response.ok) {
-        toast.success("User roles updated successfully");
-        setSelectedUserId("");
-        setSelectedRoles([]);
-        setOpen(false);
-        onRolesUpdated();
+        toast.success(`Role "${newRoleName}" created successfully.`);
+        setNewRoleName('');
+        fetchRoles(); // Refresh the list
       } else {
-        // Provide more specific error feedback
-        const errorData = await response.json().catch(() => ({ message: "Failed to update user roles." }));
-        throw new Error(errorData.message);
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create role.");
       }
     } catch (error) {
-      console.error('Error updating user roles:', error);
       toast.error((error as Error).message);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // The JSX for the component remains unchanged
   return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline">Manage Roles</Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-md">
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="bg-gray-900 text-white border-gray-700">
           <DialogHeader>
-            <DialogTitle>Manage User Roles</DialogTitle>
+            <DialogTitle>Manage System Roles</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="user">Select User</Label>
-              <Select value={selectedUserId} onValueChange={handleUserSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id.toString()}>
-                        {user.username} ({user.email})
-                      </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <h3 className="font-semibold mb-2">Existing Roles</h3>
+              <div className="flex flex-wrap gap-2 p-2 bg-gray-800 rounded-md min-h-[50px]">
+                {loading && !roles.length ? <p>Loading...</p> : roles.map(r => <Badge key={r.id}>{r.name.replace('ROLE_', '')}</Badge>)}
+              </div>
             </div>
-            {selectedUserId && (
-                <div>
-                  <Label>Assign Roles</Label>
-                  <div className="space-y-2">
-                    {roles.map((role) => (
-                        <div key={role.id} className="flex items-center space-x-2">
-                          <Checkbox
-                              id={`role-${role.id}`}
-                              checked={selectedRoles.includes(role.name)}
-                              onCheckedChange={(checked) => handleRoleChange(role.name, checked === true)}
-                          />
-                          <Label htmlFor={`role-${role.id}`}>{role.name}</Label>
-                        </div>
-                    ))}
-                  </div>
-                </div>
-            )}
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading || !selectedUserId}>
-                {isLoading ? "Updating..." : "Update Roles"}
-              </Button>
-            </div>
-          </form>
+            <form onSubmit={handleCreateRole} className="space-y-2">
+              <Label htmlFor="newRoleName">Create New Role</Label>
+              <div className="flex gap-2">
+                <Input id="newRoleName" value={newRoleName} onChange={e => setNewRoleName(e.target.value)} placeholder="e.g., LIBRARIAN" className="bg-gray-800" />
+                <Button type="submit" disabled={loading}>Create</Button>
+              </div>
+            </form>
+          </div>
         </DialogContent>
       </Dialog>
   );

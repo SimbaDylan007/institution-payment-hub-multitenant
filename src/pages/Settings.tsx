@@ -1,296 +1,198 @@
-import { useState, useEffect, ReactNode } from "react";
-import { Link } from "react-router-dom";
+// src/pages/Settings.tsx
+
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Link, Navigate } from "react-router-dom";
+import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
-import { Toggle } from "@/components/ui/toggle";
-import { Users, Settings as SettingsIcon, Home } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Home, Users, Edit, Trash2, Key, UserPlus, ShieldPlus } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/utils/apiClient";
-import {ManageRolesModal} from "@/components/forms/ManageRolesModal.tsx";
-import {BulkUserImportModal} from "@/components/forms/BulkUserImportModal.tsx";
-import {AddUserModal} from "@/components/forms/AddUserModal.tsx"; // 1. Import the secure fetch wrapper
+import { AddUserModal } from "@/components/forms/AddUserModal";
+import { ManageRolesModal } from "@/components/forms/ManageRolesModal";
+import { AssignRolesModal } from "@/components/forms/AssignRolesModal";
 
 // --- Interfaces ---
+interface Role { id: number; name: string; }
+interface User { id: number; username: string; email: string; enabled: boolean; roles: Role[]; }
 interface UserStats { totalUsers: number; activeUsers: number; administrators: number; teachers: number; }
-interface User { id: number; username: string; enabled: boolean; roles: { name: string }[]; createdAt: string; }
 
-// --- Main Component ---
-const Settings = () => {
-  const { user } = useAuth(); // Assuming useAuth provides the logged-in user context
-  const [userStats, setUserStats] = useState<UserStats>({ totalUsers: 0, activeUsers: 0, administrators: 0, teachers: 0 });
+export default function Settings() {
+  const { user } = useAuth();
+  const [stats, setStats] = useState<UserStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [chartData, setChartData] = useState([]);
-  const [settings, setSettings] = useState({ maintenanceMode: false, twoFactorEnabled: false });
+  const [loading, setLoading] = useState(false);
+
+  // Modal States
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isManageRolesModalOpen, setIsManageRolesModalOpen] = useState(false);
+  const [isAssignRolesModalOpen, setIsAssignRolesModalOpen] = useState(false);
+
+  // State for selected user to edit or assign roles
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [statsRes, usersRes] = await Promise.all([
+        apiFetch('http://localhost:8080/api/users/statistics'),
+        apiFetch('http://localhost:8080/api/users')
+      ]);
+
+      if (statsRes.ok) setStats(await statsRes.json());
+      if (usersRes.ok) setUsers(await usersRes.json());
+
+      if (!statsRes.ok || !usersRes.ok) {
+        toast.error("Failed to load user management data.");
+      }
+    } catch (error) {
+      // apiFetch handles generic error toasts
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (user) { // Only fetch data if the user is logged in
-      fetchUserStats();
-      fetchUsers();
-      fetchChartData();
+    if (user?.role === 'ADMIN') {
+      fetchData();
     }
-  }, [user]);
+  }, [user, fetchData]);
 
-  // --- CORRECTED: All fetch functions now use apiFetch ---
-  const fetchUserStats = async () => {
-    try {
-      const response = await apiFetch('http://localhost:8080/api/users/statistics');
-      if (response.ok) setUserStats(await response.json());
-      else console.error('Failed to fetch user statistics');
-    } catch (error) { console.error('Error fetching user statistics:', error); }
-  };
+  const handleDeleteUser = async (userId: number) => {
+    if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
 
-  const fetchUsers = async () => {
     try {
-      const response = await apiFetch('http://localhost:8080/api/users');
-      if (response.ok) setUsers(await response.json());
-      else console.error('Failed to fetch users');
-    } catch (error) { console.error('Error fetching users:', error); }
-  };
-
-  const fetchChartData = async () => {
-    try {
-      const response = await apiFetch('http://localhost:8080/api/users/monthly-stats');
-      if (response.ok) setChartData(await response.json());
-      else setChartData([]);
-    } catch (error) { setChartData([]); }
-  };
-
-  const handleMaintenanceMode = async () => {
-    try {
-      const response = await apiFetch('http://localhost:8080/api/settings/maintenance-mode', {
-        method: 'POST',
-        body: JSON.stringify({ enabled: !settings.maintenanceMode }),
-      });
+      const response = await apiFetch(`http://localhost:8080/api/users/${userId}`, { method: 'DELETE' });
       if (response.ok) {
-        setSettings(prev => ({ ...prev, maintenanceMode: !prev.maintenanceMode }));
-        toast.success(`Maintenance mode ${!settings.maintenanceMode ? 'enabled' : 'disabled'}`);
-      } else { throw new Error("Failed to toggle"); }
-    } catch (error) { toast.error('Failed to toggle maintenance mode'); }
+        toast.success("User deleted successfully.");
+        fetchData(); // Refresh data
+      } else {
+        toast.error("Failed to delete user.");
+      }
+    } catch (error) { /* Handled by apiFetch */ }
   };
 
-  const handleTwoFactorAuth = async () => {
-    try {
-      const response = await apiFetch('http://localhost:8080/api/settings/two-factor-auth', {
-        method: 'POST',
-        body: JSON.stringify({ enabled: !settings.twoFactorEnabled }),
-      });
-      if (response.ok) {
-        setSettings(prev => ({ ...prev, twoFactorEnabled: !prev.twoFactorEnabled }));
-        toast.success(`Two-factor authentication ${!settings.twoFactorEnabled ? 'enabled' : 'disabled'}`);
-      } else { throw new Error("Failed to toggle"); }
-    } catch (error) { toast.error('Failed to toggle two-factor authentication'); }
-  };
+  if (!user) return <Navigate to="/" replace />;
+  // This is a protected Admin page
+  if (user.role !== 'ADMIN') {
+    return (
+        <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center">
+          <h1 className="text-3xl font-bold text-red-500">Access Denied</h1>
+          <p className="mt-4">You do not have permission to view this page.</p>
+          <Button asChild className="mt-6"><Link to="/dashboard">Go to Dashboard</Link></Button>
+        </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your institution settings and configurations.
-          </p>
-        </div>
-        <Button
-          className="bg-purple-500 text-white hover:bg-purple-600"
-          asChild
-        >
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <Home className="h-4 w-4" />
-            Dashboard
-          </Link>
-        </Button>
-      </div>
-
-      <div className="grid gap-6">
-        {/* General Settings Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SettingsIcon className="h-5 w-5" />
-              General Settings
-            </CardTitle>
-            <CardDescription>
-              Configure basic settings for your institution.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="maintenanceMode">Maintenance Mode</Label>
-              <Toggle id="maintenanceMode" />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="allowRegistrations">Allow New Registrations</Label>
-              <Toggle id="allowRegistrations" defaultChecked />
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="mb-6 flex justify-between items-center">
             <div>
-              <Label htmlFor="defaultLanguage">Default Language</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="fr">French</SelectItem>
-                  <SelectItem value="es">Spanish</SelectItem>
-                </SelectContent>
-              </Select>
+              <h1 className="text-2xl font-bold">User & Role Management</h1>
+              <p className="text-gray-300">Create users, define roles, and manage permissions.</p>
             </div>
-          </CardContent>
-        </Card>
+            <Button asChild className="bg-purple-600 hover:bg-purple-700"><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4"/>Dashboard</Link></Button>
+          </div>
 
-        {/* User Management Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              User Management
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <AddUserModal onUserAdded={fetchUserStats} />
-              <BulkUserImportModal onUsersImported={fetchUserStats} />
-              <ManageRolesModal onRolesUpdated={fetchUserStats} />
-            </div>
-            <div>
-              <p>Total Users: {userStats.totalUsers}</p>
-              <p>Active Users: {userStats.activeUsers}</p>
-              <p>Administrators: {userStats.administrators}</p>
-              <p>Teachers: {userStats.teachers}</p>
-            </div>
-            <Table>
-              <TableCaption>A list of your institution users.</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.slice(0, 10).map((user: any, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{user.username}</TableCell>
-                    <TableCell>{user.roles?.map((role: any) => role.name).join(', ') || 'No roles'}</TableCell>
-                    <TableCell>{user.enabled ? 'Active' : 'Inactive'}</TableCell>
-                    <TableCell>{new Date(user.createdAt || Date.now()).toLocaleDateString()}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={4}>
-                    {users.length} users in total
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
-          </CardContent>
-        </Card>
+          {/* Stat Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <StatCard title="Total Users" value={stats?.totalUsers} />
+            <StatCard title="Active Users" value={stats?.activeUsers} />
+            <StatCard title="Administrators" value={stats?.administrators} />
+            <StatCard title="Teachers" value={stats?.teachers} />
+          </div>
 
-        {/* Security Settings Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SettingsIcon className="h-5 w-5" />
-              Security Settings
-            </CardTitle>
-            <CardDescription>
-              Configure security settings for your institution.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-purple-800/30 rounded-lg border border-purple-600">
-                <div>
-                  <h3 className="font-medium text-white">Maintenance Mode</h3>
-                  <p className="text-sm text-gray-300">Enable maintenance mode to restrict access</p>
+          <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2"><Users/>System Users</CardTitle>
+                <div className="flex gap-2">
+                  <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsAddUserModalOpen(true)}><UserPlus className="h-4 w-4 mr-2"/>Add New User</Button>
+                  <Button variant="outline" onClick={() => setIsManageRolesModalOpen(true)}><ShieldPlus className="h-4 w-4 mr-2"/>Manage All Roles</Button>
                 </div>
-                <Button
-                  onClick={handleMaintenanceMode}
-                  variant={settings.maintenanceMode ? "destructive" : "default"}
-                  className={settings.maintenanceMode ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
-                >
-                  {settings.maintenanceMode ? 'Disable' : 'Enable'}
-                </Button>
               </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-gray-700 hover:bg-transparent">
+                      <TableHead>Username</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Roles</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-center">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                        <TableRow><TableCell colSpan={5} className="text-center py-8">Loading users...</TableCell></TableRow>
+                    ) : (
+                        users.map(u => (
+                            <TableRow key={u.id} className="border-gray-800">
+                              <TableCell className="font-medium">{u.username}</TableCell>
+                              <TableCell>{u.email}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {u.roles.map(role => <Badge key={role.id}>{role.name.replace('ROLE_', '')}</Badge>)}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={u.enabled ? 'default' : 'destructive'}>{u.enabled ? 'Active' : 'Disabled'}</Badge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex gap-2 justify-center">
+                                  <Button size="sm" variant="outline" onClick={() => { setSelectedUser(u); setIsAssignRolesModalOpen(true); }}><Key className="h-4 w-4"/> Assign Roles</Button>
+                                  <Button size="sm" variant="outline" onClick={() => { setSelectedUser(u); setIsAddUserModalOpen(true); }}><Edit className="h-4 w-4"/></Button>
+                                  <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(u.id)}><Trash2 className="h-4 w-4"/></Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
 
-              <div className="flex items-center justify-between p-4 bg-purple-800/30 rounded-lg border border-purple-600">
-                <div>
-                  <h3 className="font-medium text-white">Two-Factor Authentication</h3>
-                  <p className="text-sm text-gray-300">Add an extra layer of security to accounts</p>
-                </div>
-                <Button
-                  onClick={handleTwoFactorAuth}
-                  variant={settings.twoFactorEnabled ? "destructive" : "default"}
-                  className={settings.twoFactorEnabled ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
-                >
-                  {settings.twoFactorEnabled ? 'Disable' : 'Enable'}
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-purple-800/30 rounded-lg border border-purple-600">
-                <div>
-                  <h3 className="font-medium text-white">Session Timeout</h3>
-                  <p className="text-sm text-gray-300">Set the duration for user sessions</p>
-                </div>
-                <Input type="number" id="sessionTimeout" className="w-24" defaultValue="30" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Analytics and Reporting Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SettingsIcon className="h-5 w-5" />
-              Analytics and Reporting
-            </CardTitle>
-            <CardDescription>
-              View analytics and reporting data for your institution.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="Students" stroke="#8884d8" name="Students" />
-                  <Line type="monotone" dataKey="Teachers" stroke="#82ca9d" name="Teachers" />
-                  <Line type="monotone" dataKey="Admins" stroke="#ffc658" name="Admins" />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-gray-500">
-                No chart data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Modals */}
+        <AddUserModal
+            isOpen={isAddUserModalOpen}
+            onClose={() => { setIsAddUserModalOpen(false); setSelectedUser(null); }}
+            onSuccess={fetchData}
+            userToEdit={selectedUser}
+        />
+        <ManageRolesModal
+            isOpen={isManageRolesModalOpen}
+            onClose={() => setIsManageRolesModalOpen(false)}
+        />
+        {selectedUser && (
+            <AssignRolesModal
+                isOpen={isAssignRolesModalOpen}
+                onClose={() => { setIsAssignRolesModalOpen(false); setSelectedUser(null); }}
+                onSuccess={fetchData}
+                user={selectedUser}
+            />
+        )}
       </div>
-    </div>
   );
-};
+}
 
-export default Settings;
+// Helper component for stat cards
+const StatCard = ({ title, value }: { title: string, value?: number }) => (
+    <Card className="bg-purple-800/30 border-purple-700">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-gray-300">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold text-white">{value ?? <div className="h-8 w-12 bg-gray-600 rounded animate-pulse"/>}</div>
+      </CardContent>
+    </Card>
+);

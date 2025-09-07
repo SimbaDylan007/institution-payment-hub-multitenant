@@ -1,252 +1,110 @@
+// src/pages/StudentPortal.tsx
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Navigate, Link } from 'react-router-dom';
+import Header from '@/components/Header';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Home, User, GraduationCap, DollarSign, Library, Calendar, MessageSquare } from 'lucide-react';
+import { format } from 'date-fns';
+import { apiFetch } from '@/utils/apiClient';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
 
-import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, Link } from "react-router-dom";
-import Header from "@/components/Header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Calendar, BookOpen, GraduationCap, MessageSquare, FileText } from "lucide-react";
+// --- Interfaces ---
+interface Student { id: number; studentId: string; firstName: string; lastName: string; email: string; currentGrade: string; }
+interface Grade { id: number; subject: { name: string; code: string; }; letterGrade: string; marksObtained: number; maxMarks: number; }
+interface Financials { ledgerEntries: any[]; currentBalance: number; }
+interface BookTransaction { id: number; book: { title: string }; issueDate: string; dueDate: string; returnDate: string | null; status: string; }
+interface ScheduleEvent { id: string; title: string; start: string; end?: string; }
+interface Notification { id: number; subject: string; content: string; createdAt: string; }
 
 export default function StudentPortal() {
   const { user } = useAuth();
+  const [profile, setProfile] = useState<Student | null>(null);
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [financials, setFinancials] = useState<Financials | null>(null);
+  const [library, setLibrary] = useState<BookTransaction[]>([]);
+  const [schedule, setSchedule] = useState<ScheduleEvent[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
+  useEffect(() => {
+    if (user?.role === 'STUDENT') {
+      const fetchData = async () => {
+        setLoading(true);
+        try {
+          const today = new Date();
+          const scheduleParams = `?year=${today.getFullYear()}&month=${today.getMonth() + 1}`;
+          const [profileRes, gradesRes, financialsRes, libraryRes, scheduleRes, notificationsRes] = await Promise.all([
+            apiFetch('/api/student-portal/my-profile'),
+            apiFetch('/api/student-portal/my-grades'),
+            apiFetch('/api/student-portal/my-financials'),
+            apiFetch('/api/student-portal/my-library-activity'),
+            apiFetch(`/api/student-portal/my-schedule${scheduleParams}`),
+            apiFetch('/api/student-portal/my-notifications')
+          ]);
+          if (profileRes.ok) setProfile(await profileRes.json());
+          if (gradesRes.ok) setGrades(await gradesRes.json());
+          if (financialsRes.ok) setFinancials(await financialsRes.json());
+          if (libraryRes.ok) setLibrary((await libraryRes.json()).content);
+          if (scheduleRes.ok) {
+            const scheduleData = await scheduleRes.json();
+            setSchedule(scheduleData.map((e:any) => ({id: e.id, title: e.title, start: e.startDate, end: e.endDate})));
+          }
+          if (notificationsRes.ok) setNotifications((await notificationsRes.json()).content);
+        } catch (error) {
+          console.error("Failed to fetch student data", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    }
+  }, [user]);
+
+  if (!user) return <Navigate to="/" replace />;
+  if (user.role !== 'STUDENT') return <div>Access Denied. This portal is for students only.</div>;
+  if (loading) return <div className="text-center p-8">Loading your portal...</div>;
 
   return (
-    <div className="min-h-screen bg-[#121828] text-white dark:bg-gray-100 dark:text-gray-900 flex flex-col">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Student Portal</h1>
-            <p className="text-gray-400 dark:text-gray-600">
-              Access your academic information and resources
-            </p>
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="mb-6 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold">Welcome, {profile?.firstName || user.name}</h1>
+              <p className="text-gray-400">Your personal student dashboard</p>
+            </div>
+            <Button asChild><Link to="/dashboard"><Home size={16} className="mr-2"/>Dashboard</Link></Button>
           </div>
-          <Button
-            className="bg-purple-500 text-white hover:bg-purple-600"
-            asChild
-          >
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <Home className="h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-            <CardContent className="p-4">
-              <div className="text-xl font-bold text-blue-400">Grade 12-A</div>
-              <p className="text-sm text-gray-400">Current Class</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-            <CardContent className="p-4">
-              <div className="text-xl font-bold text-green-400">95.6%</div>
-              <p className="text-sm text-gray-400">Attendance</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-            <CardContent className="p-4">
-              <div className="text-xl font-bold text-purple-400">3.8</div>
-              <p className="text-sm text-gray-400">GPA</p>
-            </CardContent>
-          </Card>
-        </div>
+          <Tabs defaultValue="grades" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="grades">My Grades</TabsTrigger>
+              <TabsTrigger value="financials">My Account</TabsTrigger>
+              <TabsTrigger value="library">Library</TabsTrigger>
+              <TabsTrigger value="schedule">Timetable</TabsTrigger>
+              <TabsTrigger value="messages">Messages</TabsTrigger>
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+            </TabsList>
 
-        <Tabs defaultValue="timetable" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="timetable">Timetable</TabsTrigger>
-            <TabsTrigger value="exams">Exam Schedule</TabsTrigger>
-            <TabsTrigger value="results">Results</TabsTrigger>
-            <TabsTrigger value="library">Library</TabsTrigger>
-            <TabsTrigger value="communication">Messages</TabsTrigger>
-          </TabsList>
+            <TabsContent value="grades"><Card className="bg-gray-800 border-gray-700"><CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap/>Academic Results</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Subject</TableHead><TableHead>Marks</TableHead><TableHead>Grade</TableHead></TableRow></TableHeader><TableBody>{grades.map(g => <TableRow key={g.id}><TableCell>{g.subject.name} ({g.subject.code})</TableCell><TableCell>{g.marksObtained}/{g.maxMarks}</TableCell><TableCell><Badge>{g.letterGrade}</Badge></TableCell></TableRow>)}</TableBody></Table></CardContent></Card></TabsContent>
 
-          <TabsContent value="timetable">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Class Timetable
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-7 gap-2 mb-4">
-                  <div className="font-semibold text-center py-2">Time</div>
-                  <div className="font-semibold text-center py-2">Monday</div>
-                  <div className="font-semibold text-center py-2">Tuesday</div>
-                  <div className="font-semibold text-center py-2">Wednesday</div>
-                  <div className="font-semibold text-center py-2">Thursday</div>
-                  <div className="font-semibold text-center py-2">Friday</div>
-                  <div className="font-semibold text-center py-2">Saturday</div>
-                </div>
-                
-                <div className="grid grid-cols-7 gap-2">
-                  <div className="text-center py-2 text-sm">8:00-9:00</div>
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-2 rounded text-sm text-center">Mathematics</div>
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-2 rounded text-sm text-center">Physics</div>
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-2 rounded text-sm text-center">Chemistry</div>
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-2 rounded text-sm text-center">Biology</div>
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-2 rounded text-sm text-center">English</div>
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-2 rounded text-sm text-center">Computer</div>
-                </div>
-                
-                <div className="text-center py-8 text-gray-400 dark:text-gray-600">
-                  <p>Complete timetable interface will be implemented here.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="financials"><Card className="bg-gray-800 border-gray-700"><CardHeader><CardTitle className="flex items-center gap-2 justify-between"><div className="flex items-center gap-2"><DollarSign/>Financial Ledger</div><Badge variant={financials && financials.currentBalance > 0 ? "destructive" : "default"}>Balance: ${financials?.currentBalance.toFixed(2)}</Badge></CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Charge</TableHead><TableHead className="text-right">Payment</TableHead></TableRow></TableHeader><TableBody>{financials?.ledgerEntries.map(l => <TableRow key={l.id}><TableCell>{format(new Date(l.transactionDate), 'yyyy-MM-dd')}</TableCell><TableCell>{l.description}</TableCell><TableCell className="text-right text-red-400">{l.transactionType === 'DEBIT' ? `$${l.amount.toFixed(2)}` : ''}</TableCell><TableCell className="text-right text-green-400">{l.transactionType === 'CREDIT' ? `$${l.amount.toFixed(2)}` : ''}</TableCell></TableRow>)}</TableBody></Table></CardContent></Card></TabsContent>
 
-          <TabsContent value="exams">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Upcoming Examinations
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded border-gray-700 dark:border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-semibold">Mathematics Final Exam</h3>
-                        <p className="text-sm text-gray-400">Date: March 15, 2024</p>
-                        <p className="text-sm text-gray-400">Time: 9:00 AM - 12:00 PM</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-yellow-400">In 5 days</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded border-gray-700 dark:border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-semibold">Physics Practical Exam</h3>
-                        <p className="text-sm text-gray-400">Date: March 18, 2024</p>
-                        <p className="text-sm text-gray-400">Time: 2:00 PM - 5:00 PM</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-yellow-400">In 8 days</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="library"><Card className="bg-gray-800 border-gray-700"><CardHeader><CardTitle className="flex items-center gap-2"><Library/>My Library Activity</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Book Title</TableHead><TableHead>Issue Date</TableHead><TableHead>Due Date</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{library.map(l => <TableRow key={l.id}><TableCell>{l.book.title}</TableCell><TableCell>{format(new Date(l.issueDate), 'yyyy-MM-dd')}</TableCell><TableCell>{format(new Date(l.dueDate), 'yyyy-MM-dd')}</TableCell><TableCell><Badge variant={l.status === 'ISSUED' ? 'destructive' : 'default'}>{l.status}</Badge></TableCell></TableRow>)}</TableBody></Table></CardContent></Card></TabsContent>
 
-          <TabsContent value="results">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5" />
-                  Academic Results
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded">
-                    <h3 className="font-semibold mb-2">Mid-Term Examination - 2024</h3>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>Mathematics: <span className="font-semibold text-green-400">92%</span></div>
-                      <div>Physics: <span className="font-semibold text-green-400">88%</span></div>
-                      <div>Chemistry: <span className="font-semibold text-green-400">85%</span></div>
-                      <div>Biology: <span className="font-semibold text-green-400">90%</span></div>
-                      <div>English: <span className="font-semibold text-green-400">87%</span></div>
-                      <div>Computer: <span className="font-semibold text-green-400">95%</span></div>
-                    </div>
-                    <div className="mt-2 text-sm">
-                      Overall: <span className="font-semibold text-green-400">89.5%</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="schedule"><Card className="bg-gray-800 border-gray-700"><CardHeader><CardTitle className="flex items-center gap-2"><Calendar/>My Timetable</CardTitle></CardHeader><CardContent><FullCalendar plugins={[dayGridPlugin]} initialView="dayGridMonth" events={schedule}/></CardContent></Card></TabsContent>
 
-          <TabsContent value="library">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  Library Resources
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded">
-                    <h3 className="font-semibold mb-2">Currently Issued Books</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Advanced Mathematics - Vol 2</span>
-                        <span className="text-yellow-400">Due: Mar 20</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Physics Fundamentals</span>
-                        <span className="text-yellow-400">Due: Mar 25</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-center py-4 text-gray-400 dark:text-gray-600">
-                    <p>Digital library access and book search will be implemented here.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="messages"><Card className="bg-gray-800 border-gray-700"><CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare/>Announcements & Messages</CardTitle></CardHeader><CardContent className="space-y-3">{notifications.map(n => <div key={n.id} className="p-3 border border-gray-600 rounded-md"><h4 className="font-bold">{n.subject}</h4><p className="text-sm text-gray-300">{n.content}</p><p className="text-xs text-gray-500 mt-1">{format(new Date(n.createdAt), 'PPP p')}</p></div>)}</CardContent></Card></TabsContent>
 
-          <TabsContent value="communication">
-            <Card className="bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Messages & Announcements
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold">Parent-Teacher Meeting</h3>
-                        <p className="text-sm text-gray-400">From: Principal Office</p>
-                        <p className="text-sm mt-2">Reminder: Parent-Teacher meeting scheduled for March 22, 2024.</p>
-                      </div>
-                      <span className="text-xs text-gray-500">2 days ago</span>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-[#252e3e] dark:bg-gray-50 p-4 rounded">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold">Assignment Submission</h3>
-                        <p className="text-sm text-gray-400">From: Mathematics Teacher</p>
-                        <p className="text-sm mt-2">Please submit your calculus assignment by March 15, 2024.</p>
-                      </div>
-                      <span className="text-xs text-gray-500">1 week ago</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
-      
-      <footer className="bg-[#1A1F2C] dark:bg-white border-t border-gray-800 dark:border-gray-200 py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-600">
-          &copy; {new Date().getFullYear()} School Management System
-        </div>
-      </footer>
-    </div>
+            <TabsContent value="profile"><Card className="bg-gray-800 border-gray-700"><CardHeader><CardTitle className="flex items-center gap-2"><User/>My Profile</CardTitle></CardHeader><CardContent className="space-y-2"><div><strong>Name:</strong> {profile?.firstName} {profile?.lastName}</div><div><strong>Student ID:</strong> {profile?.studentId}</div><div><strong>Email:</strong> {profile?.email}</div><div><strong>Current Grade:</strong> {profile?.currentGrade}</div></CardContent></Card></TabsContent>
+          </Tabs>
+        </main>
+      </div>
   );
 }

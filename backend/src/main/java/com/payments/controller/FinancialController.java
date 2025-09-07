@@ -18,10 +18,12 @@ import com.opencsv.exceptions.CsvValidationException;
 import java.io.IOException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/financials")
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasAnyRole('ADMIN', 'FINANCE_ADMIN')") // Only ADMIN and FINANCE_ADMIN can access
 public class FinancialController {
 
     @Autowired private FinancialService financialService;
