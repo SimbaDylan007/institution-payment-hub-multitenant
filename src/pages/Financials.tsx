@@ -14,6 +14,7 @@ import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { CSVLink } from "react-csv";
 import { apiFetch } from "@/utils/apiClient";
+import {academicYears, currentAcademicYear, currentSemester, semesters} from "@/config/academicConfig.ts";
 
 // --- Interfaces ---
 interface FeeType { id: number; name: string; defaultAmount: number; description: string; currency: 'USD' | 'ZWG'; }
@@ -37,6 +38,13 @@ export default function Financials() {
     const [isBulkChargeDialogOpen, setIsBulkChargeDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [gradeFilter, setGradeFilter] = useState('All');
+
+    // --- NEW: State for the controlled Bulk Charge form ---
+    const [bulkFeeTypeId, setBulkFeeTypeId] = useState<string>('');
+    const [bulkAcademicYear, setBulkAcademicYear] = useState(currentAcademicYear);
+    const [bulkSemester, setBulkSemester] = useState(currentSemester);
+    const [bulkFile, setBulkFile] = useState<File | null>(null);
+    const [bulkManualIds, setBulkManualIds] = useState('');
 
     // --- Data Fetching ---
     useEffect(() => {
@@ -111,7 +119,9 @@ export default function Financials() {
         e.preventDefault(); if (!currentStudent) return;
         setLoading(true);
         const formData = new FormData(e.currentTarget);
-        const requestData = { studentId: currentStudent.studentId, amount: parseFloat(formData.get('amount') as string), description: formData.get('description'), transactionDate: formData.get('transactionDate'), feeTypeId: formData.get('feeTypeId') ? parseInt(formData.get('feeTypeId') as string) : null };
+        const requestData = { studentId: currentStudent.studentId, amount: parseFloat(formData.get('amount') as string), description: formData.get('description'), transactionDate: formData.get('transactionDate'), feeTypeId: formData.get('feeTypeId') ? parseInt(formData.get('feeTypeId') as string) : null,
+            academicYear: formData.get('academicYear'),
+            semester: formData.get('semester')};
         const url = transactionType === 'DEBIT' ? 'http://localhost:8080/api/financials/students/charges' : 'http://localhost:8080/api/financials/students/payments';
         try {
             const response = await apiFetch(url, { method: 'POST', body: JSON.stringify(requestData) });
@@ -127,27 +137,60 @@ export default function Financials() {
 
 
     const handleBulkChargeSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault(); setLoading(true);
-        const formData = new FormData(e.currentTarget);
-        const manualIds = (formData.get('studentIds_manual') as string).split(/[\n,]/).map(id => id.trim()).filter(Boolean);
-        formData.delete('studentIds_manual');
-        manualIds.forEach(id => formData.append('studentIds', id));
+        e.preventDefault();
+        setLoading(true);
+
+        if (!bulkFeeTypeId) {
+            toast.error("Please select a fee type to apply.");
+            setLoading(false);
+            return;
+        }
+
+        const manualIdList = bulkManualIds.split(/[\n,]/).map(id => id.trim()).filter(Boolean);
+        if (manualIdList.length === 0 && !bulkFile) {
+            toast.error("Please provide student IDs either manually or by uploading a file.");
+            setLoading(false);
+            return;
+        }
+
+        // 1. Manually construct the FormData object
+        const formData = new FormData();
+        formData.append('feeTypeId', bulkFeeTypeId);
+        formData.append('academicYear', bulkAcademicYear);
+        formData.append('semester', bulkSemester);
+
+        if (bulkFile) {
+            formData.append('file', bulkFile);
+        }
+        manualIdList.forEach(id => formData.append('studentIds', id));
 
         try {
-            // apiFetch needs a small adjustment for multipart/form-data
             const token = localStorage.getItem("jwt_token");
-            const headers = new Headers();
-            if (token) { headers.append("Authorization", "Bearer " + token); }
-            const response = await fetch('http://localhost:8080/api/financials/charges/bulk', { method: 'POST', body: formData, headers });
+            if (!token) throw new Error("Authentication token not found.");
+
+            const response = await fetch('/api/financials/charges/bulk', {
+                method: 'POST',
+                body: formData,
+                headers: { "Authorization": "Bearer " + token }
+            });
 
             if (response.ok) {
                 toast.success('Bulk charge applied successfully!');
-                setIsBulkChargeDialogOpen(false); fetchAllStudentBalances();
-            } else { const err = await response.json(); throw new Error(err.message); }
-        } catch (error) { toast.error((error as Error).message); }
-        finally { setLoading(false); }
+                setIsBulkChargeDialogOpen(false);
+                // Reset form state after successful submission
+                setBulkFeeTypeId(''); setBulkAcademicYear(currentAcademicYear); setBulkSemester(currentSemester); setBulkFile(null); setBulkManualIds('');
+                fetchAllStudentBalances();
+            } else {
+                const errText = await response.text();
+                const err = JSON.parse(errText);
+                throw new Error(err.message || 'Failed to apply bulk charge.');
+            }
+        } catch (error) {
+            toast.error((error as Error).message);
+        } finally {
+            setLoading(false);
+        }
     };
-
 
 
     // --- Memoized Calculations ---
@@ -221,9 +264,128 @@ export default function Financials() {
                 </Tabs>
             </main>
 
-            <Dialog open={isBulkChargeDialogOpen} onOpenChange={setIsBulkChargeDialogOpen}><DialogContent className="bg-purple-900 border-purple-700 text-white max-w-lg"><DialogHeader><DialogTitle>Apply Fee to Multiple Students</DialogTitle></DialogHeader><form onSubmit={handleBulkChargeSubmit} className="space-y-4"><div><Label htmlFor="feeTypeId">Select Fee Type to Apply</Label><Select name="feeTypeId" required><SelectTrigger className="bg-purple-800 border-purple-600"><SelectValue placeholder="Choose a fee..." /></SelectTrigger><SelectContent className="bg-purple-800 border-purple-600">{feeTypes?.map(ft => <SelectItem key={ft.id} value={ft.id.toString()}>{ft.name} ({ft.currency} ${ft.defaultAmount.toFixed(2)})</SelectItem>)}</SelectContent></Select></div><p className="text-sm text-center text-gray-400 font-bold">--- CHOOSE ONE METHOD ---</p><div><Label htmlFor="file">Method 1: Upload CSV File</Label><p className="text-xs text-gray-400 mb-1">Upload a .csv file with one student ID per row in the first column.</p><Input id="file" name="file" type="file" accept=".csv" className="bg-purple-800 border-purple-600 file:text-white" /></div><div><Label htmlFor="studentIds_manual">Method 2: Manually Enter Student IDs</Label><p className="text-xs text-gray-400 mb-1">Enter a list of student IDs, separated by commas or new lines.</p><Textarea id="studentIds_manual" name="studentIds_manual" rows={5} placeholder="P2522029, S1234567, T9876543" className="bg-purple-800 border-purple-600" /></div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setIsBulkChargeDialogOpen(false)}>Cancel</Button><Button type="submit" disabled={loading}>{loading ? 'Applying...' : 'Apply Charge to Students'}</Button></div></form></DialogContent></Dialog>
+            <Dialog open={isBulkChargeDialogOpen} onOpenChange={setIsBulkChargeDialogOpen}>
+                <DialogContent className="bg-purple-900 border-purple-700 text-white max-w-lg">
+                    <DialogHeader><DialogTitle>Apply Fee to Multiple Students</DialogTitle></DialogHeader>
+                    {/* The form now correctly triggers our new handler */}
+                    <form onSubmit={handleBulkChargeSubmit} className="space-y-4">
+                        <div>
+                            <Label>Select Fee Type to Apply</Label>
+                            {/* 2. The component is now controlled by React state */}
+                            <Select name="feeTypeId" required value={bulkFeeTypeId} onValueChange={setBulkFeeTypeId}>
+                                <SelectTrigger className="bg-purple-800"><SelectValue placeholder="Choose a fee..." /></SelectTrigger>
+                                <SelectContent className="bg-purple-800">{feeTypes?.map(ft => <SelectItem key={ft.id} value={ft.id.toString()}>{ft.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label>For Academic Year</Label>
+                                <Select name="academicYear" required value={bulkAcademicYear} onValueChange={setBulkAcademicYear}>
+                                    <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="bg-purple-800">{academicYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label>For Term / Semester</Label>
+                                <Select name="semester" required value={bulkSemester} onValueChange={setBulkSemester}>
+                                    <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="bg-purple-800">{semesters.map(term => <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <p className="text-sm text-center text-gray-400 font-bold">--- CHOOSE ONE STUDENT INPUT METHOD ---</p>
+                        <div>
+                            <Label htmlFor="file">Method 1: Upload CSV File</Label>
+                            <p className="text-xs text-gray-400 mb-1">Upload a .csv with student IDs in the first column.</p>
+                            <Input id="file" name="file" type="file" accept=".csv" className="bg-purple-800 file:text-white" onChange={(e) => setBulkFile(e.target.files ? e.target.files[0] : null)} />
+                        </div>
+                        <div>
+                            <Label htmlFor="studentIds_manual">Method 2: Manually Enter Student IDs</Label>
+                            <p className="text-xs text-gray-400 mb-1">Enter IDs, separated by commas or new lines.</p>
+                            <Textarea id="studentIds_manual" name="studentIds_manual" rows={5} placeholder="P2522029, S1234567" className="bg-purple-800" value={bulkManualIds} onChange={(e) => setBulkManualIds(e.target.value)} />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button type="button" variant="outline" onClick={() => setIsBulkChargeDialogOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={loading}>{loading ? 'Applying...' : 'Apply Charge'}</Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={isFeeTypeDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setSelectedFeeType(null); setIsFeeTypeDialogOpen(isOpen); }}><DialogContent className="bg-purple-900 border-purple-700 text-white"><DialogHeader><DialogTitle>{selectedFeeType ? 'Edit Fee Type' : 'Add New Fee Type'}</DialogTitle></DialogHeader><form onSubmit={handleFeeTypeSubmit} className="space-y-4"><div><Label htmlFor="name">Fee Name</Label><Input id="name" name="name" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.name} required /></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="defaultAmount">Default Amount</Label><Input id="defaultAmount" name="defaultAmount" type="number" step="0.01" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.defaultAmount} required /></div><div><Label htmlFor="currency">Currency</Label><Select name="currency" defaultValue={selectedFeeType?.currency || 'USD'}><SelectTrigger className="bg-purple-800 border-purple-600"><SelectValue /></SelectTrigger><SelectContent className="bg-purple-800 border-purple-600"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div></div><div><Label htmlFor="description">Description</Label><Input id="description" name="description" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.description} /></div><div className="flex justify-end gap-2"><Button type="submit" disabled={loading}>{loading ? 'Saving...' : (selectedFeeType ? 'Update Fee' : 'Add Fee')}</Button></div></form></DialogContent></Dialog>
-            <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}><DialogContent className="bg-purple-900 border-purple-700 text-white"><DialogHeader><DialogTitle>{transactionType === 'DEBIT' ? 'Add a Charge' : 'Record a Payment'}</DialogTitle></DialogHeader><form onSubmit={handleTransactionSubmit} className="space-y-4">{transactionType === 'DEBIT' && (<div><Label htmlFor="feeTypeId">Fee Type (Optional)</Label><Select name="feeTypeId"><SelectTrigger className="bg-purple-800 border-purple-600"><SelectValue placeholder="Select a pre-defined fee" /></SelectTrigger><SelectContent className="bg-purple-800 border-purple-600">{feeTypes?.map(ft => <SelectItem key={ft.id} value={ft.id.toString()}>{ft.name} ({ft.currency}) - ${ft.defaultAmount.toFixed(2)}</SelectItem>)}</SelectContent></Select></div>)}<div><Label htmlFor="amount">Amount</Label><Input id="amount" name="amount" type="number" step="0.01" className="bg-purple-800 border-purple-600" required /></div><div><Label htmlFor="description">Description</Label><Input id="description" name="description" className="bg-purple-800 border-purple-600" required /></div><div><Label htmlFor="transactionDate">Transaction Date</Label><Input id="transactionDate" name="transactionDate" type="date" className="bg-purple-800 border-purple-600" defaultValue={new Date().toISOString().split('T')[0]} required /></div><div className="flex justify-end gap-2"><Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Submit Transaction'}</Button></div></form></DialogContent></Dialog>
+            <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
+                <DialogContent className="bg-purple-900 border-purple-700 text-white">
+                    <DialogHeader><DialogTitle>{transactionType === 'DEBIT' ? 'Add a Charge' : 'Record a Payment'}</DialogTitle></DialogHeader>
+                    <form onSubmit={handleTransactionSubmit} className="space-y-4 py-4">
+                        {transactionType === 'DEBIT' && (
+                            <div>
+                                <Label htmlFor="feeTypeId">Fee Type (Optional)</Label>
+                                <Select name="feeTypeId">
+                                    <SelectTrigger className="bg-purple-800 border-purple-600">
+                                        <SelectValue placeholder="Select a pre-defined fee" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-purple-800 border-purple-600">
+                                        {feeTypes?.map(ft =>
+                                            <SelectItem key={ft.id} value={ft.id.toString()}>
+                                                {ft.name} ({ft.currency} ${ft.defaultAmount.toFixed(2)})
+                                            </SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                        <div>
+                            <Label htmlFor="amount">Amount</Label>
+                            <Input id="amount" name="amount" type="number" step="0.01" className="bg-purple-800 border-purple-600" required />
+                        </div>
+                        <div>
+                            <Label htmlFor="description">Description</Label>
+                            <Input id="description" name="description" className="bg-purple-800 border-purple-600" required />
+                        </div>
+
+                        {/* --- THIS IS THE CORRECTED DYNAMIC SECTION --- */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label htmlFor="academicYear">Academic Year</Label>
+                                <Select name="academicYear" defaultValue={currentAcademicYear} required>
+                                    <SelectTrigger className="bg-purple-800 border-purple-600">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-purple-800 border-purple-600">
+                                        {academicYears.map(year => (
+                                            <SelectItem key={year} value={year}>{year}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label htmlFor="semester">Term / Semester</Label>
+                                <Select name="semester" defaultValue={currentSemester} required>
+                                    <SelectTrigger className="bg-purple-800 border-purple-600">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-purple-800 border-purple-600">
+                                        {semesters.map(term => (
+                                            <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label htmlFor="transactionDate">Transaction Date</Label>
+                            <Input id="transactionDate" name="transactionDate" type="date" className="bg-purple-800 border-purple-600" defaultValue={new Date().toISOString().split('T')[0]} required />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button type="button" variant="outline" onClick={() => setIsTransactionDialogOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={loading}>
+                                {loading ? 'Saving...' : 'Submit Transaction'}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

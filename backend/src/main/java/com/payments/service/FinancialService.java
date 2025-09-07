@@ -10,6 +10,11 @@ import com.payments.repository.FeeTypeRepository;
 import com.payments.repository.FinancialLedgerRepository;
 import com.payments.repository.PaymentRepository;
 import com.payments.repository.StudentRepository;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class FinancialService {
@@ -32,6 +38,7 @@ public class FinancialService {
     @Autowired private FinancialLedgerRepository ledgerRepository;
     @Autowired private StudentRepository studentRepository;
     @Autowired private PaymentRepository paymentRepository;
+    @Autowired private SystemSettingsService settingsService;
 
     // --- Fee Type Management ---
     public List<FeeType> getAllFeeTypes() { return feeTypeRepository.findAll(); }
@@ -61,11 +68,14 @@ public class FinancialService {
     public Page<PaymentAlert> getPaymentsByStatus(String status, String searchTerm, Pageable pageable) {
         return paymentRepository.findByStatusWithSearch(status, searchTerm, pageable);
     }
+
+
     @Transactional
     public FinancialLedger allocatePayment(PaymentAllocationRequest request) {
         PaymentAlert payment = paymentRepository.findById(request.getPaymentAlertId()).orElseThrow(() -> new RuntimeException("PaymentAlert not found"));
         Student student = studentRepository.findByStudentId(request.getStudentId()).orElseThrow(() -> new RuntimeException("Student not found"));
         if (!"PENDING".equalsIgnoreCase(payment.getStatus())) { throw new IllegalStateException("Payment already allocated."); }
+
         FinancialLedger creditEntry = new FinancialLedger();
         creditEntry.setStudent(student);
         creditEntry.setTransactionType(TransactionType.CREDIT);
@@ -74,25 +84,67 @@ public class FinancialService {
         creditEntry.setDescription("Payment Received. Ref: " + payment.getReference());
         creditEntry.setTransactionDate(LocalDate.now());
         creditEntry.setPaymentAlertId(payment.getId());
+        creditEntry.setAcademicYear(request.getAcademicYear());
+        creditEntry.setSemester(request.getSemester());
+
         payment.setStatus("ALLOCATED");
         paymentRepository.save(payment);
         return ledgerRepository.save(creditEntry);
     }
 
-    // --- Bulk Charging ---
+
     @Transactional
-    public void applyBulkCharge(Long feeTypeId, List<String> studentIds, MultipartFile studentIdFile) throws IOException, CsvValidationException {
-        FeeType feeType = feeTypeRepository.findById(feeTypeId).orElseThrow(() -> new RuntimeException("FeeType not found"));
+    public void applyBulkCharge(Long feeTypeId, List<String> studentIds, MultipartFile file, String academicYear, String semester)
+            throws IOException, CsvValidationException {
+
+        FeeType feeType = feeTypeRepository.findById(feeTypeId)
+                .orElseThrow(() -> new RuntimeException("FeeType not found"));
+
         List<String> allStudentIds = new ArrayList<>();
-        if (studentIds != null && !studentIds.isEmpty()) { allStudentIds.addAll(studentIds); }
-        if (studentIdFile != null && !studentIdFile.isEmpty()) {
-            try (Reader reader = new InputStreamReader(studentIdFile.getInputStream());
-                 CSVReader csvReader = new CSVReader(reader)) {
-                String[] line;
-                while ((line = csvReader.readNext()) != null) { if (line.length > 0 && !line[0].trim().isEmpty()) { allStudentIds.add(line[0]); } }
+        if (studentIds != null && !studentIds.isEmpty()) {
+            allStudentIds.addAll(studentIds);
+        }
+
+        // --- INTELLIGENT FILE READING LOGIC ---
+        if (file != null && !file.isEmpty()) {
+            String filename = Objects.requireNonNull(file.getOriginalFilename()).toLowerCase();
+
+            if (filename.endsWith(".csv")) {
+                // --- CSV Reading Logic (your existing code) ---
+                try (Reader reader = new InputStreamReader(file.getInputStream());
+                     CSVReader csvReader = new CSVReader(reader)) {
+                    csvReader.skip(1); // Skip header if present
+                    String[] line;
+                    while ((line = csvReader.readNext()) != null) {
+                        if (line.length > 0 && !line[0].trim().isEmpty()) {
+                            allStudentIds.add(line[0].trim());
+                        }
+                    }
+                }
+            } else if (filename.endsWith(".xlsx")) {
+                // --- NEW: Excel Reading Logic ---
+                try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+                    Sheet sheet = workbook.getSheetAt(0);
+                    for (int i = 1; i <= sheet.getLastRowNum(); i++) { // Start from 1 to skip header
+                        Row row = sheet.getRow(i);
+                        if (row != null) {
+                            Cell cell = row.getCell(0); // Get the first cell
+                            if (cell != null) {
+                                allStudentIds.add(getCellValueAsString(cell));
+                            }
+                        }
+                    }
+                }
+            } else {
+                throw new IllegalArgumentException("Unsupported file type. Please upload a .csv or .xlsx file.");
             }
         }
-        if (allStudentIds.isEmpty()) { throw new IllegalArgumentException("No student IDs provided for bulk charge."); }
+
+        if (allStudentIds.isEmpty()) {
+            throw new IllegalArgumentException("No student IDs were provided for the bulk charge.");
+        }
+
+        // --- (The rest of the logic is the same) ---
         for (String studentId : allStudentIds) {
             studentRepository.findByStudentId(studentId.trim()).ifPresent(student -> {
                 FinancialLedger charge = new FinancialLedger();
@@ -103,8 +155,29 @@ public class FinancialService {
                 charge.setDescription(feeType.getName());
                 charge.setCurrency(feeType.getCurrency());
                 charge.setTransactionDate(LocalDate.now());
+                charge.setAcademicYear(academicYear);
+                charge.setSemester(semester);
                 ledgerRepository.save(charge);
             });
+        }
+    }
+
+    // --- NEW: Helper method to safely read any cell type from Excel as a String ---
+    private String getCellValueAsString(Cell cell) {
+        if (cell == null) return "";
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue().trim();
+            case NUMERIC:
+                // This handles both integers and decimals without adding ".0"
+                return new java.text.DecimalFormat("0.##############").format(cell.getNumericCellValue()).trim();
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue()).trim();
+            case FORMULA:
+                // You might want to evaluate the formula, but for student IDs, getting the cached value is safer
+                return cell.getStringCellValue().trim();
+            default:
+                return "";
         }
     }
 

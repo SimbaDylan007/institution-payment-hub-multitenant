@@ -93,10 +93,15 @@ public class FinancialController {
     }
 
     @PostMapping("/charges/bulk")
-    public ResponseEntity<Void> applyBulkCharge(@RequestParam("feeTypeId") Long feeTypeId,
-                                                @RequestParam(value = "studentIds", required = false) List<String> studentIds,
-                                                @RequestParam(value = "file", required = false) MultipartFile file) throws IOException, CsvValidationException {
-        financialService.applyBulkCharge(feeTypeId, studentIds, file);
+    public ResponseEntity<Void> applyBulkCharge(
+            @RequestParam("feeTypeId") Long feeTypeId,
+            @RequestParam("academicYear") String academicYear, // <-- Add new parameter
+            @RequestParam("semester") String semester,         // <-- Add new parameter
+            @RequestParam(value = "studentIds", required = false) List<String> studentIds,
+            @RequestParam(value = "file", required = false) MultipartFile file
+    ) throws IOException, CsvValidationException {
+
+        financialService.applyBulkCharge(feeTypeId, studentIds, file, academicYear, semester);
         return ResponseEntity.ok().build();
     }
 

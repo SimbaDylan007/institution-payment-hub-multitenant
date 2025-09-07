@@ -54,4 +54,15 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
      * @return true if grades exist for this subject, false otherwise.
      */
     boolean existsBySubjectId(Long subjectId);
+
+    // --- THIS IS THE NEW, NON-BREAKING ADDITION ---
+    /**
+     * Finds all grades for a specific student in a given academic year and semester.
+     * This is used by the ReportsService to generate report cards.
+     * @param studentId The ID of the student.
+     * @param academicYear The academic year (e.g., "2024-2025").
+     * @param semester The semester (e.g., "SEMESTER_1").
+     * @return A list of matching Grade records.
+     */
+    List<Grade> findByStudentIdAndAcademicYearAndSemester(Long studentId, String academicYear, String semester);
 }
