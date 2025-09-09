@@ -9,6 +9,7 @@ import com.payments.repository.LeaveRequestRepository;
 import com.payments.repository.StaffAttendanceRepository;
 import com.payments.repository.StaffRepository;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -24,11 +25,14 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 public class StaffService {
@@ -37,11 +41,27 @@ public class StaffService {
     @Autowired private StaffAttendanceRepository staffAttendanceRepository;
     @Autowired private LeaveRequestRepository leaveRequestRepository;
 
+    /**
+     * Centralized helper method to generate a unique employee ID.
+     * e.g., "E25" + "123456" -> "E25123456"
+     */
+    private String generateNewEmployeeId() {
+        String year = String.valueOf(Year.now().getValue()).substring(2);
+        int randomNum = new Random().nextInt(900000) + 100000; // 6-digit random number
+        return "E" + year + randomNum;
+    }
+
+    /**
+     * This is the corrected and robust bulk import method.
+     * It intelligently handles both CSV and Excel files, identifies new vs. existing staff,
+     * and auto-generates IDs only for new staff members.
+     */
     @Transactional
     public List<Staff> bulkAddStaff(MultipartFile file) throws IOException, CsvValidationException {
-        List<Staff> processedStaff = new ArrayList<>();
-        String filename = file.getOriginalFilename();
-        if (filename == null || (!filename.endsWith(".csv") && !filename.endsWith(".xlsx"))) {
+        List<Staff> processedStaffList = new ArrayList<>();
+        String filename = Objects.requireNonNull(file.getOriginalFilename()).toLowerCase();
+
+        if (!filename.endsWith(".csv") && !filename.endsWith(".xlsx")) {
             throw new IllegalArgumentException("Invalid file type. Please upload a CSV or XLSX file.");
         }
 
@@ -51,64 +71,65 @@ public class StaffService {
                 csvReader.skip(1); // Skip header row
                 String[] line;
                 while ((line = csvReader.readNext()) != null) {
-                    String employeeId = line[0];
-                    Optional<Staff> existingStaffOpt = staffRepository.findByEmployeeId(employeeId);
-
-                    Staff staff = existingStaffOpt.orElse(new Staff()); // Get existing or create new
-
-                    staff.setEmployeeId(employeeId);
-                    staff.setFirstName(line[1]);
-                    staff.setLastName(line[2]);
-                    staff.setEmail(line[3]);
-                    staff.setPhone(line[4]);
-                    staff.setDepartment(line[5]);
-                    staff.setPosition(line[6]);
-                    staff.setHireDate(parseDate(line[7]));
-
-                    if (!existingStaffOpt.isPresent()) { // Only set status for new staff
-                        staff.setEmploymentStatus("ACTIVE");
-                    }
-                    processedStaff.add(staff);
+                    // Assumes CSV format: employeeId,firstName,lastName,email,phone,department,position,hireDate
+                    processStaffRecord(line[3], line[1], line[2], line[4], line[5], line[6], line[7], processedStaffList);
                 }
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to parse CSV file: " + e.getMessage());
             }
-        } else { // XLSX
+        } else { // .xlsx
             try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
                 Sheet sheet = workbook.getSheetAt(0);
                 for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                     Row row = sheet.getRow(i);
                     if (row == null) continue;
-
-                    String employeeId = getCellValueAsString(row.getCell(0));
-                    Optional<Staff> existingStaffOpt = staffRepository.findByEmployeeId(employeeId);
-
-                    Staff staff = existingStaffOpt.orElse(new Staff());
-
-                    staff.setEmployeeId(employeeId);
-                    staff.setFirstName(getCellValueAsString(row.getCell(1)));
-                    staff.setLastName(getCellValueAsString(row.getCell(2)));
-                    staff.setEmail(getCellValueAsString(row.getCell(3)));
-                    staff.setPhone(getCellValueAsString(row.getCell(4)));
-                    staff.setDepartment(getCellValueAsString(row.getCell(5)));
-                    staff.setPosition(getCellValueAsString(row.getCell(6)));
-                    staff.setHireDate(parseDate(getCellValueAsString(row.getCell(7))));
-
-                    if (!existingStaffOpt.isPresent()) {
-                        staff.setEmploymentStatus("ACTIVE");
-                    }
-                    processedStaff.add(staff);
+                    // Assumes Excel format: employeeId,firstName,lastName,email,phone,department,position,hireDate
+                    processStaffRecord(
+                            getCellValueAsString(row.getCell(3)), // email is the key for updates
+                            getCellValueAsString(row.getCell(1)), getCellValueAsString(row.getCell(2)),
+                            getCellValueAsString(row.getCell(4)), getCellValueAsString(row.getCell(5)),
+                            getCellValueAsString(row.getCell(6)), getCellValueAsString(row.getCell(7)),
+                            processedStaffList
+                    );
                 }
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to parse Excel file: " + e.getMessage());
             }
         }
 
-        if (processedStaff.isEmpty()) {
-            throw new IllegalArgumentException("File contains no staff data to import.");
+        if (processedStaffList.isEmpty()) {
+            throw new IllegalArgumentException("File contains no valid staff data to import.");
         }
-        // The saveAll method handles both new inserts and updates for existing entities
-        return staffRepository.saveAll(processedStaff);
+        return staffRepository.saveAll(processedStaffList);
+    }
+
+    /**
+     * Helper method to process a single staff record from a file.
+     * It finds existing staff by email to update them, or creates a new staff
+     * member with a generated ID if no existing record is found.
+     */
+    private void processStaffRecord(String email, String firstName, String lastName, String phone, String department, String position, String hireDateStr, List<Staff> processedStaffList) {
+        if (email == null || email.trim().isEmpty() || firstName == null || firstName.trim().isEmpty()) {
+            return; // Skip records with no email or first name
+        }
+
+        // Use email as the reliable unique identifier for finding existing staff
+        Optional<Staff> existingStaffOpt = staffRepository.findByEmail(email.trim());
+
+        Staff staff = existingStaffOpt.orElse(new Staff());
+
+        // If it's a new staff member (ID is null), generate a new employee ID
+        if (staff.getId() == null) {
+            staff.setEmployeeId(generateNewEmployeeId());
+            staff.setEmploymentStatus("ACTIVE"); // Default status for new hires
+        }
+
+        // Update or set all other properties from the file data
+        staff.setFirstName(firstName);
+        staff.setLastName(lastName);
+        staff.setEmail(email.trim());
+        staff.setPhone(phone);
+        staff.setDepartment(department);
+        staff.setPosition(position);
+        staff.setHireDate(parseDate(hireDateStr));
+
+        processedStaffList.add(staff);
     }
 
     // --- Helper methods for parsing ---

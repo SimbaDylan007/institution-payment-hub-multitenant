@@ -11,6 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+
 
 @Repository
 public interface FinancialLedgerRepository extends JpaRepository<FinancialLedger, Long> {
@@ -50,5 +52,10 @@ public interface FinancialLedgerRepository extends JpaRepository<FinancialLedger
      * @return true if the fee type is in use, false otherwise.
      */
     boolean existsByFeeTypeId(Long feeTypeId);
+
+    // --- NEW: Method to get balances grouped by currency ---
+    @Query("SELECT new map(fl.currency as currency, SUM(CASE WHEN fl.transactionType = 'DEBIT' THEN fl.amount ELSE -fl.amount END) as balance) " +
+            "FROM FinancialLedger fl WHERE fl.student.id = :studentId GROUP BY fl.currency")
+    List<Map<String, Object>> getBalancesByCurrencyForStudent(@Param("studentId") Long studentId);
 
 }

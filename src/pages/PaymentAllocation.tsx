@@ -4,16 +4,13 @@ import { Link, Navigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// FIX 1: Remove the incorrect direct import from radix-ui
-// import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@radix-ui/react-select";
-// FIX 2: Correctly import ALL components from shadcn/ui wrappers
 import { Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Banknote, UserCheck, LayoutDashboard, Download, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
@@ -22,11 +19,8 @@ import { saveAs } from 'file-saver';
 import { CSVLink } from "react-csv";
 import { apiFetch } from "@/utils/apiClient";
 import { academicYears, semesters, currentAcademicYear, currentSemester } from '@/config/academicConfig';
+import { PaymentAlert, StudentBalance, Page } from '@/types';
 
-// --- Interfaces ---
-interface PaymentAlert { id: string; amount: number; narrative: string; studentName: string; regNumber: string; reference: string; transactionDate: string; status: string; }
-interface StudentBalance { id: number; studentId: string; firstName: string; lastName: string; balance: number; }
-interface Page<T> { content: T[]; totalPages: number; number: number; totalElements: number; size: number; }
 
 // --- Helper Components ---
 const PaymentTable = ({ payments, loading, onAllocateClick }: { payments: PaymentAlert[], loading: boolean, onAllocateClick?: (p: PaymentAlert) => void }) => (
@@ -35,11 +29,11 @@ const PaymentTable = ({ payments, loading, onAllocateClick }: { payments: Paymen
             <thead><tr className="border-b border-purple-600"><th className="p-2">Date</th><th className="p-2">Amount</th><th className="p-2">Narrative / Student</th><th className="p-2 text-center">Action</th></tr></thead>
             <tbody>
             {loading ? (<tr><td colSpan={4} className="text-center p-4">Loading...</td></tr>)
-                : !payments || payments.length === 0 ? (<tr><td colSpan={4} className="text-center p-4 text-gray-400">No payments found for this status.</td></tr>)
+                : !payments || payments.length === 0 ? (<tr><td colSpan={4} className="text-center p-4 text-gray-400">No payments found.</td></tr>)
                     : payments.map(p => (
                         <tr key={p.id} className="border-b border-purple-800 hover:bg-purple-900/50">
                             <td className="p-2 whitespace-nowrap">{p.transactionDate ? p.transactionDate.split(' ')[0] : 'N/A'}</td>
-                            <td className="p-2 font-bold text-green-400 whitespace-nowrap">${(p.amount || 0).toFixed(2)}</td>
+                            <td className="p-2 font-bold text-green-400 whitespace-nowrap">{p.currency} ${(p.amount || 0).toFixed(2)}</td>
                             <td className="p-2 text-sm max-w-md truncate" title={p.narrative}>{p.narrative || `${p.studentName} (${p.regNumber})`}</td>
                             <td className="p-2 text-center">{onAllocateClick && <Button size="sm" onClick={() => onAllocateClick(p)}>Allocate</Button>}</td>
                         </tr>
@@ -62,7 +56,6 @@ const PaginationControls = ({ page, onPageChange }: { page: Page<any> | null, on
     );
 };
 
-
 export default function PaymentAllocation() {
     const { user } = useAuth();
     const [paymentPage, setPaymentPage] = useState<Page<PaymentAlert> | null>(null);
@@ -70,59 +63,55 @@ export default function PaymentAllocation() {
     const [selectedPayment, setSelectedPayment] = useState<PaymentAlert | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<StudentBalance | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [loading, setLoading] = useState(true); // Start true for initial fetch
+    const [loading, setLoading] = useState(true);
     const [studentSearchTerm, setStudentSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('PENDING');
     const [currentPage, setCurrentPage] = useState(0);
     const [paymentSearchTerm, setPaymentSearchTerm] = useState('');
-
     const [allocationYear, setAllocationYear] = useState(currentAcademicYear);
     const [allocationSemester, setAllocationSemester] = useState(currentSemester);
+    const [isSearchPopoverOpen, setIsSearchPopoverOpen] = useState(false);
+
 
     const fetchPayments = useCallback((status: string, page: number, searchTerm: string) => {
         setLoading(true);
         const url = `/api/financials/payments/status?status=${status}&page=${page}&size=10&searchTerm=${encodeURIComponent(searchTerm)}`;
-        apiFetch(url)
-            .then(res => {
-                if (!res.ok) throw new Error("Failed to fetch payments");
-                return res.json();
-            })
-            .then(data => setPaymentPage(data))
+        apiFetch(url).then(res => res.json()).then(data => setPaymentPage(data))
             .catch(() => toast.error(`Failed to fetch ${status.toLowerCase()} payments.`))
             .finally(() => setLoading(false));
     }, []);
 
     useEffect(() => {
-        if(user) { fetchPayments(activeTab, currentPage, paymentSearchTerm); }
+        if (user) {
+            fetchPayments(activeTab, currentPage, paymentSearchTerm);
+            fetchAllStudents();
+        }
     }, [user, activeTab, currentPage, paymentSearchTerm, fetchPayments]);
 
-    useEffect(() => {
-        if(user) { fetchAllStudents(); }
-    }, [user]);
+    // useEffect(() => {
+    //     if(user) { fetchAllStudents(); }
+    // }, [user]);
 
     const fetchAllStudents = async () => {
         try {
-            // 3. Use apiFetch
-            const res = await apiFetch('http://localhost:8080/api/financials/students/balances');
+            const res = await apiFetch('/api/financials/students/balances');
             if (res.ok) setAllStudents(await res.json());
         } catch (e) { console.error("Could not fetch students for search"); }
     };
 
     const handleAllocateClick = (payment: PaymentAlert) => {
         setSelectedPayment(payment);
-        setStudentSearchTerm(payment.regNumber || payment.studentName || '');
+        setStudentSearchTerm(payment.regNumber || '');
+        setSelectedStudent(null);
         setIsDialogOpen(true);
     };
 
+
     const handleConfirmAllocation = async () => {
-        if (!selectedPayment || !selectedStudent) {
-            toast.warning("You must select a payment and a student.");
-            return;
-        }
+        if (!selectedPayment || !selectedStudent) return toast.warning("You must select a payment and a student.");
         setLoading(true);
         try {
-            // 4. Use apiFetch
-            const response = await apiFetch('http://localhost:8080/api/financials/payments/allocate', {
+            const response = await apiFetch('/api/financials/payments/allocate', {
                 method: 'POST',
                 body: JSON.stringify({
                     paymentAlertId: selectedPayment.id,
@@ -132,18 +121,16 @@ export default function PaymentAllocation() {
                 })
             });
             if (response.ok) {
-                toast.success(`Payment of $${selectedPayment.amount.toFixed(2)} allocated to ${selectedStudent.firstName}`);
+                toast.success(`Payment allocated to ${selectedStudent.firstName}`);
                 setIsDialogOpen(false);
                 setSelectedPayment(null);
                 setSelectedStudent(null);
-                fetchPayments(activeTab, currentPage, paymentSearchTerm); // Refresh the current page
+                fetchPayments(activeTab, currentPage, paymentSearchTerm);
             } else { throw new Error("Allocation failed on the server."); }
-        } catch (error) {
-            toast.error("Allocation failed.");
-        } finally {
-            setLoading(false);
-        }
+        } catch (error) { toast.error((error as Error).message); }
+        finally { setLoading(false); }
     };
+
 
     const handleTabChange = (status: string) => {
         setActiveTab(status);
@@ -165,9 +152,8 @@ export default function PaymentAllocation() {
         saveAs(data, `payments_${activeTab}_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
-    if (!user) return <Navigate to="/" replace />;
 
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+
     const filteredStudents = useMemo(() => {
         if (!studentSearchTerm) return [];
         return allStudents.filter(s =>
@@ -175,6 +161,14 @@ export default function PaymentAllocation() {
             `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase())
         ).slice(0, 5);
     }, [allStudents, studentSearchTerm]);
+
+    const handleStudentSelect = (student: StudentBalance) => {
+        setSelectedStudent(student);
+        setStudentSearchTerm(`${student.firstName} ${student.lastName} (${student.studentId})`);
+        setIsSearchPopoverOpen(false); // Close the popover on selection
+    };
+
+    if (!user) return <Navigate to="/" replace />;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
@@ -213,34 +207,57 @@ export default function PaymentAllocation() {
                 <DialogContent className="bg-purple-900 border-purple-700 text-white">
                     <DialogHeader><DialogTitle>Allocate Payment</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-4">
-                        <p>Payment of <strong className="text-green-400">${(selectedPayment?.amount || 0).toFixed(2)}</strong> from <strong className="text-blue-400">{selectedPayment?.narrative}</strong></p>
+                        <p>Payment of <strong className="text-green-400">{selectedPayment?.currency} ${(selectedPayment?.amount || 0).toFixed(2)}</strong> from <strong className="text-blue-400">{selectedPayment?.narrative}</strong></p>
                         <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label>For Academic Year</Label>
-                                <Select value={allocationYear} onValueChange={setAllocationYear}>
-                                    <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
-                                    <DialogPortal>
-                                        <SelectContent className="bg-purple-800">
-                                            {academicYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-                                        </SelectContent>
-                                    </DialogPortal>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label>For Term / Semester</Label>
-                                <Select value={allocationSemester} onValueChange={setAllocationSemester}>
-                                    <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
-                                    <DialogPortal>
-                                        <SelectContent className="bg-purple-800">
-                                            {semesters.map(term => <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>)}
-                                        </SelectContent>
-                                    </DialogPortal>
-                                </Select>
-                            </div>
+                            <div><Label>For Academic Year</Label><Select value={allocationYear} onValueChange={setAllocationYear}><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{academicYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
+                            <div><Label>For Term / Semester</Label><Select value={allocationSemester} onValueChange={setAllocationSemester}><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{semesters.map(term => <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
                         </div>
-                        <div><Label htmlFor="studentSearch">Search for Student to Allocate To</Label><Input id="studentSearch" value={studentSearchTerm} onChange={e => setStudentSearchTerm(e.target.value)} placeholder="Search by name or ID..." className="bg-purple-800" /></div>
-                        <div className="space-y-2 max-h-48 overflow-y-auto p-1">{filteredStudents.map(s => (<div key={s.id} onClick={() => setSelectedStudent(s)} className={`p-2 rounded-md cursor-pointer border ${selectedStudent?.id === s.id ? 'bg-purple-600' : 'bg-purple-800/50 hover:bg-purple-700/50'}`}><p className="font-semibold">{s.firstName} {s.lastName} ({s.studentId})</p><p className="text-sm">Current Balance: ${(s.balance || 0).toFixed(2)}</p></div>))}</div>
-                        {selectedStudent && (<div className="p-3 bg-green-900/50 border border-green-700 rounded-md text-center"><p className="font-bold">Allocating to: {selectedStudent.firstName} {selectedStudent.lastName}</p></div>)}
+                        <div>
+                            <Label htmlFor="studentSearch">Search for Student to Allocate To</Label>
+                            {/* --- THIS IS THE CORRECTED STRUCTURE --- */}
+                            <Popover open={isSearchPopoverOpen} onOpenChange={setIsSearchPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <div className="relative">
+                                        <Input
+                                            id="studentSearch"
+                                            value={studentSearchTerm}
+                                            onChange={e => setStudentSearchTerm(e.target.value)}
+                                            onFocus={() => setIsSearchPopoverOpen(true)} // Open on focus
+                                            placeholder="Search by name or ID..."
+                                            className="bg-purple-800"
+                                            autoComplete="off"
+                                        />
+                                    </div>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    className="w-[var(--radix-popover-trigger-width)] p-1 border-purple-700 bg-purple-900 text-white"
+                                    onOpenAutoFocus={(e) => e.preventDefault()}
+                                    align="start"
+                                >
+                                    {filteredStudents.length > 0 ? (
+                                        <div className="space-y-1">
+                                            {filteredStudents.map(s => (
+                                                <div key={s.id} onMouseDown={() => handleStudentSelect(s)} className="p-2 rounded-md cursor-pointer hover:bg-purple-700/50">
+                                                    <p className="font-semibold">{s.firstName} {s.lastName} ({s.studentId})</p>
+                                                    <div className="text-sm text-gray-400">
+                                                        {s.balances && Object.entries(s.balances).map(([currency, value]) => (
+                                                            <span key={currency} className={`mr-3 ${value >= 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                                                                {currency}: {value.toFixed(2)}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="p-2 text-center text-sm text-gray-400">No students found.</div>
+                                    )}
+                                </PopoverContent>
+                            </Popover>
+
+                        </div>
+
+                        {selectedStudent && (<div className="p-3 bg-green-900/50 border-green-700 rounded-md text-center"><p className="font-bold">Allocating to: {selectedStudent.firstName} {selectedStudent.lastName}</p></div>)}
                         <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button><Button onClick={handleConfirmAllocation} disabled={!selectedStudent || loading}><UserCheck className="mr-2 h-4 w-4" /> Confirm Allocation</Button></div>
                     </div>
                 </DialogContent>

@@ -29,4 +29,12 @@ public interface PaymentRepository extends JpaRepository<PaymentAlert, String> {
     @Query("SELECT p FROM PaymentAlert p WHERE p.status = :status AND " +
             "(p.studentName LIKE %:searchTerm% OR p.narrative LIKE %:searchTerm% OR p.reference LIKE %:searchTerm%)")
     Page<PaymentAlert> findByStatusWithSearch(String status, String searchTerm, Pageable pageable);
+
+    /**
+     * Counts the number of payment alerts with a specific status.
+     * This method is used by the DashboardService to show alerts.
+     * @param status The status to count (e.g., "PENDING").
+     * @return The total count of records with that status.
+     */
+    long countByStatus(String status);
 }

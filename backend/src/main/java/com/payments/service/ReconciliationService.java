@@ -21,45 +21,56 @@ public class ReconciliationService {
     @Autowired private PaymentRepository paymentRepository;
     @Autowired private StudentRepository studentRepository;
     @Autowired private FinancialLedgerRepository ledgerRepository;
+    @Autowired private SystemSettingsService settingsService; // Inject settings service
 
-    // This method will run automatically every 5 minutes.
-    // The rate can be adjusted via application.properties.
+
     @Scheduled(fixedRateString = "${reconciliation.job.fixedRate:300000}")
     @Transactional
     public void runAutoReconciliation() {
         logger.info("Starting automatic payment reconciliation job...");
         List<PaymentAlert> pendingPayments = paymentRepository.findByStatus("PENDING");
 
+        if (pendingPayments.isEmpty()) {
+            logger.info("No pending payments to reconcile.");
+            return;
+        }
+
+        // Get the current system settings once for the entire job
+        SystemSettings currentSettings = settingsService.getSystemSettings();
+
         for (PaymentAlert payment : pendingPayments) {
             Optional<Student> studentOpt = studentRepository.findByStudentId(payment.getRegNumber());
 
             if (studentOpt.isPresent()) {
                 Student student = studentOpt.get();
-
-                // --- THIS IS THE MODIFIED LOGIC ---
-                // The check for a positive balance has been removed.
-                // The system will now ALWAYS allocate a payment if the student ID matches.
-
                 logger.info("Auto-allocating payment {} to student {}", payment.getId(), student.getStudentId());
 
                 FinancialLedger creditEntry = new FinancialLedger();
                 creditEntry.setStudent(student);
                 creditEntry.setTransactionType(TransactionType.CREDIT);
-                creditEntry.setAmount(BigDecimal.valueOf(payment.getAmount()));
-                creditEntry.setCurrency(Currency.USD); // Defaulting to USD
-                creditEntry.setDescription("Auto-Allocated Prepayment/Credit. Ref: " + payment.getReference());
+
+                // --- THIS IS THE FIX ---
+                // payment.getAmount() is already a BigDecimal. No conversion needed.
+                creditEntry.setAmount(payment.getAmount());
+
+                // Use the currency from the payment alert.
+                creditEntry.setCurrency(Currency.valueOf(payment.getCurrency()));
+                creditEntry.setDescription("Auto-Allocated Payment. Ref: " + payment.getReference());
                 creditEntry.setTransactionDate(LocalDate.now());
                 creditEntry.setPaymentAlertId(payment.getId());
+
+                // Apply the dynamically fetched academic period
+                creditEntry.setAcademicYear(currentSettings.getCurrentAcademicYear());
+                creditEntry.setSemester(currentSettings.getCurrentSemester());
+
                 ledgerRepository.save(creditEntry);
 
                 payment.setStatus("AUTO_ALLOCATED");
                 paymentRepository.save(payment);
-
             } else {
                 logger.warn("Could not find student with ID {} for payment {}. Manual allocation required.", payment.getRegNumber(), payment.getId());
             }
         }
-
         logger.info("Finished automatic payment reconciliation job. Processed {} payments.", pendingPayments.size());
     }
 }

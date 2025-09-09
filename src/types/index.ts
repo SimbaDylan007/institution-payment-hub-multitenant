@@ -36,6 +36,7 @@ export interface Timestamp {
 export interface PaymentAlert {
   id: string;
   amount: number;
+  currency?: string;
   date: Timestamp | string;
   narrative: string;
   nr1?: string;
@@ -62,6 +63,29 @@ export interface ErrorDetails {
   details?: string;
   message: string;
   timestamp: string;
+}
+
+export interface FeeType {
+  id: number;
+  name: string;
+  defaultAmount: number;
+  description: string;
+  currency: 'USD' | 'ZWG';
+}
+
+export interface LedgerEntry {
+  id: number;
+  transactionType: 'DEBIT' | 'CREDIT';
+  amount: number;
+  description: string;
+  transactionDate: string;
+  currency: 'USD' | 'ZWG';
+  academicYear?: string;
+  semester?: string;
+}
+
+export interface CurrencyBalance {
+  balances: { [key: string]: number }; // e.g., { "USD": -9450.00, "ZWG": -10.00 }
 }
 
 export type ExportFormat = 'csv' | 'excel' | 'pdf';
@@ -102,4 +126,21 @@ export interface StudentRegistration {
   customerAccountDetails1: string;
   customerAccountDetails2: string;
   customerName: string;
+}
+
+export interface StudentBalance {
+  id: number;
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  currentGrade: string;
+  balances: { [key: string]: number };
+}
+
+export interface Page<T> {
+  content: T[];
+  totalPages: number;
+  number: number; // Current page number (0-indexed)
+  totalElements: number;
+  size: number;
 }

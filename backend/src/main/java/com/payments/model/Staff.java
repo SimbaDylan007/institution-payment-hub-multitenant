@@ -1,9 +1,12 @@
 
 package com.payments.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import javax.persistence.*;
 import java.time.LocalDate;
 import java.util.List;
+import java.time.Year;
+import java.util.Random;
 
 @Entity
 @Table(name = "staff")
@@ -35,6 +38,7 @@ public class Staff {
     private String address;
     
     @Column(nullable = false)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate hireDate;
     
     @Column(nullable = false)
@@ -51,7 +55,23 @@ public class Staff {
     private String qualifications;
     
     private String specializations;
-    
+
+    /**
+     * This method is automatically called by JPA/Hibernate right before
+     * a new Staff entity is saved to the database for the first time.
+     * It will not run on updates.
+     */
+    @PrePersist
+    public void generateEmployeeId() {
+        // We only generate an ID if one has not been set already
+        if (this.employeeId == null || this.employeeId.isEmpty()) {
+            String year = String.valueOf(Year.now().getValue()).substring(2); // last 2 digits of the current year
+            int randomNum = new Random().nextInt(900000) + 100000; // 6-digit random number for less collision chance
+            this.employeeId = "E" + year + randomNum; // e.g., "E25123456"
+        }
+    }
+
+
     @OneToMany(mappedBy = "staff", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<StaffAttendance> attendanceRecords;
     

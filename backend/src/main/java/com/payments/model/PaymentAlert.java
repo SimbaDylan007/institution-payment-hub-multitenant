@@ -6,6 +6,7 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Transient;
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -15,7 +16,13 @@ public class PaymentAlert implements Serializable {
 
     @Id
     private String id;
-    private double amount;
+
+    @Column(precision = 19, scale = 4)
+    private BigDecimal amount;
+
+    @Column(length = 10)
+    private String currency;
+
     @Transient
     private Object date;
     @Column(length = 1000)
@@ -49,8 +56,8 @@ public class PaymentAlert implements Serializable {
     // --- Getters and Setters ---
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
-    public double getAmount() { return amount; }
-    public void setAmount(double amount) { this.amount = amount; }
+    public BigDecimal getAmount() { return amount; }
+    public void setAmount(BigDecimal amount) { this.amount = amount; }
     public Object getDate() { return date; }
     public void setDate(Object date) { this.date = date; }
     public String getNarrative() { return narrative; }
@@ -81,4 +88,6 @@ public class PaymentAlert implements Serializable {
     public void setStudentSurname(String studentSurname) { this.studentSurname = studentSurname; }
     public String getRegNumber() { return regNumber; }
     public void setRegNumber(String regNumber) { this.regNumber = regNumber; }
+    public String getCurrency() { return currency; }
+    public void setCurrency(String currency) { this.currency = currency; }
 }

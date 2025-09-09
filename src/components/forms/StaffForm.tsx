@@ -1,11 +1,11 @@
-
+// src/components/forms/StaffForm.tsx
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { createStaff, updateStaff } from "@/services/staffApiService";
+import { apiFetch } from "@/utils/apiClient"; // Use the central apiFetch
 
 interface Staff {
   id?: number;
@@ -18,229 +18,162 @@ interface Staff {
   department?: string;
   position?: string;
   employmentStatus: string;
-  hireDate?: string;
+  hireDate?: string; // Expect "YYYY-MM-DD" string from backend
   salary?: number;
   qualifications?: string;
   specializations?: string;
 }
 
 interface StaffFormProps {
-  staff?: Staff;
+  staff?: Staff | null; // Allow null for clarity
   onSuccess: () => void;
   onCancel: () => void;
 }
 
+// Initial state for creating a new staff member
+const initialFormData: Partial<Staff> = {
+  firstName: '',
+  lastName: '',
+  // employeeId is handled by the backend
+  email: '',
+  phone: '',
+  address: '',
+  department: 'ADMINISTRATION',
+  position: '',
+  employmentStatus: 'ACTIVE',
+  hireDate: new Date().toISOString().split('T')[0],
+  salary: 0,
+  qualifications: '',
+  specializations: ''
+};
+
 export default function StaffForm({ staff, onSuccess, onCancel }: StaffFormProps) {
-  const [formData, setFormData] = useState<Staff>({
-    firstName: '',
-    lastName: '',
-    employeeId: '',
-    email: '',
-    phone: '',
-    address: '',
-    department: '',
-    position: '',
-    employmentStatus: 'ACTIVE',
-    hireDate: new Date().toISOString().split('T')[0],
-    salary: 0,
-    qualifications: '',
-    specializations: ''
-  });
+  // Use Partial<Staff> to allow for an empty initial state
+  const [formData, setFormData] = useState<Partial<Staff>>(initialFormData);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (staff) {
+      // If editing, populate the form with the staff member's data.
+      // The backend now sends hireDate as a "yyyy-MM-dd" string, which is exactly
+      // what the <input type="date"> needs. No splitting required.
       setFormData({
         ...staff,
-        hireDate: staff.hireDate ? staff.hireDate.split('T')[0] : ''
+        hireDate: staff.hireDate || new Date().toISOString().split('T')[0],
       });
+    } else {
+      // If adding a new staff member, reset the form.
+      setFormData(initialFormData);
     }
   }, [staff]);
 
-  const handleChange = (field: string, value: string | number) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [name]: type === 'number' ? parseFloat(value) || 0 : value
     }));
+  };
+
+  const handleSelectChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      toast.error("First Name, Last Name, and Email are required.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      if (staff?.id) {
-        await updateStaff(staff.id, formData);
-        toast.success('Staff member updated successfully');
-      } else {
-        await createStaff(formData);
-        toast.success('Staff member created successfully');
+      const url = staff?.id ? `/api/staff/${staff.id}` : '/api/staff';
+      const method = staff?.id ? 'PUT' : 'POST';
+
+      const response = await apiFetch(url, { method, body: JSON.stringify(formData) });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "An unknown server error occurred." }));
+        throw new Error(errorData.message);
       }
+
+      toast.success(`Staff member successfully ${staff ? 'updated' : 'created'}.`);
       onSuccess();
     } catch (error) {
-      console.error('Error saving staff:', error);
-      toast.error('Failed to save staff member');
+      toast.error((error as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="firstName">First Name *</Label>
-          <Input
-            id="firstName"
-            value={formData.firstName}
-            onChange={(e) => handleChange('firstName', e.target.value)}
-            required
-          />
+      <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4">
+        {/* --- All inputs are now controlled and use dark theme classes --- */}
+        <div className="grid grid-cols-2 gap-4">
+          <div><Label htmlFor="firstName">First Name *</Label><Input id="firstName" name="firstName" value={formData.firstName || ''} onChange={handleChange} required className="bg-gray-800"/></div>
+          <div><Label htmlFor="lastName">Last Name *</Label><Input id="lastName" name="lastName" value={formData.lastName || ''} onChange={handleChange} required className="bg-gray-800"/></div>
         </div>
-        <div>
-          <Label htmlFor="lastName">Last Name *</Label>
-          <Input
-            id="lastName"
-            value={formData.lastName}
-            onChange={(e) => handleChange('lastName', e.target.value)}
-            required
-          />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="employeeId">Employee ID *</Label>
-          <Input
-            id="employeeId"
-            value={formData.employeeId}
-            onChange={(e) => handleChange('employeeId', e.target.value)}
-            required
-          />
+        <div className="grid grid-cols-2 gap-4">
+          {/* Conditional rendering for Employee ID */}
+          {staff && (
+              <div>
+                <Label htmlFor="employeeId">Employee ID</Label>
+                <Input id="employeeId" name="employeeId" value={formData.employeeId || ''} readOnly disabled className="bg-gray-900 cursor-not-allowed"/>
+              </div>
+          )}
+          <div className={staff ? "" : "col-span-2"}>
+            <Label htmlFor="email">Email *</Label>
+            <Input id="email" name="email" type="email" value={formData.email || ''} onChange={handleChange} required className="bg-gray-800" />
+          </div>
         </div>
-        <div>
-          <Label htmlFor="email">Email *</Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleChange('email', e.target.value)}
-            required
-          />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="phone">Phone</Label>
-          <Input
-            id="phone"
-            value={formData.phone}
-            onChange={(e) => handleChange('phone', e.target.value)}
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div><Label htmlFor="phone">Phone</Label><Input id="phone" name="phone" value={formData.phone || ''} onChange={handleChange} className="bg-gray-800"/></div>
+          <div><Label htmlFor="hireDate">Hire Date</Label><Input id="hireDate" name="hireDate" type="date" value={formData.hireDate || ''} onChange={handleChange} className="bg-gray-800"/></div>
         </div>
-        <div>
-          <Label htmlFor="hireDate">Hire Date</Label>
-          <Input
-            id="hireDate"
-            type="date"
-            value={formData.hireDate}
-            onChange={(e) => handleChange('hireDate', e.target.value)}
-          />
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="department">Department</Label>
+            <Select value={formData.department || ''} onValueChange={(value) => handleSelectChange('department', value)}><SelectTrigger className="bg-gray-800"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACADEMICS">Academics</SelectItem>
+                <SelectItem value="ADMINISTRATION">Administration</SelectItem>
+                <SelectItem value="FINANCE">Finance</SelectItem>
+                <SelectItem value="IT">IT</SelectItem>
+                <SelectItem value="SUPPORT">Support</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label htmlFor="position">Position</Label><Input id="position" name="position" value={formData.position || ''} onChange={handleChange} className="bg-gray-800"/></div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="department">Department</Label>
-          <Select value={formData.department} onValueChange={(value) => handleChange('department', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Department" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="MATHEMATICS">Mathematics</SelectItem>
-              <SelectItem value="SCIENCE">Science</SelectItem>
-              <SelectItem value="ENGLISH">English</SelectItem>
-              <SelectItem value="HISTORY">History</SelectItem>
-              <SelectItem value="PHYSICAL_EDUCATION">Physical Education</SelectItem>
-              <SelectItem value="ART">Art</SelectItem>
-              <SelectItem value="MUSIC">Music</SelectItem>
-              <SelectItem value="ADMINISTRATION">Administration</SelectItem>
-              <SelectItem value="SUPPORT">Support</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="employmentStatus">Employment Status *</Label>
+            <Select value={formData.employmentStatus || 'ACTIVE'} onValueChange={(value) => handleSelectChange('employmentStatus', value)}><SelectTrigger className="bg-gray-800"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="INACTIVE">Inactive</SelectItem>
+                <SelectItem value="ON_LEAVE">On Leave</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label htmlFor="salary">Salary</Label><Input id="salary" type="number" value={formData.salary || ''} name="salary" onChange={handleChange} className="bg-gray-800"/></div>
         </div>
-        <div>
-          <Label htmlFor="position">Position</Label>
-          <Input
-            id="position"
-            value={formData.position}
-            onChange={(e) => handleChange('position', e.target.value)}
-          />
+
+        <div><Label htmlFor="address">Address</Label><Input id="address" name="address" value={formData.address || ''} onChange={handleChange} className="bg-gray-800"/></div>
+        <div><Label htmlFor="qualifications">Qualifications</Label><Input id="qualifications" name="qualifications" value={formData.qualifications || ''} onChange={handleChange} className="bg-gray-800"/></div>
+        <div><Label htmlFor="specializations">Specializations</Label><Input id="specializations" name="specializations" value={formData.specializations || ''} onChange={handleChange} className="bg-gray-800"/></div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button type="submit" disabled={loading}>{loading ? 'Saving...' : (staff ? 'Update Staff' : 'Create Staff')}</Button>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="employmentStatus">Employment Status *</Label>
-          <Select value={formData.employmentStatus} onValueChange={(value) => handleChange('employmentStatus', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="INACTIVE">Inactive</SelectItem>
-              <SelectItem value="ON_LEAVE">On Leave</SelectItem>
-              <SelectItem value="TERMINATED">Terminated</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="salary">Salary</Label>
-          <Input
-            id="salary"
-            type="number"
-            value={formData.salary}
-            onChange={(e) => handleChange('salary', parseFloat(e.target.value) || 0)}
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="address">Address</Label>
-        <Input
-          id="address"
-          value={formData.address}
-          onChange={(e) => handleChange('address', e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="qualifications">Qualifications</Label>
-        <Input
-          id="qualifications"
-          value={formData.qualifications}
-          onChange={(e) => handleChange('qualifications', e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="specializations">Specializations</Label>
-        <Input
-          id="specializations"
-          value={formData.specializations}
-          onChange={(e) => handleChange('specializations', e.target.value)}
-        />
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : (staff ? 'Update Staff' : 'Create Staff')}
-        </Button>
-      </div>
-    </form>
+      </form>
   );
 }

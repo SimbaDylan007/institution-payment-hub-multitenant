@@ -3,8 +3,11 @@ com\payments\repository\AcademicRecordRepository.class
 com\payments\repository\SchoolInformationRepository.class
 com\payments\repository\StaffRepository.class
 OpenApiConfig.class
+com\payments\dto\HubAlertDto.class
 com\payments\service\LibraryService.class
 com\payments\dto\BulkUserImportDto.class
+com\payments\dto\QuickActionDto.class
+com\payments\dto\DashboardHubDto.class
 com\payments\repository\LeaveRequestRepository.class
 com\payments\model\FeeType.class
 com\payments\model\Facility.class
@@ -14,6 +17,7 @@ com\payments\controller\SubjectController.class
 com\payments\model\Book.class
 com\payments\dto\SystemPreferencesDto.class
 com\payments\repository\TimetableRepository.class
+com\payments\service\DashboardService.class
 com\payments\model\Role.class
 com\payments\controller\AuthController.class
 com\payments\model\Exam.class
@@ -50,6 +54,7 @@ com\payments\model\FinancialLedger.class
 com\payments\repository\GradeRepository.class
 com\payments\dto\UserCreationDto.class
 com\payments\dto\SubjectGradeDto.class
+com\payments\dto\CurrencyBalanceDto.class
 com\payments\exception\ResourceNotFoundException.class
 com\payments\dto\PasswordPolicyDto.class
 com\payments\repository\SystemSettingsRepository.class
@@ -105,6 +110,7 @@ com\payments\repository\EventRepository.class
 com\payments\model\SecurityFeatures.class
 com\payments\dto\AnnouncementRequest.class
 com\payments\model\PasswordPolicy.class
+com\payments\controller\DashboardController.class
 com\payments\config\SecurityConfig.class
 com\payments\model\Student.class
 com\payments\repository\GuardianRepository.class
@@ -117,6 +123,7 @@ com\payments\dto\JwtResponse.class
 com\payments\service\StudentService$1.class
 com\payments\model\PickPaymentRequest.class
 com\payments\service\StudentRegistrationService.class
+com\payments\dto\StatCardDto.class
 com\payments\repository\SystemPreferencesRepository.class
 com\payments\dto\ScheduleStatsDto.class
 com\payments\dto\UserRoleAssignmentDto.class
@@ -143,6 +150,7 @@ com\payments\controller\NotificationController.class
 com\payments\model\Guardian.class
 com\payments\model\ResourceUsageLog.class
 com\payments\dto\FinancialAnalyticsDto.class
+com\payments\dto\DashboardStatsDto.class
 com\payments\dto\GradeDTO.class
 com\payments\service\NotificationService.class
 com\payments\dto\StudentFinancialSummaryDto.class

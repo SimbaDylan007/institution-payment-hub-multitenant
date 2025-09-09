@@ -6,10 +6,11 @@ import { PaymentAlert, SearchFiltersType } from "@/types";
 
 // UI Components & Services
 import Header from "@/components/Header";
-import SchoolStats from "@/components/school/SchoolStats";
 import SchoolNavigation from "@/components/SchoolNavigation";
 import SearchFilters from "@/components/SearchFilters";
 import PaymentTable from "@/components/PaymentTable";
+// Import the new DashboardHub component
+import DashboardHub from "@/components/school/DashboardHub";
 import { fetchPayments as fetchPaymentsFromApi, resetAllPayments as resetAllPaymentsFromApi } from "@/services/paymentService";
 
 // Shadcn/ui components
@@ -30,132 +31,30 @@ import { UserPlus, FileText, Key, Plus, Trash2, Banknote, RotateCcw, Search } fr
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- Type Definitions ---
-interface InstitutionAccount {
-  id: string;
-  institutionId: string;
-  accountName: string;
-}
+interface InstitutionAccount { id: string; institutionId: string; accountName: string; }
 
 // --- Helper Components ---
-const PaymentTableSkeleton = () => (
-    <div className="space-y-4 p-6">{[...Array(5)].map((_, i) => (<Skeleton key={i} className="h-10 w-full rounded-md bg-gray-200/70 dark:bg-gray-700/50" />))}</div>
-);
-
-// UPDATED: NoPaymentsFound component with a more generic message
-const NoPaymentsFound = ({ hasFetched }: { hasFetched: boolean }) => (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="flex flex-col items-center justify-center p-8 text-center text-gray-500 dark:text-gray-400">
-      <FileText size={48} className="mb-4 text-gray-600 dark:text-gray-300" />
-      <h3 className="text-xl font-semibold mb-2">No Payments Found</h3>
-      <p className="text-sm">
-        {hasFetched
-            ? "No payments matched the criteria from the bank."
-            : "There are currently no payments stored in the local database."}
-      </p>
-    </motion.div>
-);
-
+const PaymentTableSkeleton = () => ( <div className="space-y-4 p-6">{[...Array(5)].map((_, i) => (<Skeleton key={i} className="h-10 w-full rounded-md bg-gray-200/70 dark:bg-gray-700/50" />))}</div> );
+const NoPaymentsFound = ({ hasFetched }: { hasFetched: boolean }) => ( <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="flex flex-col items-center justify-center p-8 text-center text-gray-500 dark:text-gray-400"><FileText size={48} className="mb-4 text-gray-600 dark:text-gray-300" /><h3 className="text-xl font-semibold mb-2">No Payments Found</h3><p className="text-sm">{hasFetched ? "No payments matched the criteria from the bank." : "There are currently no payments stored in the local database."}</p></motion.div> );
 const CredentialsManager = ({ accounts, setAccounts }: { accounts: InstitutionAccount[], setAccounts: React.Dispatch<React.SetStateAction<InstitutionAccount[]>> }) => {
   const [institutionId, setInstitutionId] = useState('');
   const [accountName, setAccountName] = useState('');
-
-  const handleAddAccount = () => {
-    if (!institutionId || !accountName) return toast.error("Account Name and Institution ID are required.");
-    const newAccount: InstitutionAccount = { id: institutionId, institutionId, accountName };
-    const updatedAccounts = [...accounts.filter(acc => acc.id !== newAccount.id), newAccount];
-    setAccounts(updatedAccounts);
-    localStorage.setItem('institutionAccounts', JSON.stringify(updatedAccounts));
-    toast.success(`Account "${accountName}" added. Ensure its password is configured on the server.`);
-    setInstitutionId(''); setAccountName('');
-  };
-
-  const handleDeleteAccount = (id: string) => {
-    const updatedAccounts = accounts.filter(acc => acc.id !== id);
-    setAccounts(updatedAccounts);
-    localStorage.setItem('institutionAccounts', JSON.stringify(updatedAccounts));
-    toast.info("Account removed.");
-  };
-
-  return (
-      <DialogContent className="dark:bg-gray-900/80 dark:border-gray-700 dark:text-white backdrop-blur-sm">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><Key /> Manage Institution Accounts</DialogTitle></DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="space-y-2 p-3 border dark:border-gray-700 rounded-lg">
-            <h4 className="font-semibold">Add New Account</h4>
-            <Input placeholder="Account Name (e.g., Main ZWL)" value={accountName} onChange={e => setAccountName(e.target.value)} className="dark:bg-gray-800" />
-            <Input placeholder="Institution ID (e.g., PACHEDU-ZWG)" value={institutionId} onChange={e => setInstitutionId(e.target.value)} className="dark:bg-gray-800" />
-            <p className="text-xs text-amber-400">Note: The password for this ID must be set in the backend's configuration file.</p>
-            <Button onClick={handleAddAccount} className="w-full"><Plus className="h-4 w-4 mr-2" />Add Account</Button>
-          </div>
-          <div className="space-y-2">
-            <h4 className="font-semibold">Saved Accounts</h4>
-            <div className="space-y-2 max-h-48 overflow-y-auto p-2 border dark:border-gray-700 rounded-lg">
-              {accounts.length === 0 && <p className="text-sm text-center text-gray-400">No accounts saved.</p>}
-              {accounts.map(acc => (
-                  <div key={acc.id} className="flex justify-between items-center p-2 bg-gray-800 rounded">
-                    <div><p className="font-bold">{acc.accountName}</p><p className="text-xs text-gray-400">{acc.institutionId}</p></div>
-                    <Button size="sm" variant="destructive" onClick={() => handleDeleteAccount(acc.id)}><Trash2 className="h-4 w-4"/></Button>
-                  </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-  );
+  const handleAddAccount = () => { if (!institutionId || !accountName) return toast.error("Account Name and Institution ID are required."); const newAccount: InstitutionAccount = { id: institutionId, institutionId, accountName }; const updatedAccounts = [...accounts.filter(acc => acc.id !== newAccount.id), newAccount]; setAccounts(updatedAccounts); localStorage.setItem('institutionAccounts', JSON.stringify(updatedAccounts)); toast.success(`Account "${accountName}" added.`); setInstitutionId(''); setAccountName(''); };
+  const handleDeleteAccount = (id: string) => { const updatedAccounts = accounts.filter(acc => acc.id !== id); setAccounts(updatedAccounts); localStorage.setItem('institutionAccounts', JSON.stringify(updatedAccounts)); toast.info("Account removed."); };
+  return (<DialogContent className="dark:bg-gray-900/80 dark:border-gray-700 dark:text-white backdrop-blur-sm"><DialogHeader><DialogTitle className="flex items-center gap-2"><Key /> Manage Institution Accounts</DialogTitle></DialogHeader><div className="space-y-4 py-2"><div className="space-y-2 p-3 border dark:border-gray-700 rounded-lg"><h4 className="font-semibold">Add New Account</h4><Input placeholder="Account Name (e.g., Main ZWL)" value={accountName} onChange={e => setAccountName(e.target.value)} className="dark:bg-gray-800" /><Input placeholder="Institution ID (e.g., PACHEDU-ZWG)" value={institutionId} onChange={e => setInstitutionId(e.target.value)} className="dark:bg-gray-800" /><p className="text-xs text-amber-400">Note: The password for this ID must be set in the backend's configuration file.</p><Button onClick={handleAddAccount} className="w-full"><Plus className="h-4 w-4 mr-2" />Add Account</Button></div><div className="space-y-2"><h4 className="font-semibold">Saved Accounts</h4><div className="space-y-2 max-h-48 overflow-y-auto p-2 border dark:border-gray-700 rounded-lg">{accounts.length === 0 && <p className="text-sm text-center text-gray-400">No accounts saved.</p>}{accounts.map(acc => (<div key={acc.id} className="flex justify-between items-center p-2 bg-gray-800 rounded"><div><p className="font-bold">{acc.accountName}</p><p className="text-xs text-gray-400">{acc.institutionId}</p></div><Button size="sm" variant="destructive" onClick={() => handleDeleteAccount(acc.id)}><Trash2 className="h-4 w-4"/></Button></div>))}</div></div></div></DialogContent>);
 };
-
 const PaymentPicker = ({ accounts, onFetchPayments }: { accounts: InstitutionAccount[], onFetchPayments: (selectedIds: string[], action: 'pending' | 'all') => void }) => {
-  const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(new Set());
-  const [actionType, setActionType] = useState<'pending' | 'all'>('pending');
-
-  const handleSelectAccount = (id: string, isChecked: boolean) => {
-    const newSet = new Set(selectedAccountIds);
-    if (isChecked) newSet.add(id); else newSet.delete(id);
-    setSelectedAccountIds(newSet);
-  };
-
-  const handleFetch = () => {
-    if (selectedAccountIds.size === 0) return toast.warning("Please select at least one account.");
-    onFetchPayments(Array.from(selectedAccountIds), actionType);
-  };
-
-  return (
-      <Card className="dark:bg-[#1A1F2C] dark:border-gray-800">
-        <CardHeader className="pb-4"><CardTitle className="text-md flex items-center gap-2"><Banknote/>Institution Connection</CardTitle></CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div>
-              <Label>Action Type</Label>
-              <Select value={actionType} onValueChange={(value: 'pending' | 'all') => setActionType(value)}>
-                <SelectTrigger className="w-full dark:bg-gray-800 dark:border-gray-700"><SelectValue /></SelectTrigger>
-                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                  <SelectItem value="pending">Pick Pending Payments</SelectItem>
-                  <SelectItem value="all">Get All Payments (History)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Label>Select accounts to fetch from:</Label>
-            <div className="space-y-2 p-2 border dark:border-gray-700 rounded-md max-h-32 overflow-y-auto">
-              {accounts.length === 0 ? <p className="text-xs text-gray-400 text-center">No accounts configured.</p> :
-                  accounts.map(acc => (
-                      <div key={acc.id} className="flex items-center space-x-2">
-                        <Checkbox id={acc.id} onCheckedChange={(checked) => handleSelectAccount(acc.id, !!checked)} />
-                        <Label htmlFor={acc.id} className="text-sm font-medium leading-none">{acc.accountName}</Label>
-                      </div>
-                  ))}
-            </div>
-            <Button onClick={handleFetch} className="w-full bg-purple-600 hover:bg-purple-700 dark:text-white">Fetch New Payments</Button>
-          </div>
-        </CardContent>
-      </Card>
-  );
+  const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(new Set()); const [actionType, setActionType] = useState<'pending' | 'all'>('pending');
+  const handleSelectAccount = (id: string, isChecked: boolean) => { const newSet = new Set(selectedAccountIds); if (isChecked) newSet.add(id); else newSet.delete(id); setSelectedAccountIds(newSet); };
+  const handleFetch = () => { if (selectedAccountIds.size === 0) return toast.warning("Please select at least one account."); onFetchPayments(Array.from(selectedAccountIds), actionType); };
+  return (<Card className="dark:bg-[#1A1F2C] dark:border-gray-800"><CardHeader className="pb-4"><CardTitle className="text-md flex items-center gap-2"><Banknote/>Institution Connection</CardTitle></CardHeader><CardContent><div className="space-y-3"><div><Label>Action Type</Label><Select value={actionType} onValueChange={(value: 'pending' | 'all') => setActionType(value)}><SelectTrigger className="w-full dark:bg-gray-800 dark:border-gray-700"><SelectValue /></SelectTrigger><SelectContent className="dark:bg-gray-800 dark:border-gray-700"><SelectItem value="pending">Pick Pending Payments</SelectItem><SelectItem value="all">Get All Payments (History)</SelectItem></SelectContent></Select></div><Label>Select accounts to fetch from:</Label><div className="space-y-2 p-2 border dark:border-gray-700 rounded-md max-h-32 overflow-y-auto">{accounts.length === 0 ? <p className="text-xs text-gray-400 text-center">No accounts configured.</p> : accounts.map(acc => (<div key={acc.id} className="flex items-center space-x-2"><Checkbox id={acc.id} onCheckedChange={(checked) => handleSelectAccount(acc.id, !!checked)} /><Label htmlFor={acc.id} className="text-sm font-medium leading-none">{acc.accountName}</Label></div>))}</div><Button onClick={handleFetch} className="w-full bg-purple-600 hover:bg-purple-700 dark:text-white">Fetch New Payments</Button></div></CardContent></Card>);
 };
 
-// --- Main Dashboard Component ---
 export default function Dashboard() {
   const { user } = useAuth();
   const [allFetchedPayments, setAllFetchedPayments] = useState<PaymentAlert[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Start with loading true for initial fetch
-  const [hasFetchedRemotely, setHasFetchedRemotely] = useState(false); // Track if a remote fetch was done
+  const [isLoadingPayments, setIsLoadingPayments] = useState(true);
+  const [hasFetchedRemotely, setHasFetchedRemotely] = useState(false);
   const [backendFilters, setBackendFilters] = useState<SearchFiltersType>({});
   const [localSearchTerm, setLocalSearchTerm] = useState("");
   const [institutionAccounts, setInstitutionAccounts] = useState<InstitutionAccount[]>([]);
@@ -163,113 +62,74 @@ export default function Dashboard() {
   const canManagePayments = user?.role === 'ADMIN' || user?.role === 'FINANCE_ADMIN';
   const canManageStudents = user?.role === 'ADMIN' || user?.role === 'IT_ADMIN';
 
-  // UPDATED: This function now handles both local and remote fetching
   const loadPayments = useCallback(async (action: 'pending' | 'all', accountIdsToFetch?: string[]) => {
-    setIsLoading(true);
-    if (accountIdsToFetch) { setAllFetchedPayments([]); } // Clear table only for new remote fetches
+    setIsLoadingPayments(true);
+    if (accountIdsToFetch) { setAllFetchedPayments([]); }
     setLocalSearchTerm("");
     setHasFetchedRemotely(!!accountIdsToFetch && accountIdsToFetch.length > 0);
-
-    const toastId = toast.loading(accountIdsToFetch
-        ? `Fetching payments for ${accountIdsToFetch.length} account(s)...`
-        : "Loading existing payments from database..."
-    );
-
+    const toastId = toast.loading(accountIdsToFetch ? `Fetching payments...` : "Loading existing payments...");
     try {
       const result = await fetchPaymentsFromApi(backendFilters, action, accountIdsToFetch);
       setAllFetchedPayments(result);
-      toast.success(accountIdsToFetch
-              ? `${result.length} payments found!`
-              : `${result.length} existing payments loaded.`,
-          { id: toastId, duration: 5000 });
+      toast.success(accountIdsToFetch ? `${result.length} payments found!` : `${result.length} existing payments loaded.`, { id: toastId, duration: 5000 });
     } catch (error) {
       toast.error((error as Error).message || "An unexpected error occurred.", { id: toastId, duration: 5000 });
     } finally {
-      setIsLoading(false);
+      setIsLoadingPayments(false);
     }
   }, [backendFilters]);
 
-  // NEW: useEffect for the initial load of local data
+  // This useEffect hook is now simplified
   useEffect(() => {
-    // This effect runs only once when the component mounts
     if (canManagePayments) {
-      loadPayments('all'); // Call with no account IDs to trigger the local DB fetch
+      loadPayments('all');
     } else {
-      setIsLoading(false); // If user can't see payments, stop loading
+      setIsLoadingPayments(false);
     }
-
     const savedAccounts = localStorage.getItem('institutionAccounts');
     if (savedAccounts) { try { setInstitutionAccounts(JSON.parse(savedAccounts)); } catch (e) { console.error("Failed to parse saved accounts", e); } }
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, [canManagePayments, loadPayments]);
 
-  const handleBackendSearch = (newFilters: SearchFiltersType) => {
-    setBackendFilters(newFilters);
-    toast.info("Filters updated. Click 'Fetch New Payments' to apply them to your bank query.");
-  };
-
-  const handlePaymentReset = (paymentId: string) => {
-    toast.info("Payment has been reset on the server.");
-    setAllFetchedPayments(prev => prev.filter(p => p.id !== paymentId));
-  };
-
-  const handleResetAllPayments = async () => { if (window.confirm("DANGER: This will reset ALL payments in your local database. Are you sure?")) { const toastId = toast.loading("Resetting all payments..."); try { await resetAllPaymentsFromApi(); toast.success("All payments have been reset.", { id: toastId }); setAllFetchedPayments([]); } catch (error) { toast.error((error as Error).message, { id: toastId }); } } };
-
-  const displayedPayments = useMemo(() => {
-    if (!localSearchTerm) return allFetchedPayments;
-    const term = localSearchTerm.toLowerCase();
-    return allFetchedPayments.filter(p =>
-        p.studentName?.toLowerCase().includes(term) ||
-        p.regNumber?.toLowerCase().includes(term) ||
-        p.reference?.toLowerCase().includes(term) ||
-        p.narrative?.toLowerCase().includes(term)
-    );
-  }, [allFetchedPayments, localSearchTerm]);
+  const handleBackendSearch = (newFilters: SearchFiltersType) => { setBackendFilters(newFilters); toast.info("Filters updated. Click 'Fetch New Payments' to apply."); };
+  const handlePaymentReset = (paymentId: string) => { setAllFetchedPayments(prev => prev.filter(p => p.id !== paymentId)); toast.info("Payment reset."); };
+  const handleResetAllPayments = async () => { if (window.confirm("DANGER: This will reset ALL payments in your local database. Are you sure?")) { const toastId = toast.loading("Resetting..."); try { await resetAllPaymentsFromApi(); toast.success("All payments reset.", { id: toastId }); setAllFetchedPayments([]); } catch (error) { toast.error((error as Error).message, { id: toastId }); } } };
+  const displayedPayments = useMemo(() => { if (!localSearchTerm) return allFetchedPayments; const term = localSearchTerm.toLowerCase(); return allFetchedPayments.filter(p => p.studentName?.toLowerCase().includes(term) || p.regNumber?.toLowerCase().includes(term) || p.reference?.toLowerCase().includes(term) || p.narrative?.toLowerCase().includes(term)); }, [allFetchedPayments, localSearchTerm]);
 
   if (!user) return <Navigate to="/" replace />;
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans antialiased dark:bg-gradient-to-br dark:from-[#1A2E44] dark:to-[#0E1B29] dark:text-white">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:bg-gradient-to-br dark:from-[#1A2E44] dark:to-[#0E1B29] dark:text-white">
         <Header />
         <main className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 py-8 px-8">
-          <motion.aside initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="lg:col-span-1 rounded-xl p-6 bg-white border border-gray-200 shadow-lg dark:bg-[#1A1F2C] dark:border-gray-800 dark:shadow-xl">
+          <motion.aside initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="lg:col-span-1 rounded-xl p-6 bg-white shadow-lg dark:bg-[#1A1F2C] dark:border-gray-800 dark:shadow-xl">
             <SchoolNavigation />
-            {canManageStudents && (<div className="mt-8 pt-6 border-t border-gray-300 dark:border-gray-700/50"><h3 className="text-md font-semibold text-gray-700 mb-4 dark:text-gray-300">Actions</h3><Link to="/students"><Button className="w-full justify-start gap-3 bg-gradient-to-r from-blue-500 to-blue-400 text-white hover:from-blue-600 hover:to-blue-500 shadow-md"><UserPlus size={18} /> Manage Students</Button></Link></div>)}
+            {canManageStudents && (<div className="mt-8 pt-6 border-t dark:border-gray-700/50"><h3 className="text-md font-semibold mb-4 dark:text-gray-300">Actions</h3><Link to="/students"><Button className="w-full justify-start gap-3 bg-gradient-to-r from-blue-500 to-blue-400 text-white hover:from-blue-600 hover:to-blue-500 shadow-md"><UserPlus size={18} /> Manage Students</Button></Link></div>)}
           </motion.aside>
 
           <div className="lg:col-span-1 space-y-8">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 bg-white border border-gray-200 rounded-xl shadow-lg dark:bg-[#1A1F2C] dark:border-gray-800 dark:shadow-xl">
-              <div><h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">School Management Dashboard</h1><p className="text-gray-700 mt-1 text-lg dark:text-gray-400">Welcome, <span className="text-purple-600 dark:text-purple-400">{user?.name || 'Admin'}</span>.</p></div>
+            {/* The innovative DashboardHub is now the first thing users see */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+              <DashboardHub />
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}><h2 className="text-xl font-semibold mb-4 text-gray-800 px-6 dark:text-gray-200">Key School Metrics</h2><SchoolStats /></motion.div>
-
             {canManagePayments && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="rounded-xl p-6 bg-white border border-gray-200 shadow-lg dark:bg-[#1A1F2C] dark:border-gray-800 dark:shadow-xl">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="rounded-xl p-6 bg-white shadow-lg dark:bg-[#1A1F2C] dark:border-gray-800 dark:shadow-xl">
                   <Card className="bg-transparent border-none shadow-none">
                     <CardHeader className="p-0 mb-6">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"><CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">Payment Alerts</CardTitle><div className="flex gap-3"><Button onClick={handleResetAllPayments} variant="destructive" size="sm" className="flex items-center gap-2 bg-red-600/80 hover:bg-red-600"><RotateCcw size={16} /> Reset All Payments</Button><Dialog><DialogTrigger asChild><Button variant="outline" size="sm" className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-teal-400 text-white hover:from-teal-600 hover:to-teal-500 border-none shadow-md"><Key size={16} /> Manage Accounts</Button></DialogTrigger><CredentialsManager accounts={institutionAccounts} setAccounts={setInstitutionAccounts} /></Dialog></div></div>
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"><CardTitle className="text-2xl font-bold dark:text-gray-100">Payment Alerts</CardTitle><div className="flex gap-3"><Button onClick={handleResetAllPayments} variant="destructive" size="sm" className="flex items-center gap-2 bg-red-600/80 hover:bg-red-600"><RotateCcw size={16} /> Reset All Payments</Button><Dialog><DialogTrigger asChild><Button variant="outline" size="sm" className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-teal-400 text-white hover:from-teal-600 hover:to-teal-500 border-none shadow-md"><Key size={16} /> Manage Accounts</Button></DialogTrigger><CredentialsManager accounts={institutionAccounts} setAccounts={setInstitutionAccounts} /></Dialog></div></div>
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                         <div className="lg:col-span-3"><SearchFilters onSearch={handleBackendSearch} /></div>
-                        {/* The onFetchPayments prop now correctly calls loadPayments with account IDs */}
                         <div className="lg:col-span-1"><PaymentPicker accounts={institutionAccounts} onFetchPayments={(ids, action) => loadPayments(action, ids)} /></div>
                       </div>
 
-                      {allFetchedPayments.length > 0 && (
-                          <div className="relative mb-4">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input placeholder={`Search within the ${allFetchedPayments.length} loaded payments...`} value={localSearchTerm} onChange={e => setLocalSearchTerm(e.target.value)} className="pl-10 dark:bg-gray-800 dark:border-gray-700" />
-                          </div>
-                      )}
+                      {allFetchedPayments.length > 0 && (<div className="relative mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder={`Search within the ${allFetchedPayments.length} loaded payments...`} value={localSearchTerm} onChange={e => setLocalSearchTerm(e.target.value)} className="pl-10 dark:bg-gray-800" /></div>)}
 
                       <AnimatePresence mode="wait">
-                        {isLoading ? (<motion.div key="loading"><PaymentTableSkeleton /></motion.div>
-                        ) : displayedPayments.length > 0 ? (
-                            <motion.div key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><PaymentTable payments={displayedPayments} onPaymentReset={handlePaymentReset} /></motion.div>
-                        ) : (
-                            <motion.div key="no-payments"><NoPaymentsFound hasFetched={hasFetchedRemotely} /></motion.div>
-                        )}
+                        {isLoadingPayments ? (<motion.div key="loading"><PaymentTableSkeleton /></motion.div>) :
+                            displayedPayments.length > 0 ? (<motion.div key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><PaymentTable payments={displayedPayments} onPaymentReset={handlePaymentReset} /></motion.div>) :
+                                (<motion.div key="no-payments"><NoPaymentsFound hasFetched={hasFetchedRemotely} /></motion.div>)}
                       </AnimatePresence>
                     </CardContent>
                   </Card>
@@ -277,10 +137,8 @@ export default function Dashboard() {
             )}
           </div>
         </main>
-        <footer className="bg-white border-t border-gray-200 py-4 mt-8 px-8 dark:bg-[#1A1F2C] dark:border-gray-800">
-          <div className="text-center text-sm text-gray-600 dark:text-gray-500">
-            © {new Date().getFullYear()} School Management System. All rights reserved.
-          </div>
+        <footer className="bg-white border-t py-4 mt-8 px-8 dark:bg-[#1A1F2C] dark:border-gray-800">
+          <div className="text-center text-sm text-gray-600 dark:text-gray-500">© {new Date().getFullYear()} School Management System. All rights reserved.</div>
         </footer>
       </div>
   );

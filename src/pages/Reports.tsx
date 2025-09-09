@@ -11,9 +11,8 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { CSVLink } from "react-csv";
 import { apiFetch } from "@/utils/apiClient";
-// --- THIS IS THE FIX: Import the centralized academic config ---
 import { academicYears, semesters, currentAcademicYear, currentSemester } from '@/config/academicConfig';
-import { Label } from "recharts";
+import {Label} from "recharts";
 
 // --- Interfaces ---
 interface Student { id: number; studentId: string; firstName: string; lastName: string; }
@@ -26,7 +25,6 @@ export default function Reports() {
   const [students, setStudents] = useState<Student[]>([]);
   const [grades, setGrades] = useState<string[]>([]);
 
-  // --- State is now initialized from the config file ---
   const [reportType, setReportType] = useState('STUDENT_REPORT_CARD');
   const [academicYear, setAcademicYear] = useState(currentAcademicYear);
   const [semester, setSemester] = useState(currentSemester);
@@ -36,11 +34,25 @@ export default function Reports() {
   const [generatedData, setGeneratedData] = useState<any[] | null>(null);
 
   useEffect(() => {
-    apiFetch('/api/students?size=1000').then(res => res.json()).then(data => {
-      setStudents(data.content);
-      const uniqueGrades = [...new Set(data.content.map((s: any) => s.currentGrade).filter(Boolean))].sort();
-      setGrades(uniqueGrades as string[]);
-    });
+    // --- THIS IS THE ROBUST FIX ---
+    apiFetch('/api/students?size=1000')
+        .then(res => {
+          if (!res.ok) throw new Error("Failed to fetch student list for filters.");
+          return res.json();
+        })
+        .then(data => {
+          // Safely access the content property only if data exists
+          const studentList = data?.content || [];
+          setStudents(studentList);
+          const uniqueGrades = [...new Set(studentList.map((s: any) => s.currentGrade).filter(Boolean))].sort();
+          setGrades(uniqueGrades as string[]);
+        })
+        .catch(error => {
+          toast.error(error.message);
+          // Set to empty arrays to prevent crashes
+          setStudents([]);
+          setGrades([]);
+        });
   }, []);
 
   const handleGenerateReport = async () => {
@@ -62,8 +74,11 @@ export default function Reports() {
     finally { setLoading(false); }
   };
 
+
   const csvReportCardData = generatedData?.flatMap(rc => (Array.isArray(rc.subjectGrades) ? rc.subjectGrades.map((sg:any) => ({ studentId: rc.studentId, studentName: rc.studentName, subjectCode: sg.subjectCode, subjectName: sg.subjectName, finalScore: sg.finalScore, letterGrade: sg.letterGrade, overallAverage: rc.overallAverage.toFixed(2) })) : [])) || [];
   const csvFinancialData = generatedData?.map(fs => ({ studentId: fs.studentId, studentName: fs.studentName, gradeLevel: fs.gradeLevel, totalCharges: (fs.totalCharges||0).toFixed(2), totalPayments: (fs.totalPayments||0).toFixed(2), periodBalance: (fs.periodBalance||0).toFixed(2), outstandingBalance: (fs.outstandingBalance||0).toFixed(2) })) || [];
+
+
 
   if (!user) return <Navigate to="/" replace />;
 

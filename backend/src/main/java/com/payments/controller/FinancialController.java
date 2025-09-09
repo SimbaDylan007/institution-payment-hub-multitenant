@@ -19,6 +19,7 @@ import java.io.IOException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.payments.dto.CurrencyBalanceDto;
 
 @RestController
 @RequestMapping("/api/financials")
@@ -50,9 +51,9 @@ public class FinancialController {
 
 
     @GetMapping("/students/{studentId}/balance")
-    public ResponseEntity<Map<String, BigDecimal>> getStudentBalance(@PathVariable String studentId) { // <-- CORRECTED
-        BigDecimal balance = financialService.getStudentBalance(studentId);
-        return ResponseEntity.ok(Map.of("balance", balance));
+    public ResponseEntity<CurrencyBalanceDto> getStudentBalance(@PathVariable String studentId) {
+        CurrencyBalanceDto balance = financialService.getStudentBalance(studentId);
+        return ResponseEntity.ok(balance);
     }
 
     @PostMapping("/students/charges")

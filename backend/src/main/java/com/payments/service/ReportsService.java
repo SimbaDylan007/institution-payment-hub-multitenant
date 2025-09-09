@@ -11,7 +11,7 @@ import com.payments.repository.GradeRepository;
 import com.payments.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import com.payments.dto.CurrencyBalanceDto;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -31,6 +31,10 @@ public class ReportsService {
 
     @Autowired
     private FinancialLedgerRepository financialLedgerRepository;
+
+    @Autowired
+    private FinancialService financialService;
+
 
 
     public List<ReportCardDto> generateStudentReportCards(String academicYear, String semester, Long studentId) {
@@ -120,13 +124,18 @@ public class ReportsService {
     }
 
     public List<StudentFinancialSummaryDto> generateFinancialSummary(String academicYear, String semester, Long studentId, String gradeLevel) {
-        List<Student> studentsToProcess;
+        List<Student> studentsToProcess = new ArrayList<>();
 
+        // --- THIS IS THE FIX ---
+        // This logic correctly handles all filter combinations.
         if (studentId != null) {
-            studentsToProcess = studentRepository.findAllById(Collections.singletonList(studentId));
+            // If a specific student is chosen, ignore all other filters and just get that one.
+            studentRepository.findById(studentId).ifPresent(studentsToProcess::add);
         } else if (gradeLevel != null && !gradeLevel.equalsIgnoreCase("ALL")) {
+            // If a specific grade is chosen (and not a single student), get all students in that grade.
             studentsToProcess = studentRepository.findByCurrentGrade(gradeLevel);
         } else {
+            // If "All Students" and "All Grades" are selected, get every student.
             studentsToProcess = studentRepository.findAll();
         }
 
@@ -142,34 +151,31 @@ public class ReportsService {
         summary.setStudentName(student.getFirstName() + " " + student.getLastName());
         summary.setGradeLevel(student.getCurrentGrade());
 
-        // --- THIS IS THE IMPROVED LOGIC ---
-        // If the filter is set to a specific value, use it. Otherwise, pass null to the repository
-        // so it doesn't filter by that criteria. This allows for more flexible reports.
-        List<String> yearFilter = (academicYear != null && !academicYear.equalsIgnoreCase("ALL")) ? List.of(academicYear) : null;
-        List<String> semesterFilter = (semester != null && !semester.equalsIgnoreCase("ALL")) ? List.of(semester) : null;
+        List<String> yearFilter = (academicYear != null && !academicYear.isEmpty()) ? List.of(academicYear) : null;
+        List<String> semesterFilter = (semester != null && !semester.isEmpty()) ? List.of(semester) : null;
+        List<FinancialLedger> periodLedger = financialLedgerRepository.findByStudentAndFilter(student.getId(), yearFilter, semesterFilter);
 
-        List<FinancialLedger> periodLedger = financialLedgerRepository.findByStudentAndFilter(
-                student.getId(),
-                yearFilter,
-                semesterFilter
-        );
-
-        BigDecimal totalCharges = periodLedger.stream()
+        Map<String, BigDecimal> totalCharges = periodLedger.stream()
                 .filter(entry -> "DEBIT".equals(entry.getTransactionType().toString()))
-                .map(FinancialLedger::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .collect(Collectors.groupingBy(
+                        entry -> entry.getCurrency().toString(),
+                        Collectors.mapping(FinancialLedger::getAmount, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ));
 
-        BigDecimal totalPayments = periodLedger.stream()
+        Map<String, BigDecimal> totalPayments = periodLedger.stream()
                 .filter(entry -> "CREDIT".equals(entry.getTransactionType().toString()))
-                .map(FinancialLedger::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .collect(Collectors.groupingBy(
+                        entry -> entry.getCurrency().toString(),
+                        Collectors.mapping(FinancialLedger::getAmount, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ));
 
-        BigDecimal outstandingBalance = financialLedgerRepository.getBalanceForStudent(student.getId());
+        // Get the overall outstanding balance using the injected service
+        CurrencyBalanceDto outstandingBalance = financialService.getStudentBalance(student.getStudentId());
 
-        summary.setTotalCharges(totalCharges);
-        summary.setTotalPayments(totalPayments);
-        summary.setPeriodBalance(totalCharges.subtract(totalPayments));
-        summary.setOutstandingBalance(outstandingBalance != null ? outstandingBalance : BigDecimal.ZERO);
+        // Use the new DTO methods
+        summary.setTotalChargesByCurrency(totalCharges);
+        summary.setTotalPaymentsByCurrency(totalPayments);
+        summary.setOutstandingBalances(outstandingBalance.getBalances());
 
         return summary;
     }

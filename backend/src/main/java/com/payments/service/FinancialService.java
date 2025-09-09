@@ -21,7 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
+import com.payments.dto.CurrencyBalanceDto;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -30,6 +30,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class FinancialService {
@@ -72,18 +74,28 @@ public class FinancialService {
 
     @Transactional
     public FinancialLedger allocatePayment(PaymentAllocationRequest request) {
-        PaymentAlert payment = paymentRepository.findById(request.getPaymentAlertId()).orElseThrow(() -> new RuntimeException("PaymentAlert not found"));
-        Student student = studentRepository.findByStudentId(request.getStudentId()).orElseThrow(() -> new RuntimeException("Student not found"));
-        if (!"PENDING".equalsIgnoreCase(payment.getStatus())) { throw new IllegalStateException("Payment already allocated."); }
+        PaymentAlert payment = paymentRepository.findById(request.getPaymentAlertId())
+                .orElseThrow(() -> new RuntimeException("PaymentAlert not found"));
+        Student student = studentRepository.findByStudentId(request.getStudentId())
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+        if (!"PENDING".equalsIgnoreCase(payment.getStatus())) {
+            throw new IllegalStateException("Payment already allocated.");
+        }
 
         FinancialLedger creditEntry = new FinancialLedger();
         creditEntry.setStudent(student);
         creditEntry.setTransactionType(TransactionType.CREDIT);
-        creditEntry.setAmount(BigDecimal.valueOf(payment.getAmount()));
-        creditEntry.setCurrency(Currency.USD); // Defaulting
+
+        // --- THIS IS THE FIX ---
+        // payment.getAmount() is already a BigDecimal, so just assign it directly.
+        creditEntry.setAmount(payment.getAmount());
+
+        // Use the currency from the payment alert itself
+        creditEntry.setCurrency(Currency.valueOf(payment.getCurrency()));
         creditEntry.setDescription("Payment Received. Ref: " + payment.getReference());
         creditEntry.setTransactionDate(LocalDate.now());
         creditEntry.setPaymentAlertId(payment.getId());
+
         creditEntry.setAcademicYear(request.getAcademicYear());
         creditEntry.setSemester(request.getSemester());
 
@@ -223,12 +235,33 @@ public class FinancialService {
         return ledgerRepository.findByStudentAndFilter(student.getId(), years, semesters);
     }
 
-    public BigDecimal getStudentBalance(String studentId) {
-        Student student = studentRepository.findByStudentId(studentId).orElseThrow(() -> new RuntimeException("Student not found"));
-        return ledgerRepository.getBalanceForStudent(student.getId());
+    public CurrencyBalanceDto getStudentBalance(String studentId) {
+        Student student = studentRepository.findByStudentId(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        List<Map<String, Object>> results = ledgerRepository.getBalancesByCurrencyForStudent(student.getId());
+
+        // Convert the list of maps into a single map of Currency -> Balance
+        Map<String, BigDecimal> balances = results.stream()
+                .collect(Collectors.toMap(
+                        result -> result.get("currency").toString(),
+                        result -> (BigDecimal) result.get("balance")
+                ));
+
+        return new CurrencyBalanceDto(balances);
     }
 
     public List<StudentBalanceDto> getAllStudentBalances() {
-        return studentRepository.findAllWithBalance();
+        // 1. Get the basic info for all students
+        List<StudentBalanceDto> studentDtos = studentRepository.findAllStudentInfoForBalanceDto();
+
+        // 2. For each student, fetch their multi-currency balance and attach it
+        studentDtos.forEach(dto -> {
+            CurrencyBalanceDto currencyBalance = this.getStudentBalance(dto.getStudentId());
+            dto.setBalances(currencyBalance.getBalances());
+        });
+
+        return studentDtos;
+
     }
 }

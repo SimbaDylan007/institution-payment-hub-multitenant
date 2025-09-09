@@ -2,6 +2,7 @@ package com.payments.model;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Entity
 @Table(name = "notifications")
@@ -21,10 +22,12 @@ public class Notification {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(nullable = false)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    private LocalDateTime readAt; // Null until the user reads it
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime readAt;
 
     private String type; // e.g., ANNOUNCEMENT, GRADE_UPDATE, EVENT_REMINDER, DIRECT_MESSAGE
     private String relatedEntityId; // Optional: e.g., the ID of the grade or event

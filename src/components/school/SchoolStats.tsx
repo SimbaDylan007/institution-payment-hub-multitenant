@@ -1,125 +1,56 @@
+// src/components/school/SchoolStats.tsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, GraduationCap, UserCheck, DollarSign, BookOpen, Calendar } from "lucide-react";
-import { useState, useEffect } from "react";
-import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
+import {
+  Users,
+  GraduationCap,
+  UserCheck,
+  DollarSign,
+  BookOpen,
+  Calendar,
+  ClipboardList,
+  type LucideIcon // ✅ Correct way to import the icon type
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface StatsData {
-  totalStudents: number;
-  teachingStaff: number;
-  totalClasses: number;
-  feeCollection: number;
-  libraryBooks: number;
-  eventsThisMonth: number;
+// ✅ Use the correct type for React icon components
+const iconMap: { [key: string]: LucideIcon } = {
+  Users,
+  GraduationCap,
+  UserCheck,
+  DollarSign,
+  BookOpen,
+  Calendar,
+  ClipboardList
+};
+
+// Interface for a single stat card's data from the API
+interface StatCardData {
+  title: string;
+  value: string;
+  change: string;
+  icon: string; // The name of the icon (e.g., "Users")
+  color: string;
 }
 
-export default function SchoolStats() {
-  const [stats, setStats] = useState<StatsData>({
-    totalStudents: 0,
-    teachingStaff: 0,
-    totalClasses: 0,
-    feeCollection: 0,
-    libraryBooks: 0,
-    eventsThisMonth: 0
-  });
-  const [loading, setLoading] = useState(true);
+// Interface for the component's props
+interface SchoolStatsProps {
+  stats: StatCardData[];
+  loading: boolean;
+}
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  // 2. Refactor the fetchStats function
-  const fetchStats = async () => {
-    try {
-      // Replace all instances of `fetch` with `apiFetch`.
-      // The .then() logic remains the same because apiFetch also returns a Promise<Response>.
-      // This ensures that even if one API call fails, the others can still succeed.
-      const [studentsRes, staffRes, classesRes, feesRes, booksRes, eventsRes] = await Promise.all([
-        apiFetch('http://localhost:8080/api/students/count').then(res => res.ok ? res.json() : { count: 0 }),
-        apiFetch('http://localhost:8080/api/staff/count').then(res => res.ok ? res.json() : { count: 0 }),
-        apiFetch('http://localhost:8080/api/timetables/classes/count').then(res => res.ok ? res.json() : { count: 0 }),
-        apiFetch('http://localhost:8080/api/fees/total-collected').then(res => res.ok ? res.json() : { amount: 0 }),
-        apiFetch('http://localhost:8080/api/library/books/count').then(res => res.ok ? res.json() : { count: 0 }),
-        apiFetch('http://localhost:8080/api/events/current-month/count').then(res => res.ok ? res.json() : { count: 0 })
-      ]);
-
-      setStats({
-        totalStudents: studentsRes.count || 0,
-        teachingStaff: staffRes.count || 0,
-        totalClasses: classesRes.count || 0,
-        feeCollection: feesRes.amount || 0,
-        libraryBooks: booksRes.count || 0,
-        eventsThisMonth: eventsRes.count || 0
-      });
-    } catch (error) {
-      // apiFetch will show a toast for network/auth errors.
-      // We still log the error and allow the component to render with default stats.
-      console.error('Error fetching stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // The rest of the component (JSX, config) remains unchanged.
-  const statsConfig = [
-    {
-      title: "Total Students",
-      value: stats.totalStudents.toLocaleString(),
-      change: "+12%", // Note: This is static data
-      icon: Users,
-      color: "text-blue-400",
-      bgColor: "bg-blue-500/20"
-    },
-    {
-      title: "Teaching Staff",
-      value: stats.teachingStaff.toString(),
-      change: "+3%",
-      icon: UserCheck,
-      color: "text-green-400",
-      bgColor: "bg-green-500/20"
-    },
-    {
-      title: "Classes",
-      value: stats.totalClasses.toString(),
-      change: "0%",
-      icon: GraduationCap,
-      color: "text-purple-400",
-      bgColor: "bg-purple-500/20"
-    },
-    {
-      title: "Fee Collection",
-      value: `$${stats.feeCollection.toLocaleString()}`,
-      change: "+18%",
-      icon: DollarSign,
-      color: "text-emerald-400",
-      bgColor: "bg-emerald-500/20"
-    },
-    {
-      title: "Library Books",
-      value: stats.libraryBooks.toLocaleString(),
-      change: "+45",
-      icon: BookOpen,
-      color: "text-amber-400",
-      bgColor: "bg-amber-500/20"
-    },
-    {
-      title: "Events This Month",
-      value: stats.eventsThisMonth.toString(),
-      change: "+2",
-      icon: Calendar,
-      color: "text-rose-400",
-      bgColor: "bg-rose-500/20"
-    }
-  ];
-
+export default function SchoolStats({ stats, loading }: SchoolStatsProps) {
   if (loading) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           {Array.from({ length: 6 }).map((_, index) => (
-              <Card key={index} className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700 animate-pulse">
+              <Card
+                  key={index}
+                  className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700 animate-pulse"
+              >
                 <CardContent className="p-6">
-                  <div className="h-4 bg-purple-700 rounded mb-2"></div>
-                  <div className="h-8 bg-purple-700 rounded mb-2"></div>
-                  <div className="h-3 bg-purple-700 rounded"></div>
+                  <div className="h-4 w-2/3 bg-gray-700 rounded mb-2"></div>
+                  <div className="h-8 w-1/2 bg-gray-600 rounded mb-2"></div>
+                  <div className="h-3 w-1/3 bg-gray-700 rounded"></div>
                 </CardContent>
               </Card>
           ))}
@@ -129,25 +60,26 @@ export default function SchoolStats() {
 
   return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        {statsConfig.map((stat) => {
-          const Icon = stat.icon;
+        {stats.map((stat) => {
+          const IconComponent = iconMap[stat.icon] || Users; // Fallback to Users
           return (
-              <Card key={stat.title} className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700 hover:border-purple-500 transition-colors">
+              <Card
+                  key={stat.title}
+                  className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-gray-700 hover:border-purple-500 transition-colors"
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-300">
                     {stat.title}
                   </CardTitle>
-                  <div className={`p-2 rounded-full ${stat.bgColor}`}>
-                    <Icon className={`h-4 w-4 ${stat.color}`} />
+                  <div className={`p-2 rounded-full bg-gray-800/50`}>
+                    <IconComponent className={`h-4 w-4 ${stat.color}`} />
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-white mb-1">
                     {stat.value}
                   </div>
-                  <p className="text-xs text-green-400">
-                    {stat.change} from last month
-                  </p>
+                  {stat.change && <p className="text-xs text-green-400">{stat.change}</p>}
                 </CardContent>
               </Card>
           );
