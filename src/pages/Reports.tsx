@@ -95,7 +95,12 @@ export default function Reports() {
             <Card className="lg:col-span-1 bg-gray-900/50 border-gray-700">
               <CardHeader><CardTitle className="flex items-center gap-2"><FileText/>Report Configuration</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <div><Label>Report Type</Label><Select value={reportType} onValueChange={setReportType}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="STUDENT_REPORT_CARD">Student Report Card</SelectItem><SelectItem value="FINANCIAL_SUMMARY">Student Financial Summary</SelectItem></SelectContent></Select></div>
+                <div><Label>Report Type</Label><Select value={reportType} disabled>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="STUDENT_REPORT_CARD">Student Report Card</SelectItem>
+                  </SelectContent>
+                </Select></div>
 
                 {/* --- THIS IS THE CORRECTED DYNAMIC SECTION --- */}
                 <div>
@@ -144,8 +149,8 @@ export default function Reports() {
                 {!loading && !generatedData && <div className="text-center p-8 text-gray-400">Configure and generate a report to see a preview here.</div>}
                 {generatedData && generatedData.length === 0 && <div className="text-center p-8 text-gray-400">No data found for the selected criteria.</div>}
 
-                {generatedData && generatedData.length > 0 && reportType === 'STUDENT_REPORT_CARD' && <ReportCardPreview data={generatedData as ReportCard[]} />}
-                {generatedData && generatedData.length > 0 && reportType === 'FINANCIAL_SUMMARY' && <FinancialSummaryPreview data={generatedData as FinancialSummary[]} />}
+                {/* The logic now only needs to check for STUDENT_REPORT_CARD */}
+                {generatedData && generatedData.length > 0 && <ReportCardPreview data={generatedData} />}
               </CardContent>
             </Card>
           </div>
