@@ -61,4 +61,19 @@ public class MainReportController {
             return ResponseEntity.badRequest().body(null);
         }
     }
+
+    // --- NEW ENDPOINT FOR PREVIEWING DATA ---
+    @PostMapping("/preview")
+    public ResponseEntity<?> previewReport(@RequestBody Map<String, Object> request) {
+        try {
+            String reportType = (String) request.get("reportType");
+            Map<String, String> filters = (Map<String, String>) request.get("filters");
+
+            Map<String, Object> previewData = mainReportService.generatePreview(reportType, filters);
+            return ResponseEntity.ok(previewData);
+        } catch (Exception e) {
+            // Provide a meaningful error response
+            return ResponseEntity.badRequest().body(Map.of("error", "Failed to generate preview: " + e.getMessage()));
+        }
+    }
 }

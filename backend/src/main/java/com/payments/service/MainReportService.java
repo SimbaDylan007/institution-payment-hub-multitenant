@@ -1,3 +1,5 @@
+// src/main/java/com/payments/service/MainReportService.java
+
 package com.payments.service;
 
 import com.itextpdf.html2pdf.HtmlConverter;
@@ -8,15 +10,21 @@ import com.payments.repository.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
 
 import java.io.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.HashMap;
+
 
 @Service
 public class MainReportService {
@@ -87,68 +95,18 @@ public class MainReportService {
         }
     }
 
-    private ByteArrayInputStream generateAllGradesReport(String format, Map<String, String> filters) throws IOException {
-        List<Grade> grades = gradeRepository.findAll();
-        String[] headers = {"Grade ID", "Student ID", "Student Name", "Subject Code", "Subject Name", "Academic Year", "Semester", "GPA/Score", "Letter Grade", "Assessment Type"};
-
-        if ("XLSX".equalsIgnoreCase(format)) {
-            return createGradesExcel(grades, headers);
-        } else if ("CSV".equalsIgnoreCase(format)) {
-            return createGradesCsv(grades, headers);
+    // --- HELPER METHOD TO LOAD AND ENCODE IMAGES ---
+    private String getImageAsBase64(String imagePath) throws IOException {
+        ClassPathResource resource = new ClassPathResource(imagePath);
+        if (!resource.exists()) {
+            System.err.println("Warning: Image not found at path: " + imagePath);
+            return "";
         }
-        throw new IllegalArgumentException("Unsupported format for grades report: " + format);
+        byte[] imageBytes = StreamUtils.copyToByteArray(resource.getInputStream());
+        return Base64.getEncoder().encodeToString(imageBytes);
     }
 
-    private ByteArrayInputStream createGradesExcel(List<Grade> grades, String[] headers) throws IOException {
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("All Grades");
-            Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < headers.length; i++) headerRow.createCell(i).setCellValue(headers[i]);
-
-            int rowNum = 1;
-            for (Grade grade : grades) {
-                Row row = sheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(grade.getId());
-                row.createCell(1).setCellValue(grade.getStudent() != null ? grade.getStudent().getStudentId() : "N/A");
-                row.createCell(2).setCellValue(grade.getStudent() != null ? grade.getStudent().getFirstName() + " " + grade.getStudent().getLastName() : "N/A");
-                row.createCell(3).setCellValue(grade.getSubject() != null ? grade.getSubject().getCode() : "N/A");
-                row.createCell(4).setCellValue(grade.getSubject() != null ? grade.getSubject().getName() : "N/A");
-                row.createCell(5).setCellValue(grade.getAcademicYear());
-                row.createCell(6).setCellValue(grade.getSemester());
-                // --- FIX APPLIED HERE: changed .getScore() to .getGpa() ---
-                row.createCell(7).setCellValue(grade.getGpa() != null ? grade.getGpa().doubleValue() : 0.0);
-                row.createCell(8).setCellValue(grade.getLetterGrade());
-                row.createCell(9).setCellValue(grade.getAssessmentType());
-            }
-            workbook.write(out);
-            return new ByteArrayInputStream(out.toByteArray());
-        }
-    }
-
-    private ByteArrayInputStream createGradesCsv(List<Grade> grades, String[] headers) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (CSVWriter writer = new CSVWriter(new OutputStreamWriter(out))) {
-            writer.writeNext(headers);
-            for (Grade grade : grades) {
-                writer.writeNext(new String[]{
-                        String.valueOf(grade.getId()),
-                        grade.getStudent() != null ? grade.getStudent().getStudentId() : "N/A",
-                        grade.getStudent() != null ? grade.getStudent().getFirstName() + " " + grade.getStudent().getLastName() : "N/A",
-                        grade.getSubject() != null ? grade.getSubject().getCode() : "N/A",
-                        grade.getSubject() != null ? grade.getSubject().getName() : "N/A",
-                        grade.getAcademicYear(),
-                        grade.getSemester(),
-                        // --- FIX APPLIED HERE: changed .getScore() to .getGpa() ---
-                        grade.getGpa() != null ? grade.getGpa().toString() : "",
-                        grade.getLetterGrade(),
-                        grade.getAssessmentType()
-                });
-            }
-        }
-        return new ByteArrayInputStream(out.toByteArray());
-    }
-
-
+    // --- REPORT GENERATION LOGIC ---
 
     private ByteArrayInputStream generateFinancialStatement(String format, Map<String, String> filters) throws IOException {
         String studentId = filters.get("studentId");
@@ -207,49 +165,15 @@ public class MainReportService {
         throw new IllegalArgumentException("Unsupported format for financial summary: " + format);
     }
 
-    private ByteArrayInputStream createFinancialSummaryExcel(List<FinancialLedger> financials, String title, String[] headers) throws IOException {
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet(title);
-            Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < headers.length; i++) headerRow.createCell(i).setCellValue(headers[i]);
-
-            int rowNum = 1;
-            for (FinancialLedger entry : financials) {
-                Row row = sheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(entry.getTransactionDate().toString());
-                row.createCell(1).setCellValue(entry.getStudent().getStudentId());
-                row.createCell(2).setCellValue(entry.getStudent().getFirstName() + " " + entry.getStudent().getLastName());
-                row.createCell(3).setCellValue(entry.getStudent().getCurrentGrade());
-                row.createCell(4).setCellValue(entry.getDescription());
-                row.createCell(5).setCellValue(entry.getFeeType() != null ? entry.getFeeType().getName() : "N/A");
-                row.createCell(6).setCellValue(entry.getCurrency().toString());
-                row.createCell(7).setCellValue(entry.getAmount().doubleValue());
-            }
-            workbook.write(out);
-            return new ByteArrayInputStream(out.toByteArray());
-        }
+    private ByteArrayInputStream generateAllGradesReport(String format, Map<String, String> filters) throws IOException {
+        List<Grade> grades = gradeRepository.findAll();
+        String[] headers = {"Grade ID", "Student ID", "Student Name", "Subject Code", "Subject Name", "Academic Year", "Semester", "GPA/Score", "Letter Grade", "Assessment Type"};
+        if ("XLSX".equalsIgnoreCase(format)) return createGradesExcel(grades, headers);
+        if ("CSV".equalsIgnoreCase(format)) return createGradesCsv(grades, headers);
+        throw new IllegalArgumentException("Unsupported format for grades report: " + format);
     }
 
-    private ByteArrayInputStream createFinancialSummaryCsv(List<FinancialLedger> financials, String[] headers) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (CSVWriter writer = new CSVWriter(new OutputStreamWriter(out))) {
-            writer.writeNext(headers);
-            for (FinancialLedger entry : financials) {
-                writer.writeNext(new String[]{
-                        entry.getTransactionDate().toString(),
-                        entry.getStudent().getStudentId(),
-                        entry.getStudent().getFirstName() + " " + entry.getStudent().getLastName(),
-                        entry.getStudent().getCurrentGrade(),
-                        entry.getDescription(),
-                        entry.getFeeType() != null ? entry.getFeeType().getName() : "N/A",
-                        entry.getCurrency().toString(),
-                        entry.getAmount().toString()
-                });
-            }
-        }
-        return new ByteArrayInputStream(out.toByteArray());
-    }
-
+    // --- GENERIC LIST REPORTING ---
     private <T> ByteArrayInputStream generateListReport(List<T> data, String title, String format, Class<T> clazz) throws IOException {
         String[] headers = getHeadersForClass(clazz);
         if ("XLSX".equalsIgnoreCase(format)) return createExcelForList(data, title, headers, clazz);
@@ -257,19 +181,61 @@ public class MainReportService {
         throw new IllegalArgumentException("Unsupported format for list report: " + format);
     }
 
+    // --- FORMAT-SPECIFIC HELPERS (PDF, EXCEL, CSV) ---
+
+    private ByteArrayInputStream createStudentStatementPdf(Student student, List<FinancialLedger> ledger, String currency, String year, String semester) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        String logoBase64 = "data:image/png;base64," + getImageAsBase64("static/images/logo.png");
+        String estampBase64 = "data:image/png;base64," + getImageAsBase64("static/images/estamp.png");
+
+        StringBuilder html = new StringBuilder();
+        html.append("<html><head><style>")
+                .append("body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; }")
+                .append("h1 { font-size: 18pt; color: #2c3e50; margin: 0; } h3 { font-size: 14pt; color: #34495e; margin-bottom: 20px; }")
+                .append("table { width: 100%; border-collapse: collapse; margin-top: 20px; }")
+                .append("th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }")
+                .append("th { background-color: #f2f2f2; }")
+                .append(".header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }")
+                .append(".header img.logo { max-width: 120px; max-height: 120px; margin-bottom: 10px; }")
+                .append(".student-info { border: 1px solid #ccc; padding: 10px; margin-top: 20px; border-radius: 5px; background-color: #f9f9f9; }")
+                .append(".summary { text-align: right; margin-top: 20px; font-size: 12pt; font-weight: bold; }")
+                .append("td.currency { text-align: right; }")
+                .append(".watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); z-index: -1000; font-size: 60pt; color: rgba(0, 0, 0, 0.07); font-weight: bold; text-align: center; pointer-events: none; }")
+                .append(".footer { position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 8pt; color: #888; border-top: 1px solid #ccc; padding-top: 5px; }")
+                .append(".estamp-container { position: absolute; bottom: 80px; right: 20px; }")
+                .append(".estamp-container img { max-width: 100px; max-height: 100px; opacity: 0.9; }")
+                .append("</style></head><body>")
+                .append("<div class='watermark'>Pachedu Junior School</div>")
+                .append("<div class='header'>")
+                .append("<img src='").append(logoBase64).append("' class='logo' alt='School Logo' />")
+                .append("<h1>Pachedu Junior School</h1>")
+                .append("<h3>Student Financial Statement</h3>")
+                .append("<p>Date Printed: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))).append("</p>")
+                .append("</div>")
+                .append(buildStudentInfoHtml(student, year, semester, currency))
+                .append(buildLedgerTableHtml(ledger))
+                .append(buildSummaryHtml(ledger, currency))
+                .append("<div class='estamp-container'><img src='").append(estampBase64).append("' alt='Official Stamp' /></div>")
+                .append("<div class='footer'>")
+                .append("Pachedu Junior School | 123 Education Lane, Harare, Zimbabwe<br/>")
+                .append("Phone: +263 77 777 7777 | Email: accounts@pachedu.ac.zw")
+                .append("</div>")
+                .append("</body></html>");
+
+        HtmlConverter.convertToPdf(html.toString(), new PdfWriter(outputStream));
+        return new ByteArrayInputStream(outputStream.toByteArray());
+    }
+
     private <T> ByteArrayInputStream createExcelForList(List<T> data, String sheetName, String[] headers, Class<T> clazz) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet(sheetName);
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) headerRow.createCell(i).setCellValue(headers[i]);
-
             int rowNum = 1;
             for (T item : data) {
                 Row row = sheet.createRow(rowNum++);
                 String[] values = getValuesForClass(item, clazz);
-                for (int i = 0; i < values.length; i++) {
-                    row.createCell(i).setCellValue(values[i]);
-                }
+                for (int i = 0; i < values.length; i++) row.createCell(i).setCellValue(values[i]);
             }
             workbook.write(out);
             return new ByteArrayInputStream(out.toByteArray());
@@ -280,13 +246,14 @@ public class MainReportService {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (CSVWriter writer = new CSVWriter(new OutputStreamWriter(out))) {
             writer.writeNext(headers);
-            for (T item : data) {
-                writer.writeNext(getValuesForClass(item, clazz));
-            }
+            for (T item : data) writer.writeNext(getValuesForClass(item, clazz));
         }
         return new ByteArrayInputStream(out.toByteArray());
     }
 
+    // ... other specific excel/csv helpers ...
+
+    // --- DATA MAPPING HELPERS (Headers & Values) ---
     private String[] getHeadersForClass(Class<?> clazz) {
         if (clazz == Student.class) return new String[]{"Student ID", "First Name", "Last Name", "Email", "Grade", "Section", "Enrollment Status"};
         if (clazz == Staff.class) return new String[]{"Employee ID", "First Name", "Last Name", "Email", "Department", "Position", "Hire Date", "Status"};
@@ -323,26 +290,31 @@ public class MainReportService {
         return new String[]{};
     }
 
-    private ByteArrayInputStream createStudentStatementPdf(Student student, List<FinancialLedger> ledger, String currency, String year, String semester) throws IOException {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        StringBuilder html = new StringBuilder("<html><head><style>body{font-family:Helvetica,Arial,sans-serif;font-size:10pt}h1{font-size:18pt}h3{font-size:14pt}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background-color:#e8e8e8}.header{text-align:center;margin-bottom:30px}.student-info{border:1px solid #ccc;padding:10px;margin-top:20px}.summary{text-align:right;margin-top:20px;font-size:12pt;font-weight:bold}td.currency{text-align:right}</style></head><body>");
-        html.append("<div class='header'><h1>Pachedu Junior School</h1><h3>Student Financial Statement</h3><p>Date Printed: ").append(LocalDate.now().format(dateFormatter)).append("</p></div>");
-        html.append("<div class='student-info'><b>Student Name:</b> ").append(student.getFirstName()).append(" ").append(student.getLastName()).append("<br/><b>Student ID:</b> ").append(student.getStudentId()).append("<br/><b>Grade:</b> ").append(student.getCurrentGrade()).append("<br/><b>Statement Period:</b> Year ").append(year).append(", ").append(semester).append("<br/><b>Currency:</b> ").append(currency).append("</div>");
-        html.append("<table><thead><tr><th>Date</th><th>Description</th><th style='text-align:right;'>Charge (Debit)</th><th style='text-align:right;'>Payment (Credit)</th><th style='text-align:right;'>Balance</th></tr></thead><tbody>");
+    // --- PDF TEMPLATE HELPERS ---
+    private String buildStudentInfoHtml(Student student, String year, String semester, String currency) {
+        return String.format("<div class='student-info'>" + "<b>Student Name:</b> %s %s<br/>" + "<b>Student ID:</b> %s<br/>" + "<b>Grade:</b> %s<br/>" + "<b>Statement for:</b> Year %s, %s<br/>" + "<b>Currency:</b> %s" + "</div>", student.getFirstName(), student.getLastName(), student.getStudentId(), student.getCurrentGrade(), year, semester, currency);
+    }
 
+    private String buildLedgerTableHtml(List<FinancialLedger> ledger) {
+        StringBuilder tableHtml = new StringBuilder("<table><thead><tr><th>Date</th><th>Description</th><th style='text-align:right;'>Charge (Debit)</th><th style='text-align:right;'>Payment (Credit)</th><th style='text-align:right;'>Balance</th></tr></thead><tbody>");
         BigDecimal runningBalance = BigDecimal.ZERO;
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         for (FinancialLedger entry : ledger) {
             BigDecimal debit = (entry.getTransactionType() == TransactionType.DEBIT) ? entry.getAmount() : BigDecimal.ZERO;
             BigDecimal credit = (entry.getTransactionType() == TransactionType.CREDIT) ? entry.getAmount() : BigDecimal.ZERO;
             runningBalance = runningBalance.add(debit).subtract(credit);
-            html.append("<tr><td>").append(entry.getTransactionDate().format(dateFormatter)).append("</td><td>").append(entry.getDescription()).append("</td><td class='currency'>").append(debit.compareTo(BigDecimal.ZERO) > 0 ? String.format("%.2f", debit) : "-").append("</td><td class='currency'>").append(credit.compareTo(BigDecimal.ZERO) > 0 ? String.format("%.2f", credit) : "-").append("</td><td class='currency'>").append(String.format("%.2f", runningBalance)).append("</td></tr>");
+            tableHtml.append(String.format("<tr><td>%s</td><td>%s</td><td class='currency'>%s</td><td class='currency'>%s</td><td class='currency'>%.2f</td></tr>", entry.getTransactionDate().format(dateFormatter), entry.getDescription(), debit.compareTo(BigDecimal.ZERO) > 0 ? String.format("%.2f", debit) : "-", credit.compareTo(BigDecimal.ZERO) > 0 ? String.format("%.2f", credit) : "-", runningBalance));
         }
-        html.append("</tbody></table><div class='summary'>Closing Balance: ").append(currency).append(" ").append(String.format("%.2f", runningBalance)).append("</div></body></html>");
-        HtmlConverter.convertToPdf(html.toString(), new PdfWriter(outputStream));
-        return new ByteArrayInputStream(outputStream.toByteArray());
+        tableHtml.append("</tbody></table>");
+        return tableHtml.toString();
     }
 
+    private String buildSummaryHtml(List<FinancialLedger> ledger, String currency) {
+        BigDecimal finalBalance = ledger.stream().map(e -> e.getTransactionType() == TransactionType.DEBIT ? e.getAmount() : e.getAmount().negate()).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return String.format("<div class='summary'>Closing Balance: %s %.2f</div>", currency, finalBalance);
+    }
+
+    // ... Other helpers like createGradesExcel, createStudentStatementCsv, etc.
     private ByteArrayInputStream createStudentStatementExcel(List<FinancialLedger> ledger) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Financial Statement");
@@ -387,4 +359,218 @@ public class MainReportService {
         }
         return new ByteArrayInputStream(out.toByteArray());
     }
+
+    private ByteArrayInputStream createFinancialSummaryExcel(List<FinancialLedger> financials, String title, String[] headers) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet(title);
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) headerRow.createCell(i).setCellValue(headers[i]);
+
+            int rowNum = 1;
+            for (FinancialLedger entry : financials) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(entry.getTransactionDate().toString());
+                row.createCell(1).setCellValue(entry.getStudent().getStudentId());
+                row.createCell(2).setCellValue(entry.getStudent().getFirstName() + " " + entry.getStudent().getLastName());
+                row.createCell(3).setCellValue(entry.getStudent().getCurrentGrade());
+                row.createCell(4).setCellValue(entry.getDescription());
+                row.createCell(5).setCellValue(entry.getFeeType() != null ? entry.getFeeType().getName() : "N/A");
+                row.createCell(6).setCellValue(entry.getCurrency().toString());
+                row.createCell(7).setCellValue(entry.getAmount().doubleValue());
+            }
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+        }
+    }
+
+    private ByteArrayInputStream createFinancialSummaryCsv(List<FinancialLedger> financials, String[] headers) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (CSVWriter writer = new CSVWriter(new OutputStreamWriter(out))) {
+            writer.writeNext(headers);
+            for (FinancialLedger entry : financials) {
+                writer.writeNext(new String[]{
+                        entry.getTransactionDate().toString(),
+                        entry.getStudent().getStudentId(),
+                        entry.getStudent().getFirstName() + " " + entry.getStudent().getLastName(),
+                        entry.getStudent().getCurrentGrade(),
+                        entry.getDescription(),
+                        entry.getFeeType() != null ? entry.getFeeType().getName() : "N/A",
+                        entry.getCurrency().toString(),
+                        entry.getAmount().toString()
+                });
+            }
+        }
+        return new ByteArrayInputStream(out.toByteArray());
+    }
+
+    private ByteArrayInputStream createGradesExcel(List<Grade> grades, String[] headers) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("All Grades");
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) headerRow.createCell(i).setCellValue(headers[i]);
+            int rowNum = 1;
+            for (Grade grade : grades) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(grade.getId());
+                row.createCell(1).setCellValue(grade.getStudent() != null ? grade.getStudent().getStudentId() : "N/A");
+                row.createCell(2).setCellValue(grade.getStudent() != null ? grade.getStudent().getFirstName() + " " + grade.getStudent().getLastName() : "N/A");
+                row.createCell(3).setCellValue(grade.getSubject() != null ? grade.getSubject().getCode() : "N/A");
+                row.createCell(4).setCellValue(grade.getSubject() != null ? grade.getSubject().getName() : "N/A");
+                row.createCell(5).setCellValue(grade.getAcademicYear());
+                row.createCell(6).setCellValue(grade.getSemester());
+                row.createCell(7).setCellValue(grade.getGpa() != null ? grade.getGpa().doubleValue() : 0.0);
+                row.createCell(8).setCellValue(grade.getLetterGrade());
+                row.createCell(9).setCellValue(grade.getAssessmentType());
+            }
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+        }
+    }
+
+    private ByteArrayInputStream createGradesCsv(List<Grade> grades, String[] headers) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (CSVWriter writer = new CSVWriter(new OutputStreamWriter(out))) {
+            writer.writeNext(headers);
+            for (Grade grade : grades) {
+                writer.writeNext(new String[]{
+                        String.valueOf(grade.getId()),
+                        grade.getStudent() != null ? grade.getStudent().getStudentId() : "N/A",
+                        grade.getStudent() != null ? grade.getStudent().getFirstName() + " " + grade.getStudent().getLastName() : "N/A",
+                        grade.getSubject() != null ? grade.getSubject().getCode() : "N/A",
+                        grade.getSubject() != null ? grade.getSubject().getName() : "N/A",
+                        grade.getAcademicYear(),
+                        grade.getSemester(),
+                        grade.getGpa() != null ? grade.getGpa().toString() : "",
+                        grade.getLetterGrade(),
+                        grade.getAssessmentType()
+                });
+            }
+        }
+        return new ByteArrayInputStream(out.toByteArray());
+    }
+
+    // --- NEW PUBLIC METHOD FOR PREVIEW GENERATION ---
+    public Map<String, Object> generatePreview(String reportType, Map<String, String> filters) {
+        List<?> data;
+        String[] headers;
+        Class<?> clazz;
+
+        switch (reportType) {
+            case "FINANCIAL_STATEMENT":
+                Student student = studentRepository.findByStudentId(filters.get("studentId")).orElseThrow(() -> new RuntimeException("Student not found"));
+                data = ledgerRepository.findFilteredLedgerForStudent(student.getId(), filters.get("academicYear"), filters.get("semester"), Currency.valueOf(filters.get("currency")));
+                headers = new String[]{"Date", "Description", "Charge", "Payment", "Currency"};
+                clazz = FinancialLedger.class;
+                break;
+            case "FINANCIAL_SUMMARY_PAYMENTS":
+                data = findFinancialsWithFilters(TransactionType.CREDIT, filters);
+                headers = new String[]{"Date", "Student Name", "Grade", "Description", "Amount", "Currency"};
+                clazz = FinancialLedger.class;
+                break;
+            case "FINANCIAL_SUMMARY_CHARGES":
+                data = findFinancialsWithFilters(TransactionType.DEBIT, filters);
+                headers = new String[]{"Date", "Student Name", "Grade", "Description", "Amount", "Currency"};
+                clazz = FinancialLedger.class;
+                break;
+            case "ALL_STUDENTS":
+                data = studentRepository.findWithFilters(filters.getOrDefault("grade", "All"), filters.getOrDefault("section", "All"));
+                headers = getHeadersForClass(Student.class);
+                clazz = Student.class;
+                break;
+            case "ALL_STAFF":
+                data = staffRepository.findWithFilters(filters.getOrDefault("department", "All"), filters.getOrDefault("status", "All"));
+                headers = getHeadersForClass(Staff.class);
+                clazz = Staff.class;
+                break;
+            case "ALL_GRADES":
+                data = gradeRepository.findAll();
+                headers = getHeadersForClass(Grade.class);
+                clazz = Grade.class;
+                break;
+            default: // Handles all simple list reports
+                data = getFullDataForReport(reportType);
+                clazz = getClassForReportType(reportType);
+                headers = getHeadersForClass(clazz);
+        }
+
+        List<?> previewData = data.stream().limit(10).collect(Collectors.toList());
+
+        // The cast `(Class<Object>)` is removed from here as it's no longer needed
+        List<List<String>> rows = previewData.stream()
+                .map(item -> Arrays.asList(getValuesForPreview(item, item.getClass())))
+                .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("headers", headers);
+        result.put("rows", rows);
+        return result;
+    }
+
+    // Helper to reuse filter logic for financial summaries
+    private List<FinancialLedger> findFinancialsWithFilters(TransactionType type, Map<String, String> filters) {
+        String grade = filters.get("grade");
+        Long feeTypeId = filters.get("feeTypeId") != null && !filters.get("feeTypeId").isEmpty() ? Long.parseLong(filters.get("feeTypeId")) : null;
+        LocalDate startDate = filters.get("startDate") != null && !filters.get("startDate").isEmpty() ? LocalDate.parse(filters.get("startDate")) : null;
+        LocalDate endDate = filters.get("endDate") != null && !filters.get("endDate").isEmpty() ? LocalDate.parse(filters.get("endDate")) : null;
+        return ledgerRepository.findFinancialsWithFilters(type, grade, feeTypeId, startDate, endDate);
+    }
+
+    // Helper to get raw data for simple reports
+    private List<?> getFullDataForReport(String reportType) {
+        switch(reportType) {
+            case "ALL_STAFF": return staffRepository.findAll();
+            case "ALL_BOOKS": return bookRepository.findAll();
+            case "PAYMENT_ALERTS": return paymentRepository.findAll();
+            case "ALL_FEE_TYPES": return feeTypeRepository.findAll();
+            case "ALL_ENROLLMENTS": return enrollmentRepository.findAll();
+            case "ALL_SUBJECTS": return subjectRepository.findAll();
+            case "ALL_TIMETABLES": return timetableRepository.findAll();
+            case "ALL_STAFF_ATTENDANCE": return staffAttendanceRepository.findAll();
+            case "ALL_LEAVE_REQUESTS": return leaveRequestRepository.findAll();
+            case "ALL_BOOK_TRANSACTIONS": return bookTransactionRepository.findAll();
+            case "ALL_USERS": return userRepository.findAll();
+            case "ALL_AUDIT_LOGS": return auditLogRepository.findAll();
+            case "ALL_FACILITIES": return facilityRepository.findAll();
+            default: return List.of();
+        }
+    }
+
+    // Helper to get Class type from reportType string
+    private String[] getValuesForPreview(Object item, Class<?> clazz) {
+        // The `==` comparison is now valid because of the flexible `Class<?>` type
+        if (clazz == FinancialLedger.class) {
+            FinancialLedger fl = (FinancialLedger) item;
+            String charge = fl.getTransactionType() == TransactionType.DEBIT ? fl.getAmount().toString() : "";
+            String payment = fl.getTransactionType() == TransactionType.CREDIT ? fl.getAmount().toString() : "";
+            return new String[]{
+                    fl.getTransactionDate().toString(),
+                    fl.getDescription(),
+                    charge,
+                    payment,
+                    fl.getCurrency().toString()
+            };
+        }
+        // Fallback to the main value getter for all other types
+        return getValuesForClass(item, (Class<Object>) clazz); // Cast is safe here
+    }
+
+    private Class<?> getClassForReportType(String reportType) {
+        switch(reportType) {
+            case "ALL_STAFF": return Staff.class;
+            case "ALL_BOOKS": return Book.class;
+            case "PAYMENT_ALERTS": return PaymentAlert.class;
+            case "ALL_FEE_TYPES": return FeeType.class;
+            case "ALL_ENROLLMENTS": return Enrollment.class;
+            case "ALL_SUBJECTS": return Subject.class;
+            case "ALL_TIMETABLES": return Timetable.class;
+            case "ALL_STAFF_ATTENDANCE": return StaffAttendance.class;
+            case "ALL_LEAVE_REQUESTS": return LeaveRequest.class;
+            case "ALL_BOOK_TRANSACTIONS": return BookTransaction.class;
+            case "ALL_USERS": return User.class;
+            case "ALL_AUDIT_LOGS": return AuditLog.class;
+            case "ALL_FACILITIES": return Facility.class;
+            default: return Object.class;
+        }
+    }
+
 }

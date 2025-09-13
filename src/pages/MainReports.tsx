@@ -10,7 +10,10 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Download, LayoutDashboard, ChevronsUpDown, Check } from "lucide-react";
+// --- THIS IS THE MISSING IMPORT LINE ---
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Download, LayoutDashboard, ChevronsUpDown, Check, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/utils/apiClient";
 import { academicYears, currentAcademicYear, semesters, currentSemester } from "@/config/academicConfig";
@@ -74,13 +77,16 @@ export default function MainReports() {
     const [filterSection, setFilterSection] = useState('');
     const [filterDepartment, setFilterDepartment] = useState('All');
     const [filterStaffStatus, setFilterStaffStatus] = useState('All');
-    // --- FIX 2: Updated initial state ---
     const [filterFeeTypeId, setFilterFeeTypeId] = useState('all');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [openStudentSearch, setOpenStudentSearch] = useState(false);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // --- NEW STATE FOR PREVIEW ---
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [previewData, setPreviewData] = useState<{ headers: string[], rows: string[][] }>({ headers: [], rows: [] });
+
     const availableFormats = allOptions.find(opt => opt.value === reportType)?.formats || [];
 
     useEffect(() => { if (!availableFormats.includes(format)) setFormat(availableFormats[0]); }, [reportType, format, availableFormats]);
@@ -107,11 +113,10 @@ export default function MainReports() {
         }
         setLoading(true);
         try {
-            // --- FIX 3: Convert 'all' to empty string for the backend ---
             const filters = {
                 studentId: selectedStudentId, academicYear, semester, currency, grade: filterGrade,
                 section: filterSection, department: filterDepartment, status: filterStaffStatus,
-                feeTypeId: filterFeeTypeId === 'all' ? '' : filterFeeTypeId, // This is the key change
+                feeTypeId: filterFeeTypeId === 'all' ? '' : filterFeeTypeId,
                 startDate, endDate,
             };
             const requestBody = { reportType, format, filters };
@@ -141,6 +146,44 @@ export default function MainReports() {
         } catch (error) { toast.error("A network error occurred."); } finally { setLoading(false); }
     };
 
+    const handlePreviewReport = async () => {
+        if (reportType === 'FINANCIAL_STATEMENT' && !selectedStudentId) {
+            toast.error("Please select a student to preview the statement.");
+            return;
+        }
+        setIsPreviewLoading(true);
+        setIsPreviewOpen(true);
+        setPreviewData({ headers: [], rows: [] });
+        try {
+            const filters = {
+                studentId: selectedStudentId, academicYear, semester, currency, grade: filterGrade,
+                section: filterSection, department: filterDepartment, status: filterStaffStatus,
+                feeTypeId: filterFeeTypeId === 'all' ? '' : filterFeeTypeId,
+                startDate, endDate,
+            };
+            const requestBody = { reportType, filters };
+            const token = localStorage.getItem("jwt_token");
+            const response = await fetch(`${API_BASE_URL}/api/main-reports/preview`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(requestBody),
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setPreviewData(data);
+            } else {
+                toast.error("Failed to fetch preview data.");
+                setIsPreviewOpen(false);
+            }
+        } catch (error) {
+            toast.error("A network error occurred.");
+            setIsPreviewOpen(false);
+        } finally {
+            setIsPreviewLoading(false);
+        }
+    };
+
+    // --- THIS IS THE MISSING FUNCTION BODY ---
     const renderFilters = () => {
         switch (reportType) {
             case 'FINANCIAL_STATEMENT':
@@ -199,7 +242,6 @@ export default function MainReports() {
                                 <Select value={filterFeeTypeId} onValueChange={setFilterFeeTypeId}>
                                     <SelectTrigger className="bg-purple-800"><SelectValue placeholder="All Fee Types"/></SelectTrigger>
                                     <SelectContent className="bg-purple-800">
-                                        {/* --- FIX 1: Changed value from "" to "all" --- */}
                                         <SelectItem value="all">All Fee Types</SelectItem>
                                         {feeTypes.map(ft=><SelectItem key={ft.id} value={String(ft.id)}>{ft.name}</SelectItem>)}
                                     </SelectContent>
@@ -244,13 +286,52 @@ export default function MainReports() {
                             <h3 className="text-lg font-semibold mb-4">3. Apply Filters (if applicable)</h3>
                             <div className="space-y-4">{renderFilters()}</div>
                         </div>
-                        <div className="flex justify-end pt-4">
-                            <Button onClick={handleGenerateReport} disabled={loading} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 text-base">
-                                {loading ? 'Generating...' : <><Download className="h-5 w-5 mr-2" /> Generate & Download</>}
+                        <div className="flex justify-end pt-4 gap-4">
+                            <Button onClick={handlePreviewReport} disabled={loading || isPreviewLoading} variant="outline" className="text-white border-purple-400 hover:bg-purple-800 hover:text-white">
+                                <Eye className="h-5 w-5 mr-2" />
+                                {isPreviewLoading ? 'Loading Preview...' : 'Preview Report'}
+                            </Button>
+                            <Button onClick={handleGenerateReport} disabled={loading || isPreviewLoading} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 text-base">
+                                <Download className="h-5 w-5 mr-2" />
+                                {loading ? 'Generating...' : 'Generate & Download'}
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
+
+                <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+                    <DialogContent className="max-w-4xl bg-purple-950 border-purple-700 text-white">
+                        <DialogHeader>
+                            <DialogTitle>Report Preview (First 10 Rows)</DialogTitle>
+                        </DialogHeader>
+                        <div className="mt-4 max-h-[60vh] overflow-y-auto">
+                            {isPreviewLoading ? (
+                                <p className="text-center py-8">Loading preview data...</p>
+                            ) : previewData.rows && previewData.rows.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="hover:bg-purple-900">
+                                            {previewData.headers.map((header, index) => (
+                                                <TableHead key={index} className="text-purple-300">{header}</TableHead>
+                                            ))}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {previewData.rows.map((row, rowIndex) => (
+                                            <TableRow key={rowIndex} className="border-purple-800 hover:bg-purple-900">
+                                                {row.map((cell, cellIndex) => (
+                                                    <TableCell key={cellIndex}>{cell}</TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <p className="text-center py-8 text-gray-400">No data found for the selected filters.</p>
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </main>
         </div>
     );
