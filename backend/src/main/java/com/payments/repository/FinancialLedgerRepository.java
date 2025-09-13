@@ -6,7 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
+import com.payments.model.Currency;
+import com.payments.model.TransactionType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -57,5 +58,34 @@ public interface FinancialLedgerRepository extends JpaRepository<FinancialLedger
     @Query("SELECT new map(fl.currency as currency, SUM(CASE WHEN fl.transactionType = 'DEBIT' THEN fl.amount ELSE -fl.amount END) as balance) " +
             "FROM FinancialLedger fl WHERE fl.student.id = :studentId GROUP BY fl.currency")
     List<Map<String, Object>> getBalancesByCurrencyForStudent(@Param("studentId") Long studentId);
+
+    // --- NEW METHOD FOR ADVANCED REPORTING ---
+    @Query("SELECT fl FROM FinancialLedger fl WHERE fl.student.id = :studentId " +
+            "AND fl.currency = :currency " +
+            "AND (:#{#academicYear} IS NULL OR fl.academicYear = :academicYear) " +
+            "AND (:#{#semester} IS NULL OR fl.semester = :semester) " +
+            "ORDER BY fl.transactionDate ASC, fl.id ASC")
+    List<FinancialLedger> findFilteredLedgerForStudent(
+            @Param("studentId") Long studentId,
+            @Param("academicYear") String academicYear,
+            @Param("semester") String semester,
+            @Param("currency") Currency currency
+    );
+
+    // --- NEW METHOD FOR AGGREGATE FINANCIAL REPORTS ---
+    @Query("SELECT fl FROM FinancialLedger fl JOIN fl.student s WHERE " +
+            "fl.transactionType = :type " +
+            "AND (:#{#grade} IS NULL OR :#{#grade} = 'All' OR s.currentGrade = :#{#grade}) " +
+            "AND (:#{#feeTypeId} IS NULL OR fl.feeType.id = :#{#feeTypeId}) " +
+            "AND (:#{#startDate} IS NULL OR fl.transactionDate >= :#{#startDate}) " +
+            "AND (:#{#endDate} IS NULL OR fl.transactionDate <= :#{#endDate}) " +
+            "ORDER BY fl.transactionDate DESC")
+    List<FinancialLedger> findFinancialsWithFilters(
+            @Param("type") TransactionType type,
+            @Param("grade") String grade,
+            @Param("feeTypeId") Long feeTypeId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 
 }

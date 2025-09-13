@@ -26,6 +26,8 @@ import NotFound from "./pages/NotFound";
 import Financials from "@/pages/Financials.tsx";
 import PaymentAllocation from './pages/PaymentAllocation';
 import AuditTrail from './pages/AuditTrail';
+import MainReports from "./pages/MainReports"; // <-- Add this import
+
 
 const queryClient = new QueryClient();
 
@@ -50,7 +52,8 @@ function AppContent() {
         <Route path="*" element={<NotFound />} />
         <Route path="/financials" element={<Financials />} />
         <Route path="/payment-allocation" element={<PaymentAllocation />} />
-        <Route path="/audit-trail" element={<AuditTrail />} />
+        <Route path="/audit-trail" element={<AuditTrail />} /><Route path="/main-reports" element={<MainReports />} />
+
       </Routes>
     </Router>
   );

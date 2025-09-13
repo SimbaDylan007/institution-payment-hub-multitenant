@@ -9,7 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -40,4 +39,14 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
             "LOWER(s.studentId) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
             "LOWER(s.email) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     Page<Student> findAllWithSearch(@Param("searchTerm") String searchTerm, Pageable pageable);
+
+    // --- NEW METHOD FOR FILTERED LIST REPORTS ---
+    @Query("SELECT s FROM Student s WHERE " +
+            "(:grade IS NULL OR :grade = 'All' OR s.currentGrade = :grade) AND " +
+            "(:section IS NULL OR :section = 'All' OR :section = '' OR s.section = :section)")
+    List<Student> findWithFilters(
+            @Param("grade") String grade,
+            @Param("section") String section
+    );
+
 }

@@ -35,4 +35,13 @@ public interface StaffRepository extends JpaRepository<Staff, Long> {
             "LOWER(s.department) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
             "LOWER(s.position) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     Page<Staff> findAllWithSearch(@Param("searchTerm") String searchTerm, Pageable pageable);
+
+    // --- NEW METHOD FOR FILTERED LIST REPORTS ---
+    @Query("SELECT s FROM Staff s WHERE " +
+            "(:department IS NULL OR :department = 'All' OR s.department = :department) AND " +
+            "(:status IS NULL OR :status = 'All' OR s.employmentStatus = :status)")
+    List<Staff> findWithFilters(
+            @Param("department") String department,
+            @Param("status") String status
+    );
 }

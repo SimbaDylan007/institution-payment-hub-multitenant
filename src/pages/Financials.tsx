@@ -9,15 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Home, Plus, DollarSign, BookUser, UserSearch, Download, Edit, Trash2, LayoutDashboard, Users } from "lucide-react";
+import { Home, Plus, DollarSign, BookUser, UserSearch, Download, Edit, Trash2, LayoutDashboard, Users, FileText, FileSpreadsheet, FileJson, Printer } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { CSVLink } from "react-csv";
 import { apiFetch } from "@/utils/apiClient";
 import { academicYears, currentAcademicYear, currentSemester, semesters } from "@/config/academicConfig";
 import { FeeType, LedgerEntry, StudentBalance, CurrencyBalance } from "@/types";
-
-
 
 // --- Helper Component for displaying multi-currency balances ---
 const BalanceDisplay = ({ title, balanceData, positiveColor, negativeColor }: { title: string, balanceData?: { [key: string]: number }, positiveColor: string, negativeColor: string }) => (
@@ -50,22 +47,83 @@ export default function Financials() {
     const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
     const [isEditTransactionDialogOpen, setIsEditTransactionDialogOpen] = useState(false);
     const [selectedLedgerEntry, setSelectedLedgerEntry] = useState<LedgerEntry | null>(null);
-
     const [transactionType, setTransactionType] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
     const [isBulkChargeDialogOpen, setIsBulkChargeDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [gradeFilter, setGradeFilter] = useState('All');
     const [currentBalance, setCurrentBalance] = useState<CurrencyBalance | null>(null);
-
     const [bulkFeeTypeId, setBulkFeeTypeId] = useState<string>('');
     const [bulkAcademicYear, setBulkAcademicYear] = useState(currentAcademicYear);
     const [bulkSemester, setBulkSemester] = useState(currentSemester);
     const [bulkFile, setBulkFile] = useState<File | null>(null);
     const [bulkManualIds, setBulkManualIds] = useState('');
 
+    // --- State for exporting directly from the ledger view ---
+    const [isExporting, setIsExporting] = useState(false);
+    const [ledgerYearFilter, setLedgerYearFilter] = useState(currentAcademicYear);
+    const [ledgerSemesterFilter, setLedgerSemesterFilter] = useState(currentSemester);
+    const [ledgerCurrencyFilter, setLedgerCurrencyFilter] = useState('USD');
+
+    // --- Handler function to export/print the current student's ledger ---
+    const handleExportLedger = async (format: 'PDF' | 'XLSX' | 'CSV') => {
+        if (!currentStudent) {
+            toast.error("No student selected.");
+            return;
+        }
+
+        setIsExporting(true);
+        const toastId = toast.loading(`Generating ${format} statement...`);
+        try {
+            const filters = {
+                studentId: currentStudent.studentId,
+                academicYear: ledgerYearFilter,
+                semester: ledgerSemesterFilter,
+                currency: ledgerCurrencyFilter,
+            };
+            const requestBody = {
+                reportType: 'FINANCIAL_STATEMENT',
+                format,
+                filters,
+            };
+
+            const token = localStorage.getItem("jwt_token");
+            const response = await fetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/main-reports/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (response.ok) {
+                toast.success("Statement generated! Download will begin.", { id: toastId });
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none'; a.href = url;
+
+                const disposition = response.headers.get('content-disposition');
+                // --- THIS IS THE FIX: Using JavaScript's Date object, not Java's LocalDate ---
+                let filename = `${filters.studentId}_statement_${new Date().toISOString().split('T')[0]}.${format.toLowerCase()}`;
+                if (disposition?.includes('filename=')) {
+                    filename = disposition.split('filename=')[1].replace(/"/g, '');
+                }
+                a.download = filename;
+                document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); a.remove();
+            } else {
+                const errorText = await response.text();
+                toast.error(`Failed to generate statement: ${errorText}`, { id: toastId });
+            }
+        } catch (error) {
+            toast.error("A network error occurred while generating the statement.", { id: toastId });
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    // --- CORRECTED LOGIC for role checking ---
     const canManageLedgerEntries = useMemo(() => {
         if (!user || !user.role) return false;
-        return user.role.includes('ADMIN') || user.role.includes('FINANCE_ADMIN');
+        // Direct comparison is safer than .includes for a single role string
+        return user.role === 'ADMIN' || user.role === 'FINANCE_ADMIN';
     }, [user]);
 
     useEffect(() => {
@@ -363,30 +421,70 @@ export default function Financials() {
                             </Card>
                         )}
                         {view === 'ledger' && currentStudent && (
-                            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
-                                <CardHeader><Button variant="outline" onClick={() => setView('overview')} className="mb-4 w-fit">&larr; Back to Overview</Button><CardTitle className="flex items-center gap-2"><BookUser />Ledger for {currentStudent.firstName} {currentStudent.lastName}</CardTitle></CardHeader>
-                                <CardContent>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                        <BalanceDisplay title="Total Charges" balanceData={ledgerTotals.charges} positiveColor="text-red-400" negativeColor="text-red-400" />
-                                        <BalanceDisplay title="Total Payments" balanceData={ledgerTotals.payments} positiveColor="text-green-400" negativeColor="text-green-400" />
-                                        <BalanceDisplay title="Current Balances" balanceData={currentBalance?.balances} positiveColor="text-yellow-400" negativeColor="text-blue-400" />
-                                    </div>
-                                    <div className="flex gap-4 mb-4"><Button className="bg-red-600 hover:bg-red-700" onClick={() => { setTransactionType('DEBIT'); setIsTransactionDialogOpen(true); }}>Add Charge</Button><Button className="bg-green-600 hover:bg-green-700" onClick={() => { setTransactionType('CREDIT'); setIsTransactionDialogOpen(true); }}>Record Payment</Button></div>
-                                    <table className="w-full text-left">
-                                        <thead><tr className="border-b border-purple-600"><th className="p-2">Date</th><th className="p-2">Description</th><th className="p-2 text-right">Charge</th><th className="p-2 text-right">Payment</th>{canManageLedgerEntries && <th className="p-2 text-center">Actions</th>}</tr></thead>
-                                        <tbody>{ledgerWithRunningBalance.map(entry => (<tr key={entry.id} className="border-b border-purple-800"><td className="p-2">{entry.transactionDate}</td><td className="p-2">{entry.description}</td><td className="p-2 text-right text-red-400">{entry.transactionType === 'DEBIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td><td className="p-2 text-right text-green-400">{entry.transactionType === 'CREDIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td>
-                                            {canManageLedgerEntries && (
-                                                <td className="p-2 text-center">
-                                                    <div className="flex justify-center items-center gap-2">
-                                                        <Button size="sm" variant="outline" className="border-purple-600 text-white hover:bg-purple-700" onClick={() => { setSelectedLedgerEntry(entry); setIsEditTransactionDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                                                        <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white" onClick={() => handleDeleteTransaction(entry.id)}><Trash2 className="h-4 w-4" /></Button>
-                                                    </div>
-                                                </td>
-                                            )}
-                                        </tr>))}</tbody>
-                                    </table>
-                                </CardContent>
-                            </Card>
+                            <div className="space-y-6">
+                                <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+                                    <CardHeader>
+                                        <Button variant="outline" onClick={() => setView('overview')} className="mb-4 w-fit">&larr; Back to Overview</Button>
+                                        <CardTitle className="flex items-center gap-2"><BookUser />Ledger for {currentStudent.firstName} {currentStudent.lastName}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                            <BalanceDisplay title="Total Charges" balanceData={ledgerTotals.charges} positiveColor="text-red-400" negativeColor="text-red-400" />
+                                            <BalanceDisplay title="Total Payments" balanceData={ledgerTotals.payments} positiveColor="text-green-400" negativeColor="text-green-400" />
+                                            <BalanceDisplay title="Current Balances" balanceData={currentBalance?.balances} positiveColor="text-yellow-400" negativeColor="text-blue-400" />
+                                        </div>
+                                        <div className="flex gap-4 mb-4"><Button className="bg-red-600 hover:bg-red-700" onClick={() => { setTransactionType('DEBIT'); setIsTransactionDialogOpen(true); }}>Add Charge</Button><Button className="bg-green-600 hover:bg-green-700" onClick={() => { setTransactionType('CREDIT'); setIsTransactionDialogOpen(true); }}>Record Payment</Button></div>
+                                        <table className="w-full text-left">
+                                            <thead><tr className="border-b border-purple-600"><th className="p-2">Date</th><th className="p-2">Description</th><th className="p-2 text-right">Charge</th><th className="p-2 text-right">Payment</th>{canManageLedgerEntries && <th className="p-2 text-center">Actions</th>}</tr></thead>
+                                            <tbody>{ledgerWithRunningBalance.map(entry => (<tr key={entry.id} className="border-b border-purple-800"><td className="p-2">{entry.transactionDate}</td><td className="p-2">{entry.description}</td><td className="p-2 text-right text-red-400">{entry.transactionType === 'DEBIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td><td className="p-2 text-right text-green-400">{entry.transactionType === 'CREDIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td>
+                                                {canManageLedgerEntries && (
+                                                    <td className="p-2 text-center">
+                                                        <div className="flex justify-center items-center gap-2">
+                                                            <Button size="sm" variant="outline" className="border-purple-600 text-white hover:bg-purple-700" onClick={() => { setSelectedLedgerEntry(entry); setIsEditTransactionDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                                                            <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white" onClick={() => handleDeleteTransaction(entry.id)}><Trash2 className="h-4 w-4" /></Button>
+                                                        </div>
+                                                    </td>
+                                                )}
+                                            </tr>))}</tbody>
+                                        </table>
+                                    </CardContent>
+                                </Card>
+
+                                {/* --- THIS IS THE NEW UI SECTION THAT WAS PREVIOUSLY MISSING --- */}
+                                <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+                                    <CardHeader>
+                                        <CardTitle>Export Statement</CardTitle>
+                                        <p className="text-gray-300">Select filters and a format to print or download this student's financial statement.</p>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div>
+                                                <Label>Academic Year</Label>
+                                                <Select value={ledgerYearFilter} onValueChange={setLedgerYearFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800">{academicYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select>
+                                            </div>
+                                            <div>
+                                                <Label>Semester</Label>
+                                                <Select value={ledgerSemesterFilter} onValueChange={setLedgerSemesterFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800">{semesters.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
+                                            </div>
+                                            <div>
+                                                <Label>Currency</Label>
+                                                <Select value={ledgerCurrencyFilter} onValueChange={setLedgerCurrencyFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col md:flex-row gap-4 pt-4">
+                                            <Button onClick={() => handleExportLedger('PDF')} disabled={isExporting} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                                                <Printer className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Print Statement (PDF)'}
+                                            </Button>
+                                            <Button onClick={() => handleExportLedger('XLSX')} disabled={isExporting} className="flex-1 bg-green-600 hover:bg-green-700">
+                                                <FileSpreadsheet className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Export (Excel)'}
+                                            </Button>
+                                            <Button onClick={() => handleExportLedger('CSV')} disabled={isExporting} className="flex-1 bg-gray-500 hover:bg-gray-600">
+                                                <FileJson className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Export (CSV)'}
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
                         )}
                     </TabsContent>
 
@@ -403,7 +501,6 @@ export default function Financials() {
             </main>
 
             {/* --- ALL DIALOGS ARE NOW FULLY EXPANDED --- */}
-
             <Dialog open={isBulkChargeDialogOpen} onOpenChange={setIsBulkChargeDialogOpen}>
                 <DialogContent className="bg-purple-900 border-purple-700 text-white max-w-lg">
                     <DialogHeader><DialogTitle>Apply Fee to Multiple Students</DialogTitle></DialogHeader>
@@ -447,10 +544,7 @@ export default function Financials() {
                     </form>
                 </DialogContent>
             </Dialog>
-
             <Dialog open={isFeeTypeDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setSelectedFeeType(null); setIsFeeTypeDialogOpen(isOpen); }}><DialogContent className="bg-purple-900 border-purple-700 text-white"><DialogHeader><DialogTitle>{selectedFeeType ? 'Edit Fee Type' : 'Add New Fee Type'}</DialogTitle></DialogHeader><form onSubmit={handleFeeTypeSubmit} className="space-y-4"><div><Label htmlFor="name">Fee Name</Label><Input id="name" name="name" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.name} required /></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="defaultAmount">Default Amount</Label><Input id="defaultAmount" name="defaultAmount" type="number" step="0.01" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.defaultAmount} required /></div><div><Label htmlFor="currency">Currency</Label><Select name="currency" defaultValue={selectedFeeType?.currency || 'USD'}><SelectTrigger className="bg-purple-800 border-purple-600"><SelectValue /></SelectTrigger><SelectContent className="bg-purple-800 border-purple-600"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div></div><div><Label htmlFor="description">Description</Label><Input id="description" name="description" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.description} /></div><div className="flex justify-end gap-2"><Button type="submit" disabled={loading}>{loading ? 'Saving...' : (selectedFeeType ? 'Update Fee' : 'Add Fee')}</Button></div></form></DialogContent></Dialog>
-
-            {/* THIS IS THE DIALOG THAT WAS MISSING ITS CONTENT */}
             <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
                 <DialogContent className="bg-purple-900 border-purple-700 text-white">
                     <DialogHeader><DialogTitle>{transactionType === 'DEBIT' ? 'Add a Charge' : 'Record a Payment'}</DialogTitle></DialogHeader>
@@ -487,7 +581,6 @@ export default function Financials() {
                     </form>
                 </DialogContent>
             </Dialog>
-
             <Dialog open={isEditTransactionDialogOpen} onOpenChange={setIsEditTransactionDialogOpen}>
                 <DialogContent className="bg-purple-900 border-purple-700 text-white">
                     <DialogHeader><DialogTitle>Edit Transaction</DialogTitle></DialogHeader>
@@ -529,7 +622,6 @@ export default function Financials() {
                     )}
                 </DialogContent>
             </Dialog>
-
         </div>
     );
 }

@@ -65,6 +65,7 @@ com\payments\model\StudentRegistration.class
 com\payments\service\ReconciliationService.class
 com\payments\model\StaffAttendance.class
 com\payments\config\JwtRequestFilter.class
+com\payments\service\MainReportService.class
 com\payments\model\SystemPreferences.class
 com\payments\service\AuditLogService.class
 com\payments\controller\StaffManagementController.class
@@ -150,6 +151,7 @@ com\payments\controller\NotificationController.class
 com\payments\model\Guardian.class
 com\payments\model\ResourceUsageLog.class
 com\payments\dto\FinancialAnalyticsDto.class
+com\payments\controller\MainReportController.class
 com\payments\dto\DashboardStatsDto.class
 com\payments\dto\GradeDTO.class
 com\payments\service\NotificationService.class

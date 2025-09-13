@@ -96,6 +96,7 @@ C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\pa
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\model\ScheduleEventType.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\model\Role.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\model\Guardian.java
+C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\service\MainReportService.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\repository\StudentRegistrationRepository.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\service\StudentRegistrationService.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\config\JwtRequestFilter.java
@@ -122,6 +123,7 @@ C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\pa
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\dto\StatCardDto.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\service\FacilityService.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\model\BookTransaction.java
+C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\controller\MainReportController.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\repository\ExamRepository.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\controller\EnrollmentController.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\dto\SchoolInformationDto.java
