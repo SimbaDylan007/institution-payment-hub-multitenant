@@ -87,7 +87,7 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
     }
 
     try {
-      const url = student ? `/api/students/${student.id}` : '/api/students';
+      const url = student ? `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students/${student.id}` : 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students';
       const method = student ? 'PUT' : 'POST';
 
       const response = await apiFetch(url, {

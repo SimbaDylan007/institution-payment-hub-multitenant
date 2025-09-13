@@ -38,8 +38,8 @@ export default function Settings() {
     setLoading(true);
     try {
       const [statsRes, usersRes] = await Promise.all([
-        apiFetch('http://localhost:8080/api/users/statistics'),
-        apiFetch('http://localhost:8080/api/users')
+        apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users/statistics'),
+        apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users')
       ]);
 
       if (statsRes.ok) setStats(await statsRes.json());
@@ -65,7 +65,7 @@ export default function Settings() {
     if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
 
     try {
-      const response = await apiFetch(`http://localhost:8080/api/users/${userId}`, { method: 'DELETE' });
+      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users/${userId}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success("User deleted successfully.");
         fetchData(); // Refresh data

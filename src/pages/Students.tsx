@@ -54,7 +54,7 @@ export default function Students() {
   // --- 2. REFACTOR fetchStudents ---
   const fetchStudents = useCallback((page = 0, search = "") => {
     setLoading(true);
-    const url = `http://localhost:8080/api/students?page=${page}&size=10&sort=firstName,asc&searchTerm=${encodeURIComponent(search)}`;
+    const url = `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students?page=${page}&size=10&sort=firstName,asc&searchTerm=${encodeURIComponent(search)}`;
     apiFetch(url)
         .then(res => {
           if (res.ok) return res.json();
@@ -90,7 +90,7 @@ export default function Students() {
   const handleDeleteStudent = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this student?')) {
       try {
-        const response = await apiFetch(`http://localhost:8080/api/students/${id}`, { method: 'DELETE' });
+        const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students/${id}`, { method: 'DELETE' });
         if (response.ok) {
           toast.success('Student deleted successfully');
           fetchStudents(currentPage, searchTerm);
@@ -122,7 +122,7 @@ export default function Students() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const response = await apiFetch('http://localhost:8080/api/students/bulk-upload', {
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students/bulk-upload', {
         method: 'POST',
         body: formData,
         // No Content-Type needed; browser sets it for FormData

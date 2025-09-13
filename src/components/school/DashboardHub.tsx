@@ -19,7 +19,7 @@ export default function DashboardHub() {
         const fetchHubData = async () => {
             setLoading(true); // Ensure loading state is true at the start
             try {
-                const response = await apiFetch('/api/dashboard/hub'); // This should be the new endpoint
+                const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/dashboard/hub'); // This should be the new endpoint
                 if (response.ok) {
                     setHubData(await response.json());
                 } else {

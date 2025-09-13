@@ -3,8 +3,8 @@ package com.payments.dto;
 public class HubAlertDto {
     private String text;
     private String value;
-    private String icon; // Name of the Lucide icon for the frontend
-    private String color; // Tailwind CSS color class
+    private String icon;
+    private String color;
 
     public HubAlertDto(String text, String value, String icon, String color) {
         this.text = text;

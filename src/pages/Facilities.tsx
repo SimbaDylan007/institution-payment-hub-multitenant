@@ -35,7 +35,7 @@ export default function Facilities() {
       ...currentFilters
     }).toString();
 
-    apiFetch(`/api/facilities?${params}`)
+    apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/facilities?${params}`)
         .then(res => res.json())
         .then(data => setFacilityPage(data))
         .catch(() => toast.error("Failed to fetch facilities."))
@@ -50,7 +50,7 @@ export default function Facilities() {
   const handleDelete = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this facility?")) return;
     try {
-      const response = await apiFetch(`/api/facilities/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/facilities/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success("Facility deleted successfully.");
         fetchFacilities(currentPage); // Refresh

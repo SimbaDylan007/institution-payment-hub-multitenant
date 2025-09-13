@@ -24,7 +24,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @RestController
 @RequestMapping("/api/students")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN','TEACHER')")
 public class StudentManagementController {
     
     @Autowired

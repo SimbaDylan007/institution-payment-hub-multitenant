@@ -35,7 +35,7 @@ export default function Reports() {
 
   useEffect(() => {
     // --- THIS IS THE ROBUST FIX ---
-    apiFetch('/api/students?size=1000')
+    apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students?size=1000')
         .then(res => {
           if (!res.ok) throw new Error("Failed to fetch student list for filters.");
           return res.json();
@@ -64,7 +64,7 @@ export default function Reports() {
       gradeLevel: selectedGrade === 'ALL' ? null : selectedGrade,
     };
     try {
-      const response = await apiFetch('/api/reports/generate', { method: 'POST', body: JSON.stringify(requestBody) });
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/reports/generate', { method: 'POST', body: JSON.stringify(requestBody) });
       if (response.ok) {
         const data = await response.json();
         setGeneratedData(data);

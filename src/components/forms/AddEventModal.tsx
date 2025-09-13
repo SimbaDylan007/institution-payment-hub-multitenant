@@ -36,7 +36,7 @@ export default function AddEventModal({ onEventAdded }: AddEventModalProps) {
     try {
       // 2. Use the apiFetch wrapper for the request.
       // The wrapper automatically adds the JWT Authorization header.
-      const response = await apiFetch('http://localhost:8080/api/events', {
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/events', {
         method: 'POST',
         body: JSON.stringify(formData),
       });

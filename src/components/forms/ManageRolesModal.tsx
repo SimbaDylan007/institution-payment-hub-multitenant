@@ -24,7 +24,7 @@ export const ManageRolesModal = ({ isOpen, onClose }: Props) => {
   const fetchRoles = async () => {
     setLoading(true);
     try {
-      const response = await apiFetch('http://localhost:8080/api/users/roles');
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users/roles');
       if(response.ok) setRoles(await response.json());
     } finally {
       setLoading(false);
@@ -42,7 +42,7 @@ export const ManageRolesModal = ({ isOpen, onClose }: Props) => {
     if (!newRoleName.trim()) return toast.warning("Role name cannot be empty.");
     setLoading(true);
     try {
-      const response = await apiFetch('http://localhost:8080/api/users/roles', {
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users/roles', {
         method: 'POST',
         body: newRoleName // Sending as raw string as per backend
       });

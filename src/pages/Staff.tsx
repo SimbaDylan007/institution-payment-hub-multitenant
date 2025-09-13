@@ -48,7 +48,7 @@ export default function Staff() {
 
   const fetchStaff = useCallback((page = 0, search = "") => {
     setLoading(true);
-    const url = `http://localhost:8080/api/staff?page=${page}&size=10&sort=firstName,asc&searchTerm=${encodeURIComponent(search)}`;
+    const url = `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/staff?page=${page}&size=10&sort=firstName,asc&searchTerm=${encodeURIComponent(search)}`;
     apiFetch(url)
         .then(res => {
           if (res.ok) {
@@ -83,7 +83,7 @@ export default function Staff() {
   const handleDeleteStaff = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this staff member?')) {
       try {
-        const response = await apiFetch(`http://localhost:8080/api/staff/${id}`, { method: 'DELETE' });
+        const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/staff/${id}`, { method: 'DELETE' });
         if (response.ok) {
           toast.success('Staff member deleted successfully');
           fetchStaff(currentPage, searchTerm);
@@ -110,7 +110,7 @@ export default function Staff() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const response = await apiFetch('http://localhost:8080/api/staff/bulk-upload', {
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/staff/bulk-upload', {
         method: 'POST',
         body: formData,
         // No 'Content-Type' header needed, the browser will set it correctly for FormData

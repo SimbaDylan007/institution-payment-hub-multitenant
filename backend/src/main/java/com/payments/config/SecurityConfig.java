@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // Rule 1: Allow all public API endpoints
+                        .antMatchers("/health").permitAll()
                         .antMatchers("/api/auth/**").permitAll()
 
                         // Rule 2: Require authentication for all other API endpoints
@@ -65,7 +66,7 @@ public class SecurityConfig {
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         // Only allow your actual frontend origins
-        config.setAllowedOrigins(List.of("http://localhost:8081", "http://localhost:5173"));
+        config.setAllowedOrigins(List.of("http://pachedujuniorschool.s3-website.eu-north-1.amazonaws.com/"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

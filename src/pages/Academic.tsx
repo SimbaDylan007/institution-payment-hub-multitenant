@@ -36,7 +36,7 @@ export default function Academic() {
 
   const fetchSubjects = async () => {
     try {
-      const response = await apiFetch('http://localhost:8080/api/academic/subjects');
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/subjects');
       if (response.ok) setSubjects((await response.json()).content); // Assuming paginated response
     } catch (error) { console.error('Error fetching subjects:', error); }
   };
@@ -44,7 +44,7 @@ export default function Academic() {
 
   const fetchGrades = async () => {
     try {
-      const response = await apiFetch('http://localhost:8080/api/academic/grades');
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/grades');
       if (response.ok) setGrades((await response.json()).content); // Assuming paginated response
     } catch (error) { console.error('Error fetching grades:', error); }
   };
@@ -52,7 +52,7 @@ export default function Academic() {
 
   const fetchExams = async () => {
     try {
-      const response = await apiFetch('http://localhost:8080/api/academic/exams');
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/exams');
       if (response.ok) setExams(await response.json());
     } catch (error) { console.error('Error fetching exams:', error); }
   };
@@ -75,7 +75,7 @@ export default function Academic() {
   const handleScheduleExam = async () => {
     try {
       const examData = { title: "Mid-term Science Exam", examDate: new Date().toISOString().split('T')[0], /* ... other fields */ };
-      const response = await apiFetch('http://localhost:8080/api/academic/exams', {
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/exams', {
         method: 'POST',
         body: JSON.stringify(examData),
       });

@@ -48,7 +48,7 @@ export default function AddTimetableEntryModal({ onEntryAdded }: AddTimetableEnt
     try {
       // Replace `fetch` with `apiFetch` and remove the manual headers.
       // `apiFetch` will automatically add the 'Authorization' and 'Content-Type' headers.
-      const response = await apiFetch('http://localhost:8080/api/timetables', {
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/timetables', {
         method: 'POST',
         body: JSON.stringify(formData),
       });

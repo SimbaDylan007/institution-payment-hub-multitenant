@@ -36,7 +36,7 @@ export const BulkUserImportModal: React.FC<BulkUserImportModalProps> = ({ onUser
       });
 
       // Replace `fetch` with `apiFetch` and remove the manual headers.
-      const response = await apiFetch('http://localhost:8080/api/users/bulk-import', {
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users/bulk-import', {
         method: 'POST',
         body: JSON.stringify({
           users,

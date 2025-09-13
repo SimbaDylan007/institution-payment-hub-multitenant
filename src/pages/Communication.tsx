@@ -29,7 +29,7 @@ export default function Communication() {
     if (!user) return;
     setLoading(true);
     try {
-      const response = await apiFetch('http://localhost:8080/api/notifications?page=0&size=20');
+      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/notifications?page=0&size=20');
       if (response.ok) {
         const data: Page<Notification> = await response.json();
         setNotificationsPage(data);
@@ -56,7 +56,7 @@ export default function Communication() {
     const formData = new FormData(e.currentTarget);
     const announcementData = { subject: formData.get('subject'), content: formData.get('content'), targetAudience: formData.get('targetAudience'), };
     try {
-      const res = await apiFetch('http://localhost:8080/api/notifications/announcements', {
+      const res = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/notifications/announcements', {
         method: 'POST',
         body: JSON.stringify(announcementData)
       });
@@ -77,7 +77,7 @@ export default function Communication() {
   // CORRECTED: This function now uses the apiFetch wrapper
   const handleMarkAsRead = async (id: number) => {
     try {
-      const response = await apiFetch(`http://localhost:8080/api/notifications/${id}/read`, { method: 'POST' });
+      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/notifications/${id}/read`, { method: 'POST' });
       if(response.ok) {
         setNotificationsPage(prev => {
           if (!prev) return null;

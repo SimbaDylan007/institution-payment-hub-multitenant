@@ -157,6 +157,7 @@ com\payments\dto\StudentFinancialSummaryDto.class
 com\payments\model\Grade.class
 com\payments\repository\ScheduleEventRepository.class
 com\payments\model\TransactionType.class
+com\payments\controller\HealthCheckController.class
 com\payments\dto\NotificationPreferencesDto.class
 com\payments\service\ReportsService.class
 com\payments\controller\StudentController.class

@@ -34,7 +34,7 @@ mvn clean install
 mvn spring-boot:run
 ```
 
-The application will run on http://localhost:8080
+The application will run on http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com
 
 ## API Endpoints
 
@@ -61,7 +61,7 @@ You can use tools like Postman or cURL to test the API endpoints.
 Example cURL command:
 
 ```bash
-curl -X POST "http://localhost:8080/api/payments/all-payments" \
+curl -X POST "http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/payments/all-payments" \
      -H "Content-Type: application/json" \
      -d '{"institutionId": "your_institution_id", "password": "your_password"}'
 ```

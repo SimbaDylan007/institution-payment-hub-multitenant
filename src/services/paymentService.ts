@@ -7,7 +7,7 @@ import 'jspdf-autotable';
 import autoTable from "jspdf-autotable";
 
 // The base URL for your backend API, defined once for easy maintenance.
-const API_BASE_URL = "http://localhost:8080/api";
+const API_BASE_URL = "http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api";
 
 /**
  * A helper function for client-side filtering.

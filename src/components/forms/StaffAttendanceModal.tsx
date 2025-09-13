@@ -44,7 +44,7 @@ export default function StaffAttendanceModal({ staffId, onAttendanceMarked }: St
     try {
       // Replace `fetch` with `apiFetch` and remove the manual headers.
       // apiFetch will automatically add the 'Authorization' and 'Content-Type' headers.
-      const response = await apiFetch(`http://localhost:8080/api/staff/${staffId}/attendance`, {
+      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/staff/${staffId}/attendance`, {
         method: "POST",
         body: JSON.stringify(formData),
       });

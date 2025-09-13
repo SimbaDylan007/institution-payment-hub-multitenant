@@ -2,7 +2,7 @@ import { PaymentAlert, PickPaymentRequest } from "@/types";
 import { toast } from "sonner";
 import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
-const API_BASE_URL = "http://localhost:8080/api/payments";
+const API_BASE_URL = "http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/payments";
 
 // 2. The local `fetchWithErrorHandling` function is no longer needed.
 //    Authentication, Content-Type headers, and basic error toasts are now handled by `apiFetch`.
@@ -46,6 +46,7 @@ async function processApiResponse<T>(response: Response, defaultErrorMessage: st
 export async function pickAllPendingPayments(
     request: PickPaymentRequest
 ): Promise<PaymentAlert[]> {
+    // eslint-disable-next-line no-useless-catch
   try {
     const response = await apiFetch(`${API_BASE_URL}/pick-all-pending`, {
       method: "POST",

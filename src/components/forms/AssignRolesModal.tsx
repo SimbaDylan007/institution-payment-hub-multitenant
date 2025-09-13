@@ -25,7 +25,7 @@ export const AssignRolesModal = ({ isOpen, onClose, onSuccess, user }: Props) =>
 
     useEffect(() => {
         const fetchAllRoles = async () => {
-            const response = await apiFetch('http://localhost:8080/api/users/roles');
+            const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users/roles');
             if (response.ok) {
                 setAllRoles(await response.json());
             }
@@ -57,7 +57,7 @@ export const AssignRolesModal = ({ isOpen, onClose, onSuccess, user }: Props) =>
         };
 
         try {
-            const response = await apiFetch('http://localhost:8080/api/users/assign-roles', {
+            const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users/assign-roles', {
                 method: 'POST',
                 body: JSON.stringify(assignmentData)
             });

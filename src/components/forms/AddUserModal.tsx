@@ -56,7 +56,7 @@ export const AddUserModal = ({ isOpen, onClose, onSuccess, userToEdit }: Props) 
       roleNames: userToEdit ? userToEdit.roles.map(r => r.name) : ["ROLE_STUDENT"] // Assign default role on creation
     };
 
-    const url = userToEdit ? `http://localhost:8080/api/users/${userToEdit.id}` : 'http://localhost:8080/api/users';
+    const url = userToEdit ? `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users/${userToEdit.id}` : 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users';
     const method = userToEdit ? 'PUT' : 'POST';
 
     try {

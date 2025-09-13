@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       // The login endpoint is a special case that doesn't use the apiFetch wrapper
       // because we don't have a token yet. We use the raw fetch here.
-      const response = await fetch("http://localhost:8080/api/auth/login", {
+      const response = await fetch("http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/auth/login", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     try {
       // Registration is an unauthenticated endpoint, so we use raw fetch.
-      const response = await fetch('http://localhost:8080/api/auth/register', {
+      const response = await fetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

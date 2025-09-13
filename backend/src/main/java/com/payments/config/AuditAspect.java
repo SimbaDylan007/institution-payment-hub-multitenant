@@ -35,12 +35,10 @@ public class AuditAspect {
     @Bean
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule()); // Good practice for modern date/time objects
+        mapper.registerModule(new JavaTimeModule());
         return mapper;
     }
 
-    // --- CRITICAL FIX: The pointcut now scans sub-packages as well ---
-    // The two dots (..) after "service" means "this package and any sub-packages"
     @Pointcut("execution(public * com.payments.service..*.*(..)) " +
             "&& !within(com.payments.service.AuditLogService) " +
             "&& !within(com.payments.service.CustomUserDetailsService)")

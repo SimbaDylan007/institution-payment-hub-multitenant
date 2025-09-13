@@ -37,7 +37,7 @@ export default function AuditTrail() {
         if (currentFilters.startDate) params.append('startDate', format(currentFilters.startDate, 'yyyy-MM-dd'));
         if (currentFilters.endDate) params.append('endDate', format(currentFilters.endDate, 'yyyy-MM-dd'));
 
-        apiFetch(`/api/audit-logs?${params.toString()}`)
+        apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/audit-logs?${params.toString()}`)
             .then(res => res.json())
             .then(data => setLogPage(data))
             .catch(() => console.error("Failed to fetch audit logs"))

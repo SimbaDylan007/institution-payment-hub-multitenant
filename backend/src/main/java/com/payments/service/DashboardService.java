@@ -63,8 +63,6 @@ public class DashboardService {
 
         long unreadCount = notificationRepository.countByRecipientAndReadAtIsNull(user);
         alerts.add(new HubAlertDto("Unread Messages", String.valueOf(unreadCount), "Mail", "text-blue-400"));
-        // TODO: Add logic for upcoming assignments, overdue books, etc.
-        alerts.add(new HubAlertDto("Upcoming Assignments", "2", "ClipboardCheck", "text-amber-400"));
 
         actions.add(new QuickActionDto("View My Grades", "/student-portal", "GraduationCap"));
         actions.add(new QuickActionDto("Check My Timetable", "/student-portal", "Calendar"));
@@ -81,8 +79,6 @@ public class DashboardService {
 
         long unreadCount = notificationRepository.countByRecipientAndReadAtIsNull(user);
         alerts.add(new HubAlertDto("Unread Messages", String.valueOf(unreadCount), "Mail", "text-blue-400"));
-        // TODO: Add logic for assignments needing grading
-        alerts.add(new HubAlertDto("Assignments to Grade", "5", "FileCheck2", "text-green-400"));
 
         actions.add(new QuickActionDto("Manage Academics", "/academics", "GraduationCap"));
         actions.add(new QuickActionDto("View Schedule", "/schedule", "Calendar"));

@@ -45,7 +45,7 @@ export default function AddGuardianModal({ studentId, onGuardianAdded }: AddGuar
     setLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/students/${studentId}/guardians`, {
+      const response = await fetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students/${studentId}/guardians`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

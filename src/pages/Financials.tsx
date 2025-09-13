@@ -18,6 +18,8 @@ import { apiFetch } from "@/utils/apiClient";
 import { academicYears, currentAcademicYear, currentSemester, semesters } from "@/config/academicConfig";
 import { FeeType, LedgerEntry, StudentBalance, CurrencyBalance } from "@/types";
 
+
+
 // --- Helper Component for displaying multi-currency balances ---
 const BalanceDisplay = ({ title, balanceData, positiveColor, negativeColor }: { title: string, balanceData?: { [key: string]: number }, positiveColor: string, negativeColor: string }) => (
     <Card className="bg-purple-800/30 border-purple-600 text-center">
@@ -69,7 +71,7 @@ export default function Financials() {
     const fetchAllStudentBalances = async () => {
         setLoading(true);
         try {
-            const response = await apiFetch('/api/financials/students/balances');
+            const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/balances');
             if (response.ok) {
                 setAllStudents(await response.json());
             } else {
@@ -84,7 +86,7 @@ export default function Financials() {
 
     const fetchFeeTypes = async () => {
         try {
-            const response = await apiFetch('/api/financials/fee-types');
+            const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types');
             if (response.ok) {
                 setFeeTypes(await response.json());
             } else {
@@ -100,8 +102,8 @@ export default function Financials() {
         setCurrentStudent(student);
         try {
             const [ledgerRes, balanceRes] = await Promise.all([
-                apiFetch(`/api/financials/students/${student.studentId}/ledger`),
-                apiFetch(`/api/financials/students/${student.studentId}/balance`)
+                apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/${student.studentId}/ledger`),
+                apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/${student.studentId}/balance`)
             ]);
             if (ledgerRes.ok) setCurrentLedger(await ledgerRes.json());
             if (balanceRes.ok) setCurrentBalance(await balanceRes.json());
@@ -118,7 +120,7 @@ export default function Financials() {
         setLoading(true);
         const formData = new FormData(e.currentTarget);
         const feeTypeData = { name: formData.get('name'), defaultAmount: parseFloat(formData.get('defaultAmount') as string), description: formData.get('description'), currency: formData.get('currency') };
-        const url = selectedFeeType ? `/api/financials/fee-types/${selectedFeeType.id}` : '/api/financials/fee-types';
+        const url = selectedFeeType ? `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types/${selectedFeeType.id}` : 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types';
         const method = selectedFeeType ? 'PUT' : 'POST';
         try {
             const response = await apiFetch(url, { method, body: JSON.stringify(feeTypeData) });
@@ -142,7 +144,7 @@ export default function Financials() {
         if (!window.confirm('Are you sure you want to delete this fee type?')) return;
         setLoading(true);
         try {
-            const response = await apiFetch(`/api/financials/fee-types/${feeTypeId}`, { method: 'DELETE' });
+            const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types/${feeTypeId}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success('Fee type deleted successfully!');
                 fetchFeeTypes();
@@ -172,7 +174,7 @@ export default function Financials() {
             semester: formData.get('semester') as string,
             currency: formData.get('currency') as string
         };
-        const url = transactionType === 'DEBIT' ? '/api/financials/students/charges' : '/api/financials/students/payments';
+        const url = transactionType === 'DEBIT' ? 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/charges' : 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/payments';
         try {
             const response = await apiFetch(url, { method: 'POST', body: JSON.stringify(requestData) });
             if (response.ok) {
@@ -203,7 +205,7 @@ export default function Financials() {
         try {
             const token = localStorage.getItem("jwt_token");
             if (!token) throw new Error("Authentication token not found.");
-            const response = await fetch('/api/financials/charges/bulk', { method: 'POST', body: formData, headers: { "Authorization": "Bearer " + token } });
+            const response = await fetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/charges/bulk', { method: 'POST', body: formData, headers: { "Authorization": "Bearer " + token } });
             if (response.ok) {
                 toast.success('Bulk charge applied successfully!');
                 setIsBulkChargeDialogOpen(false);
