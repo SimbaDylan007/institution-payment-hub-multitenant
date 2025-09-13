@@ -66,6 +66,20 @@ public class FinancialController {
         return ResponseEntity.ok(financialService.addPayment(request));
     }
 
+    // --- NEW: Endpoint to update a ledger entry ---
+    @PutMapping("/ledger/{id}")
+    public ResponseEntity<FinancialLedger> updateLedgerEntry(@PathVariable Long id, @RequestBody LedgerEntryRequest request) {
+        return ResponseEntity.ok(financialService.updateLedgerEntry(id, request));
+    }
+
+    // --- NEW: Endpoint to delete a ledger entry ---
+    @DeleteMapping("/ledger/{id}")
+    public ResponseEntity<Void> deleteLedgerEntry(@PathVariable Long id) {
+        financialService.deleteLedgerEntry(id);
+        return ResponseEntity.noContent().build();
+    }
+
+
     @GetMapping("/students/balances")
     public ResponseEntity<List<StudentBalanceDto>> getAllStudentBalances() {
         return ResponseEntity.ok(financialService.getAllStudentBalances());

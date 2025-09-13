@@ -82,6 +82,13 @@ export interface LedgerEntry {
   currency: 'USD' | 'ZWG';
   academicYear?: string;
   semester?: string;
+    feeType: {
+        id: number;
+        name: string;
+        description:string;
+        default_amount:string;
+        currency:string;
+    } | null; // It can be null for payments or generic charges
 }
 
 export interface CurrencyBalance {

@@ -1,4 +1,3 @@
-// src/pages/Financials.tsx
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, Navigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -49,6 +48,9 @@ export default function Financials() {
     const [isFeeTypeDialogOpen, setIsFeeTypeDialogOpen] = useState(false);
     const [selectedFeeType, setSelectedFeeType] = useState<FeeType | null>(null);
     const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
+    const [isEditTransactionDialogOpen, setIsEditTransactionDialogOpen] = useState(false);
+    const [selectedLedgerEntry, setSelectedLedgerEntry] = useState<LedgerEntry | null>(null);
+
     const [transactionType, setTransactionType] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
     const [isBulkChargeDialogOpen, setIsBulkChargeDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -61,6 +63,11 @@ export default function Financials() {
     const [bulkFile, setBulkFile] = useState<File | null>(null);
     const [bulkManualIds, setBulkManualIds] = useState('');
 
+    const canManageLedgerEntries = useMemo(() => {
+        if (!user || !user.role) return false;
+        return user.role.includes('ADMIN') || user.role.includes('FINANCE_ADMIN');
+    }, [user]);
+
     useEffect(() => {
         if(user) {
             fetchFeeTypes();
@@ -71,7 +78,7 @@ export default function Financials() {
     const fetchAllStudentBalances = async () => {
         setLoading(true);
         try {
-            const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/balances');
+            const response = await apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/balances');
             if (response.ok) {
                 setAllStudents(await response.json());
             } else {
@@ -86,7 +93,7 @@ export default function Financials() {
 
     const fetchFeeTypes = async () => {
         try {
-            const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types');
+            const response = await apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types');
             if (response.ok) {
                 setFeeTypes(await response.json());
             } else {
@@ -102,8 +109,8 @@ export default function Financials() {
         setCurrentStudent(student);
         try {
             const [ledgerRes, balanceRes] = await Promise.all([
-                apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/${student.studentId}/ledger`),
-                apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/${student.studentId}/balance`)
+                apiFetch(`http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/${student.studentId}/ledger`),
+                apiFetch(`http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/${student.studentId}/balance`)
             ]);
             if (ledgerRes.ok) setCurrentLedger(await ledgerRes.json());
             if (balanceRes.ok) setCurrentBalance(await balanceRes.json());
@@ -120,7 +127,7 @@ export default function Financials() {
         setLoading(true);
         const formData = new FormData(e.currentTarget);
         const feeTypeData = { name: formData.get('name'), defaultAmount: parseFloat(formData.get('defaultAmount') as string), description: formData.get('description'), currency: formData.get('currency') };
-        const url = selectedFeeType ? `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types/${selectedFeeType.id}` : 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types';
+        const url = selectedFeeType ? `http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types/${selectedFeeType.id}` : 'http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types';
         const method = selectedFeeType ? 'PUT' : 'POST';
         try {
             const response = await apiFetch(url, { method, body: JSON.stringify(feeTypeData) });
@@ -144,7 +151,7 @@ export default function Financials() {
         if (!window.confirm('Are you sure you want to delete this fee type?')) return;
         setLoading(true);
         try {
-            const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types/${feeTypeId}`, { method: 'DELETE' });
+            const response = await apiFetch(`http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types/${feeTypeId}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success('Fee type deleted successfully!');
                 fetchFeeTypes();
@@ -174,7 +181,7 @@ export default function Financials() {
             semester: formData.get('semester') as string,
             currency: formData.get('currency') as string
         };
-        const url = transactionType === 'DEBIT' ? 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/charges' : 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/payments';
+        const url = transactionType === 'DEBIT' ? 'http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/charges' : 'http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/payments';
         try {
             const response = await apiFetch(url, { method: 'POST', body: JSON.stringify(requestData) });
             if (response.ok) {
@@ -183,7 +190,66 @@ export default function Financials() {
                 await handleViewLedger(currentStudent);
                 await fetchAllStudentBalances();
             } else {
-                throw new Error('Failed to add transaction');
+                const errData = await response.json();
+                throw new Error(errData.message || 'Failed to add transaction');
+            }
+        } catch (error) {
+            toast.error((error as Error).message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEditTransactionSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!selectedLedgerEntry) return;
+        setLoading(true);
+        const formData = new FormData(e.currentTarget);
+        const requestData = {
+            amount: parseFloat(formData.get('amount') as string),
+            description: formData.get('description') as string,
+            transactionDate: formData.get('transactionDate') as string,
+            feeTypeId: formData.get('feeTypeId') ? parseInt(formData.get('feeTypeId') as string) : null,
+            academicYear: formData.get('academicYear') as string,
+            semester: formData.get('semester') as string,
+            currency: formData.get('currency') as string
+        };
+        const url = `http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/ledger/${selectedLedgerEntry.id}`;
+        try {
+            const response = await apiFetch(url, { method: 'PUT', body: JSON.stringify(requestData) });
+            if (response.ok) {
+                toast.success('Transaction updated successfully!');
+                setIsEditTransactionDialogOpen(false);
+                setSelectedLedgerEntry(null);
+                if (currentStudent) {
+                    await handleViewLedger(currentStudent);
+                }
+                await fetchAllStudentBalances();
+            } else {
+                const errData = await response.json();
+                throw new Error(errData.message || 'Failed to update transaction');
+            }
+        } catch (error) {
+            toast.error((error as Error).message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteTransaction = async (ledgerId: number) => {
+        if (!window.confirm('Are you sure you want to permanently delete this transaction?')) return;
+        setLoading(true);
+        try {
+            const response = await apiFetch(`http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/ledger/${ledgerId}`, { method: 'DELETE' });
+            if (response.ok) {
+                toast.success('Transaction deleted successfully!');
+                if (currentStudent) {
+                    await handleViewLedger(currentStudent);
+                }
+                await fetchAllStudentBalances();
+            } else {
+                const errData = await response.json();
+                throw new Error(errData.message || 'Failed to delete transaction');
             }
         } catch (error) {
             toast.error((error as Error).message);
@@ -205,7 +271,7 @@ export default function Financials() {
         try {
             const token = localStorage.getItem("jwt_token");
             if (!token) throw new Error("Authentication token not found.");
-            const response = await fetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/charges/bulk', { method: 'POST', body: formData, headers: { "Authorization": "Bearer " + token } });
+            const response = await fetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/charges/bulk', { method: 'POST', body: formData, headers: { "Authorization": "Bearer " + token } });
             if (response.ok) {
                 toast.success('Bulk charge applied successfully!');
                 setIsBulkChargeDialogOpen(false);
@@ -242,8 +308,6 @@ export default function Financials() {
     }, [currentLedger]);
 
     const ledgerWithRunningBalance = useMemo(() => {
-        // This calculation is now incorrect for multi-currency and is removed from the table
-        // For a true running balance, a more complex per-currency calculation would be needed
         return currentLedger;
     }, [currentLedger]);
 
@@ -307,10 +371,19 @@ export default function Financials() {
                                         <BalanceDisplay title="Total Payments" balanceData={ledgerTotals.payments} positiveColor="text-green-400" negativeColor="text-green-400" />
                                         <BalanceDisplay title="Current Balances" balanceData={currentBalance?.balances} positiveColor="text-yellow-400" negativeColor="text-blue-400" />
                                     </div>
-                                    <div className="flex gap-4 mb-4"><Button className="bg-red-600" onClick={() => { setTransactionType('DEBIT'); setIsTransactionDialogOpen(true); }}>Add Charge</Button><Button className="bg-green-600" onClick={() => { setTransactionType('CREDIT'); setIsTransactionDialogOpen(true); }}>Record Payment</Button></div>
+                                    <div className="flex gap-4 mb-4"><Button className="bg-red-600 hover:bg-red-700" onClick={() => { setTransactionType('DEBIT'); setIsTransactionDialogOpen(true); }}>Add Charge</Button><Button className="bg-green-600 hover:bg-green-700" onClick={() => { setTransactionType('CREDIT'); setIsTransactionDialogOpen(true); }}>Record Payment</Button></div>
                                     <table className="w-full text-left">
-                                        <thead><tr className="border-b border-purple-600"><th className="p-2">Date</th><th className="p-2">Description</th><th className="p-2 text-right">Charge</th><th className="p-2 text-right">Payment</th></tr></thead>
-                                        <tbody>{ledgerWithRunningBalance.map(entry => (<tr key={entry.id} className="border-b border-purple-800"><td className="p-2">{entry.transactionDate}</td><td className="p-2">{entry.description}</td><td className="p-2 text-right text-red-400">{entry.transactionType === 'DEBIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td><td className="p-2 text-right text-green-400">{entry.transactionType === 'CREDIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td></tr>))}</tbody>
+                                        <thead><tr className="border-b border-purple-600"><th className="p-2">Date</th><th className="p-2">Description</th><th className="p-2 text-right">Charge</th><th className="p-2 text-right">Payment</th>{canManageLedgerEntries && <th className="p-2 text-center">Actions</th>}</tr></thead>
+                                        <tbody>{ledgerWithRunningBalance.map(entry => (<tr key={entry.id} className="border-b border-purple-800"><td className="p-2">{entry.transactionDate}</td><td className="p-2">{entry.description}</td><td className="p-2 text-right text-red-400">{entry.transactionType === 'DEBIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td><td className="p-2 text-right text-green-400">{entry.transactionType === 'CREDIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td>
+                                            {canManageLedgerEntries && (
+                                                <td className="p-2 text-center">
+                                                    <div className="flex justify-center items-center gap-2">
+                                                        <Button size="sm" variant="outline" className="border-purple-600 text-white hover:bg-purple-700" onClick={() => { setSelectedLedgerEntry(entry); setIsEditTransactionDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                                                        <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white" onClick={() => handleDeleteTransaction(entry.id)}><Trash2 className="h-4 w-4" /></Button>
+                                                    </div>
+                                                </td>
+                                            )}
+                                        </tr>))}</tbody>
                                     </table>
                                 </CardContent>
                             </Card>
@@ -328,6 +401,8 @@ export default function Financials() {
                     </TabsContent>
                 </Tabs>
             </main>
+
+            {/* --- ALL DIALOGS ARE NOW FULLY EXPANDED --- */}
 
             <Dialog open={isBulkChargeDialogOpen} onOpenChange={setIsBulkChargeDialogOpen}>
                 <DialogContent className="bg-purple-900 border-purple-700 text-white max-w-lg">
@@ -374,6 +449,8 @@ export default function Financials() {
             </Dialog>
 
             <Dialog open={isFeeTypeDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setSelectedFeeType(null); setIsFeeTypeDialogOpen(isOpen); }}><DialogContent className="bg-purple-900 border-purple-700 text-white"><DialogHeader><DialogTitle>{selectedFeeType ? 'Edit Fee Type' : 'Add New Fee Type'}</DialogTitle></DialogHeader><form onSubmit={handleFeeTypeSubmit} className="space-y-4"><div><Label htmlFor="name">Fee Name</Label><Input id="name" name="name" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.name} required /></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="defaultAmount">Default Amount</Label><Input id="defaultAmount" name="defaultAmount" type="number" step="0.01" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.defaultAmount} required /></div><div><Label htmlFor="currency">Currency</Label><Select name="currency" defaultValue={selectedFeeType?.currency || 'USD'}><SelectTrigger className="bg-purple-800 border-purple-600"><SelectValue /></SelectTrigger><SelectContent className="bg-purple-800 border-purple-600"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div></div><div><Label htmlFor="description">Description</Label><Input id="description" name="description" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.description} /></div><div className="flex justify-end gap-2"><Button type="submit" disabled={loading}>{loading ? 'Saving...' : (selectedFeeType ? 'Update Fee' : 'Add Fee')}</Button></div></form></DialogContent></Dialog>
+
+            {/* THIS IS THE DIALOG THAT WAS MISSING ITS CONTENT */}
             <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
                 <DialogContent className="bg-purple-900 border-purple-700 text-white">
                     <DialogHeader><DialogTitle>{transactionType === 'DEBIT' ? 'Add a Charge' : 'Record a Payment'}</DialogTitle></DialogHeader>
@@ -381,7 +458,7 @@ export default function Financials() {
                         {transactionType === 'DEBIT' && (
                             <div>
                                 <Label htmlFor="feeTypeId">Fee Type (Optional)</Label>
-                                <Select name="feeTypeId"><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{feeTypes?.map(ft =><SelectItem key={ft.id} value={ft.id.toString()}>{ft.name}</SelectItem>)}</SelectContent></DialogPortal></Select>
+                                <Select name="feeTypeId"><SelectTrigger className="bg-purple-800"><SelectValue placeholder="Select a fee type..."/></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{feeTypes?.map(ft =><SelectItem key={ft.id} value={ft.id.toString()}>{ft.name}</SelectItem>)}</SelectContent></DialogPortal></Select>
                             </div>
                         )}
                         <div className="grid grid-cols-2 gap-4">
@@ -410,6 +487,49 @@ export default function Financials() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={isEditTransactionDialogOpen} onOpenChange={setIsEditTransactionDialogOpen}>
+                <DialogContent className="bg-purple-900 border-purple-700 text-white">
+                    <DialogHeader><DialogTitle>Edit Transaction</DialogTitle></DialogHeader>
+                    {selectedLedgerEntry && (
+                        <form onSubmit={handleEditTransactionSubmit} className="space-y-4 py-4">
+                            {selectedLedgerEntry.transactionType === 'DEBIT' && (
+                                <div>
+                                    <Label htmlFor="feeTypeId">Fee Type (Optional)</Label>
+                                    <Select name="feeTypeId" defaultValue={selectedLedgerEntry.feeType?.id?.toString()}>
+                                        <SelectTrigger className="bg-purple-800"><SelectValue placeholder="Select a fee type..." /></SelectTrigger>
+                                        <DialogPortal><SelectContent className="bg-purple-800">{feeTypes?.map(ft =><SelectItem key={ft.id} value={ft.id.toString()}>{ft.name}</SelectItem>)}</SelectContent></DialogPortal>
+                                    </Select>
+                                </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div><Label htmlFor="amount">Amount *</Label><Input id="amount" name="amount" type="number" step="0.01" className="bg-purple-800" required defaultValue={selectedLedgerEntry.amount} /></div>
+                                <div>
+                                    <Label htmlFor="currency">Currency *</Label>
+                                    <Select name="currency" defaultValue={selectedLedgerEntry.currency} required>
+                                        <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
+                                        <DialogPortal><SelectContent className="bg-purple-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></DialogPortal>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div><Label htmlFor="description">Description *</Label><Input id="description" name="description" className="bg-purple-800" required defaultValue={selectedLedgerEntry.description} /></div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="academicYear">Academic Year</Label>
+                                    <Select name="academicYear" defaultValue={selectedLedgerEntry.academicYear} required><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{academicYears.map(year => (<SelectItem key={year} value={year}>{year}</SelectItem>))}</SelectContent></DialogPortal></Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor="semester">Term / Semester</Label>
+                                    <Select name="semester" defaultValue={selectedLedgerEntry.semester} required><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{semesters.map(term => (<SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>))}</SelectContent></DialogPortal></Select>
+                                </div>
+                            </div>
+                            <div><Label htmlFor="transactionDate">Transaction Date *</Label><Input id="transactionDate" name="transactionDate" type="date" className="bg-purple-800" defaultValue={selectedLedgerEntry.transactionDate} required /></div>
+                            <div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={() => setIsEditTransactionDialogOpen(false)}>Cancel</Button><Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Update Transaction'}</Button></div>
+                        </form>
+                    )}
+                </DialogContent>
+            </Dialog>
+
         </div>
     );
 }

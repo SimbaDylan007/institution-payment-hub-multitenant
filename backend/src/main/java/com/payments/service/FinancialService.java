@@ -210,8 +210,12 @@ public class FinancialService {
         entry.setTransactionDate(request.getTransactionDate());
         entry.setAcademicYear(request.getAcademicYear());
         entry.setSemester(request.getSemester());
-        if (feeType != null) { entry.setCurrency(feeType.getCurrency()); }
-        else { entry.setCurrency(Currency.USD); } // Default currency
+        // Set currency from FeeType if available, otherwise from request, with a default
+        if (feeType != null) {
+            entry.setCurrency(feeType.getCurrency());
+        } else {
+            entry.setCurrency(request.getCurrency() != null ? request.getCurrency() : Currency.USD);
+        }
         return ledgerRepository.save(entry);
     }
 
@@ -229,6 +233,48 @@ public class FinancialService {
         entry.setSemester(request.getSemester());
         return ledgerRepository.save(entry);
     }
+
+    // --- NEW: Update Ledger Entry Logic ---
+    @Transactional
+    public FinancialLedger updateLedgerEntry(Long id, LedgerEntryRequest request) {
+        FinancialLedger entry = ledgerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ledger entry not found"));
+
+        // Update fields from the request
+        entry.setAmount(request.getAmount());
+        entry.setDescription(request.getDescription());
+        entry.setTransactionDate(request.getTransactionDate());
+        entry.setAcademicYear(request.getAcademicYear());
+        entry.setSemester(request.getSemester());
+        entry.setCurrency(request.getCurrency());
+
+        // If it's a DEBIT, you can also update the fee type
+        if (entry.getTransactionType() == TransactionType.DEBIT && request.getFeeTypeId() != null) {
+            FeeType feeType = feeTypeRepository.findById(request.getFeeTypeId())
+                    .orElseThrow(() -> new RuntimeException("FeeType not found"));
+            entry.setFeeType(feeType);
+        }
+
+        return ledgerRepository.save(entry);
+    }
+
+    // --- NEW: Delete Ledger Entry Logic ---
+    @Transactional
+    public void deleteLedgerEntry(Long id) {
+        FinancialLedger entry = ledgerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ledger entry not found"));
+
+        // If this entry was from an allocated payment, revert the payment alert status
+        if (entry.getPaymentAlertId() != null) {
+            paymentRepository.findById(entry.getPaymentAlertId()).ifPresent(paymentAlert -> {
+                paymentAlert.setStatus("PENDING");
+                paymentRepository.save(paymentAlert);
+            });
+        }
+
+        ledgerRepository.delete(entry);
+    }
+
 
     public List<FinancialLedger> getStudentLedger(String studentId, List<String> years, List<String> semesters) {
         Student student = studentRepository.findByStudentId(studentId).orElseThrow(() -> new RuntimeException("Student not found"));
