@@ -56,6 +56,8 @@ public class MainReportService {
                 return generateFinancialSummaryReport(TransactionType.CREDIT, format, filters);
             case "FINANCIAL_SUMMARY_CHARGES":
                 return generateFinancialSummaryReport(TransactionType.DEBIT, format, filters);
+            case "FULL_FINANCIAL_LEDGER":
+                return generateFullLedgerReport(format, filters);
             case "PAYMENT_ALERTS":
                 return generateListReport(paymentRepository.findAll(), "Payment Alerts", format, PaymentAlert.class);
             case "ALL_FEE_TYPES":
@@ -94,6 +96,83 @@ public class MainReportService {
                 throw new IllegalArgumentException("Invalid report type specified: " + reportType);
         }
     }
+
+    // --- NEW METHOD TO GENERATE THE CONSOLIDATED LEDGER ---
+    private ByteArrayInputStream generateFullLedgerReport(String format, Map<String, String> filters) throws IOException {
+        String grade = filters.get("grade");
+        Long feeTypeId = filters.get("feeTypeId") != null && !filters.get("feeTypeId").isEmpty() ? Long.parseLong(filters.get("feeTypeId")) : null;
+        LocalDate startDate = filters.get("startDate") != null && !filters.get("startDate").isEmpty() ? LocalDate.parse(filters.get("startDate")) : null;
+        LocalDate endDate = filters.get("endDate") != null && !filters.get("endDate").isEmpty() ? LocalDate.parse(filters.get("endDate")) : null;
+
+        List<FinancialLedger> ledgerEntries = ledgerRepository.findFullLedgerWithFilters(grade, feeTypeId, startDate, endDate);
+
+        String[] headers = {"Date", "Student ID", "Student Name", "Grade", "Description", "Fee Type", "Currency", "Charge (Debit)", "Payment (Credit)"};
+        String title = "Full Financial Ledger";
+
+        if ("XLSX".equalsIgnoreCase(format)) {
+            return createFullLedgerExcel(ledgerEntries, title, headers);
+        } else if ("CSV".equalsIgnoreCase(format)) {
+            return createFullLedgerCsv(ledgerEntries, headers);
+        }
+        throw new IllegalArgumentException("Unsupported format for Full Ledger report: " + format);
+    }
+
+    // --- NEW HELPER for Full Ledger Excel ---
+    private ByteArrayInputStream createFullLedgerExcel(List<FinancialLedger> ledger, String title, String[] headers) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet(title);
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) headerRow.createCell(i).setCellValue(headers[i]);
+
+            int rowNum = 1;
+            for (FinancialLedger entry : ledger) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(entry.getTransactionDate().toString());
+                row.createCell(1).setCellValue(entry.getStudent().getStudentId());
+                row.createCell(2).setCellValue(entry.getStudent().getFirstName() + " " + entry.getStudent().getLastName());
+                row.createCell(3).setCellValue(entry.getStudent().getCurrentGrade());
+                row.createCell(4).setCellValue(entry.getDescription());
+                row.createCell(5).setCellValue(entry.getFeeType() != null ? entry.getFeeType().getName() : "N/A");
+                row.createCell(6).setCellValue(entry.getCurrency().toString());
+
+                if (entry.getTransactionType() == TransactionType.DEBIT) {
+                    row.createCell(7).setCellValue(entry.getAmount().doubleValue());
+                    row.createCell(8).setCellValue(""); // Empty payment cell
+                } else { // CREDIT
+                    row.createCell(7).setCellValue(""); // Empty charge cell
+                    row.createCell(8).setCellValue(entry.getAmount().doubleValue());
+                }
+            }
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+        }
+    }
+
+    // --- NEW HELPER for Full Ledger CSV ---
+    private ByteArrayInputStream createFullLedgerCsv(List<FinancialLedger> ledger, String[] headers) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (CSVWriter writer = new CSVWriter(new OutputStreamWriter(out))) {
+            writer.writeNext(headers);
+            for (FinancialLedger entry : ledger) {
+                String charge = entry.getTransactionType() == TransactionType.DEBIT ? entry.getAmount().toString() : "";
+                String payment = entry.getTransactionType() == TransactionType.CREDIT ? entry.getAmount().toString() : "";
+
+                writer.writeNext(new String[]{
+                        entry.getTransactionDate().toString(),
+                        entry.getStudent().getStudentId(),
+                        entry.getStudent().getFirstName() + " " + entry.getStudent().getLastName(),
+                        entry.getStudent().getCurrentGrade(),
+                        entry.getDescription(),
+                        entry.getFeeType() != null ? entry.getFeeType().getName() : "N/A",
+                        entry.getCurrency().toString(),
+                        charge,
+                        payment
+                });
+            }
+        }
+        return new ByteArrayInputStream(out.toByteArray());
+    }
+
 
 
     // --- HELPER METHOD TO LOAD AND ENCODE IMAGES ---

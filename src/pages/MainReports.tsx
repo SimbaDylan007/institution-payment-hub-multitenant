@@ -26,6 +26,7 @@ const reportOptions = [
             { value: 'FINANCIAL_STATEMENT', label: 'Student Financial Statement', formats: ['PDF', 'XLSX', 'CSV'] },
             { value: 'FINANCIAL_SUMMARY_PAYMENTS', label: 'Financial Summary (Payments)', formats: ['XLSX', 'CSV'] },
             { value: 'FINANCIAL_SUMMARY_CHARGES', label: 'Financial Summary (Charges)', formats: ['XLSX', 'CSV'] },
+            { value: 'FULL_FINANCIAL_LEDGER', label: 'Full Financial Ledger (All Transactions)', formats: ['XLSX', 'CSV'] },
             { value: 'PAYMENT_ALERTS', label: 'Payment Alerts (from Bank)', formats: ['XLSX', 'CSV'] },
             { value: 'ALL_FEE_TYPES', label: 'All Fee Types', formats: ['XLSX', 'CSV'] },
         ]},
@@ -227,6 +228,7 @@ export default function MainReports() {
                         </div>
                     </div>
                 );
+            case 'FULL_FINANCIAL_LEDGER':
             case 'FINANCIAL_SUMMARY_PAYMENTS':
             case 'FINANCIAL_SUMMARY_CHARGES':
                 return (

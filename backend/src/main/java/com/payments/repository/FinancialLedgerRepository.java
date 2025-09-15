@@ -88,4 +88,20 @@ public interface FinancialLedgerRepository extends JpaRepository<FinancialLedger
             @Param("endDate") LocalDate endDate
     );
 
+    // --- NEW METHOD FOR THE FULL LEDGER REPORT ---
+    // This query is similar to findFinancialsWithFilters but omits the TransactionType check,
+    // so it returns both charges and payments. It's ordered by date to act as a true ledger.
+    @Query("SELECT fl FROM FinancialLedger fl JOIN fl.student s WHERE " +
+            "(:grade IS NULL OR :grade = 'All' OR s.currentGrade = :#{#grade}) " +
+            "AND (:#{#feeTypeId} IS NULL OR fl.feeType.id = :#{#feeTypeId}) " +
+            "AND (:#{#startDate} IS NULL OR fl.transactionDate >= :#{#startDate}) " +
+            "AND (:#{#endDate} IS NULL OR fl.transactionDate <= :#{#endDate}) " +
+            "ORDER BY fl.transactionDate ASC, fl.id ASC")
+    List<FinancialLedger> findFullLedgerWithFilters(
+            @Param("grade") String grade,
+            @Param("feeTypeId") Long feeTypeId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
 }
