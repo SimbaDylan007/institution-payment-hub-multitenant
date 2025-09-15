@@ -24,7 +24,7 @@ import com.payments.dto.CurrencyBalanceDto;
 @RestController
 @RequestMapping("/api/financials")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasAnyRole('ADMIN', 'FINANCE_ADMIN')") // Only ADMIN and FINANCE_ADMIN can access
+@PreAuthorize("hasAnyRole('ADMIN', 'FINANCE_ADMIN')")
 public class FinancialController {
 
     @Autowired private FinancialService financialService;
@@ -66,13 +66,11 @@ public class FinancialController {
         return ResponseEntity.ok(financialService.addPayment(request));
     }
 
-    // --- NEW: Endpoint to update a ledger entry ---
     @PutMapping("/ledger/{id}")
     public ResponseEntity<FinancialLedger> updateLedgerEntry(@PathVariable Long id, @RequestBody LedgerEntryRequest request) {
         return ResponseEntity.ok(financialService.updateLedgerEntry(id, request));
     }
 
-    // --- NEW: Endpoint to delete a ledger entry ---
     @DeleteMapping("/ledger/{id}")
     public ResponseEntity<Void> deleteLedgerEntry(@PathVariable Long id) {
         financialService.deleteLedgerEntry(id);
@@ -107,16 +105,20 @@ public class FinancialController {
         return ResponseEntity.ok(financialService.allocatePayment(request));
     }
 
+    // --- THIS IS THE CORRECTED ENDPOINT ---
     @PostMapping("/charges/bulk")
     public ResponseEntity<Void> applyBulkCharge(
             @RequestParam("feeTypeId") Long feeTypeId,
-            @RequestParam("academicYear") String academicYear, // <-- Add new parameter
-            @RequestParam("semester") String semester,         // <-- Add new parameter
+            @RequestParam("academicYear") String academicYear,
+            @RequestParam("semester") String semester,
+            // Add the category parameter here
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "studentIds", required = false) List<String> studentIds,
             @RequestParam(value = "file", required = false) MultipartFile file
     ) throws IOException, CsvValidationException {
 
-        financialService.applyBulkCharge(feeTypeId, studentIds, file, academicYear, semester);
+        // Pass the new category parameter to the service method
+        financialService.applyBulkCharge(feeTypeId, studentIds, file, academicYear, semester, categoryId);
         return ResponseEntity.ok().build();
     }
 

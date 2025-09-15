@@ -95,6 +95,7 @@ public class MainReportService {
         }
     }
 
+
     // --- HELPER METHOD TO LOAD AND ENCODE IMAGES ---
     private String getImageAsBase64(String imagePath) throws IOException {
         ClassPathResource resource = new ClassPathResource(imagePath);
@@ -258,7 +259,11 @@ public class MainReportService {
         if (clazz == Student.class) return new String[]{"Student ID", "First Name", "Last Name", "Email", "Grade", "Section", "Enrollment Status"};
         if (clazz == Staff.class) return new String[]{"Employee ID", "First Name", "Last Name", "Email", "Department", "Position", "Hire Date", "Status"};
         if (clazz == Book.class) return new String[]{"Title", "Author", "ISBN", "Category", "Available Copies"};
-        if (clazz == PaymentAlert.class) return new String[]{"Transaction Date", "Student Name", "Amount", "Currency", "Narrative", "Reference", "Status"};
+        if (clazz == PaymentAlert.class) return new String[]{
+                "ID", "Transaction Date", "Student Name", "Student Surname", "Reg Number", "Amount",
+                "Currency", "Narrative", "Reference", "Source", "Status", "TCD", "Picked",
+                "NR1", "NR2", "NR3", "NR4"
+        };
         if (clazz == User.class) return new String[]{"User ID", "Username", "Email", "Roles", "Enabled"};
         if (clazz == FeeType.class) return new String[]{"ID", "Name", "Default Amount", "Currency", "Description"};
         if (clazz == AuditLog.class) return new String[]{"Timestamp", "Username", "Action", "Status", "IP Address", "Details"};
@@ -276,7 +281,28 @@ public class MainReportService {
         if (clazz == Student.class) { Student s = (Student) item; return new String[]{s.getStudentId(), s.getFirstName(), s.getLastName(), s.getEmail(), s.getCurrentGrade(), s.getSection(), s.getEnrollmentStatus()}; }
         if (clazz == Staff.class) { Staff s = (Staff) item; return new String[]{s.getEmployeeId(), s.getFirstName(), s.getLastName(), s.getEmail(), s.getDepartment(), s.getPosition(), s.getHireDate().toString(), s.getEmploymentStatus()}; }
         if (clazz == Book.class) { Book b = (Book) item; return new String[]{b.getTitle(), b.getAuthor(), b.getIsbn(), b.getCategory(), String.valueOf(b.getAvailableCopies())}; }
-        if (clazz == PaymentAlert.class) { PaymentAlert p = (PaymentAlert) item; return new String[]{p.getTransactionDate(), p.getStudentName(), p.getAmount().toString(), p.getCurrency(), p.getNarrative(), p.getReference(), p.getStatus()}; }
+        if (clazz == PaymentAlert.class) {
+            PaymentAlert p = (PaymentAlert) item;
+            return new String[]{
+                    p.getId() != null ? p.getId() : "",
+                    p.getTransactionDate() != null ? p.getTransactionDate() : "",
+                    p.getStudentName() != null ? p.getStudentName() : "",
+                    p.getStudentSurname() != null ? p.getStudentSurname() : "",
+                    p.getRegNumber() != null ? p.getRegNumber() : "",
+                    p.getAmount() != null ? p.getAmount().toString() : "0.00",
+                    p.getCurrency() != null ? p.getCurrency() : "",
+                    p.getNarrative() != null ? p.getNarrative() : "",
+                    p.getReference() != null ? p.getReference() : "",
+                    p.getSource() != null ? p.getSource() : "",
+                    p.getStatus() != null ? p.getStatus() : "",
+                    p.getTcd() != null ? p.getTcd() : "",
+                    String.valueOf(p.getPicked()),
+                    p.getNr1() != null ? p.getNr1() : "",
+                    p.getNr2() != null ? p.getNr2() : "",
+                    p.getNr3() != null ? p.getNr3() : "",
+                    p.getNr4() != null ? p.getNr4() : ""
+            };
+        }
         if (clazz == User.class) { User u = (User) item; return new String[]{String.valueOf(u.getId()), u.getUsername(), u.getEmail(), u.getRoles().stream().map(Role::getName).collect(Collectors.joining(", ")), String.valueOf(u.isEnabled())}; }
         if (clazz == FeeType.class) { FeeType f = (FeeType) item; return new String[]{String.valueOf(f.getId()), f.getName(), f.getDefaultAmount().toString(), f.getCurrency().toString(), f.getDescription()}; }
         if (clazz == AuditLog.class) { AuditLog a = (AuditLog) item; return new String[]{a.getTimestamp().toString(), a.getUsername(), a.getAction(), a.getStatus(), a.getIpAddress(), a.getDetails()}; }
@@ -451,6 +477,7 @@ public class MainReportService {
 
     // --- NEW PUBLIC METHOD FOR PREVIEW GENERATION ---
     public Map<String, Object> generatePreview(String reportType, Map<String, String> filters) {
+        Map<String, Object> result = new HashMap<>();
         List<?> data;
         String[] headers;
         Class<?> clazz;
@@ -459,52 +486,45 @@ public class MainReportService {
             case "FINANCIAL_STATEMENT":
                 Student student = studentRepository.findByStudentId(filters.get("studentId")).orElseThrow(() -> new RuntimeException("Student not found"));
                 data = ledgerRepository.findFilteredLedgerForStudent(student.getId(), filters.get("academicYear"), filters.get("semester"), Currency.valueOf(filters.get("currency")));
-                headers = new String[]{"Date", "Description", "Charge", "Payment", "Currency"};
-                clazz = FinancialLedger.class;
+                result.put("headers", new String[]{"Date", "Description", "Charge", "Payment", "Currency"});
+                result.put("rows", data.stream().limit(10).map(item -> {
+                    FinancialLedger fl = (FinancialLedger) item;
+                    String charge = fl.getTransactionType() == TransactionType.DEBIT ? fl.getAmount().toString() : "";
+                    String payment = fl.getTransactionType() == TransactionType.CREDIT ? fl.getAmount().toString() : "";
+                    return Arrays.asList(fl.getTransactionDate().toString(), fl.getDescription(), charge, payment, fl.getCurrency().toString());
+                }).collect(Collectors.toList()));
                 break;
+
             case "FINANCIAL_SUMMARY_PAYMENTS":
-                data = findFinancialsWithFilters(TransactionType.CREDIT, filters);
-                headers = new String[]{"Date", "Student Name", "Grade", "Description", "Amount", "Currency"};
-                clazz = FinancialLedger.class;
-                break;
             case "FINANCIAL_SUMMARY_CHARGES":
-                data = findFinancialsWithFilters(TransactionType.DEBIT, filters);
-                headers = new String[]{"Date", "Student Name", "Grade", "Description", "Amount", "Currency"};
-                clazz = FinancialLedger.class;
+                TransactionType type = "FINANCIAL_SUMMARY_PAYMENTS".equals(reportType) ? TransactionType.CREDIT : TransactionType.DEBIT;
+                data = findFinancialsWithFilters(type, filters);
+                result.put("headers", new String[]{"Date", "Student Name", "Grade", "Description", "Amount", "Currency"});
+                result.put("rows", data.stream().limit(10).map(item -> {
+                    FinancialLedger fl = (FinancialLedger) item;
+                    return Arrays.asList(
+                            fl.getTransactionDate().toString(),
+                            fl.getStudent().getFirstName() + " " + fl.getStudent().getLastName(),
+                            fl.getStudent().getCurrentGrade(),
+                            fl.getDescription(),
+                            fl.getAmount().toString(),
+                            fl.getCurrency().toString()
+                    );
+                }).collect(Collectors.toList()));
                 break;
-            case "ALL_STUDENTS":
-                data = studentRepository.findWithFilters(filters.getOrDefault("grade", "All"), filters.getOrDefault("section", "All"));
-                headers = getHeadersForClass(Student.class);
-                clazz = Student.class;
-                break;
-            case "ALL_STAFF":
-                data = staffRepository.findWithFilters(filters.getOrDefault("department", "All"), filters.getOrDefault("status", "All"));
-                headers = getHeadersForClass(Staff.class);
-                clazz = Staff.class;
-                break;
-            case "ALL_GRADES":
-                data = gradeRepository.findAll();
-                headers = getHeadersForClass(Grade.class);
-                clazz = Grade.class;
-                break;
-            default: // Handles all simple list reports
+
+            default: // Handles all other simple list reports correctly
                 data = getFullDataForReport(reportType);
                 clazz = getClassForReportType(reportType);
-                headers = getHeadersForClass(clazz);
+                result.put("headers", getHeadersForClass(clazz));
+                result.put("rows", data.stream().limit(10)
+                        .map(item -> Arrays.asList(getValuesForClass(item, (Class<Object>) clazz)))
+                        .collect(Collectors.toList()));
+                break;
         }
-
-        List<?> previewData = data.stream().limit(10).collect(Collectors.toList());
-
-        // The cast `(Class<Object>)` is removed from here as it's no longer needed
-        List<List<String>> rows = previewData.stream()
-                .map(item -> Arrays.asList(getValuesForPreview(item, item.getClass())))
-                .collect(Collectors.toList());
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("headers", headers);
-        result.put("rows", rows);
         return result;
     }
+
 
     // Helper to reuse filter logic for financial summaries
     private List<FinancialLedger> findFinancialsWithFilters(TransactionType type, Map<String, String> filters) {
@@ -537,7 +557,6 @@ public class MainReportService {
 
     // Helper to get Class type from reportType string
     private String[] getValuesForPreview(Object item, Class<?> clazz) {
-        // The `==` comparison is now valid because of the flexible `Class<?>` type
         if (clazz == FinancialLedger.class) {
             FinancialLedger fl = (FinancialLedger) item;
             String charge = fl.getTransactionType() == TransactionType.DEBIT ? fl.getAmount().toString() : "";
@@ -550,8 +569,8 @@ public class MainReportService {
                     fl.getCurrency().toString()
             };
         }
-        // Fallback to the main value getter for all other types
-        return getValuesForClass(item, (Class<Object>) clazz); // Cast is safe here
+        // Fallback to the main value getter for all other types, with a safe cast
+        return getValuesForClass(item, (Class<Object>) clazz);
     }
 
     private Class<?> getClassForReportType(String reportType) {

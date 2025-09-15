@@ -1,3 +1,5 @@
+// src/main/java/com/payments/service/StudentService.java
+
 package com.payments.service;
 
 import com.opencsv.CSVReader;
@@ -28,45 +30,48 @@ import java.util.Optional;
 
 @Service
 public class StudentService {
-    
+
     @Autowired
     private StudentRepository studentRepository;
-    
+
     @Autowired
     private GuardianRepository guardianRepository;
-    
+
     @Autowired
     private MedicalRecordRepository medicalRecordRepository;
-    
+
     @Autowired
     private AcademicRecordRepository academicRecordRepository;
+
+    @Autowired
+    private StudentCategoryRepository studentCategoryRepository;
+
 
     public Page<Student> getAllStudents(Pageable pageable, String searchTerm) {
         return studentRepository.findAllWithSearch(searchTerm, pageable);
     }
-    
+
     public Optional<Student> getStudentById(Long id) {
         return studentRepository.findById(id);
     }
-    
+
     public Optional<Student> getStudentByStudentId(String studentId) {
         return studentRepository.findByStudentId(studentId);
     }
-    
+
     public List<Student> getStudentsByEnrollmentStatus(String status) {
         return studentRepository.findByEnrollmentStatus(status);
     }
-    
+
     public List<Student> getStudentsByGrade(String grade) {
         return studentRepository.findByCurrentGrade(grade);
     }
 
-    
     @Transactional
     public Student createStudent(Student student) {
         return studentRepository.save(student);
     }
-    
+
     @Transactional
     public Student updateStudent(Long id, Student studentDetails) {
         Optional<Student> optionalStudent = studentRepository.findById(id);
@@ -82,11 +87,12 @@ public class StudentService {
             student.setEnrollmentStatus(studentDetails.getEnrollmentStatus());
             student.setCurrentGrade(studentDetails.getCurrentGrade());
             student.setSection(studentDetails.getSection());
+            student.setCategory(studentDetails.getCategory());
             return studentRepository.save(student);
         }
         return null;
     }
-    
+
     @Transactional
     public boolean deleteStudent(Long id) {
         if (studentRepository.existsById(id)) {
@@ -95,17 +101,17 @@ public class StudentService {
         }
         return false;
     }
-    
+
     // Guardian management
     public List<Guardian> getStudentGuardians(Long studentId) {
         return guardianRepository.findByStudentId(studentId);
     }
-    
+
     @Transactional
     public Guardian addGuardian(Guardian guardian) {
         return guardianRepository.save(guardian);
     }
-    
+
     @Transactional
     public Guardian updateGuardian(Long id, Guardian guardianDetails) {
         Optional<Guardian> optionalGuardian = guardianRepository.findById(id);
@@ -125,33 +131,38 @@ public class StudentService {
         }
         return null;
     }
-    
+
     // Medical records management
     public List<MedicalRecord> getStudentMedicalRecords(Long studentId) {
         return medicalRecordRepository.findByStudentId(studentId);
     }
-    
+
     @Transactional
     public MedicalRecord addMedicalRecord(MedicalRecord medicalRecord) {
         return medicalRecordRepository.save(medicalRecord);
     }
-    
+
     // Academic records management
     public List<AcademicRecord> getStudentAcademicRecords(Long studentId) {
         return academicRecordRepository.findByStudentId(studentId);
     }
-    
+
     @Transactional
     public AcademicRecord addAcademicRecord(AcademicRecord academicRecord) {
         return academicRecordRepository.save(academicRecord);
     }
-    
+
     public Long getStudentCountByStatus(String status) {
         return studentRepository.countByEnrollmentStatus(status);
     }
 
     @Transactional
     public List<Student> bulkAddStudents(MultipartFile file) throws IOException, CsvValidationException {
+        // Find the "OTHER" category once, to use as a default.
+        // This makes the import much more efficient.
+        StudentCategory defaultCategory = studentCategoryRepository.findByName("OTHER")
+                .orElseThrow(() -> new RuntimeException("Default 'OTHER' category not found in the database."));
+
         List<Student> studentsToSave = new ArrayList<>();
         String filename = file.getOriginalFilename();
 
@@ -162,7 +173,7 @@ public class StudentService {
         if (filename.endsWith(".csv")) {
             try (Reader reader = new InputStreamReader(file.getInputStream());
                  CSVReader csvReader = new CSVReader(reader)) {
-                csvReader.skip(1); // Skip header row
+                csvReader.skip(1);
                 String[] line;
                 while ((line = csvReader.readNext()) != null) {
                     Student student = new Student();
@@ -170,11 +181,18 @@ public class StudentService {
                     student.setLastName(line[1]);
                     student.setEmail(line[2]);
                     student.setPhone(line[3]);
-                    student.setDateOfBirth(parseDate(line[4])); // Use the new helper method
+                    student.setDateOfBirth(parseDate(line[4]));
                     student.setGender(line[5]);
                     student.setAddress(line[6]);
                     student.setCurrentGrade(line[7]);
                     student.setSection(line[8]);
+
+                    // --- THIS IS THE CORRECTED LOGIC ---
+                    String categoryName = line[9].trim().toUpperCase();
+                    StudentCategory category = studentCategoryRepository.findByName(categoryName)
+                            .orElse(defaultCategory); // Find by name, or use the default
+                    student.setCategory(category);
+
                     student.setEnrollmentStatus("ACTIVE");
                     student.setEnrollmentDate(LocalDate.now());
                     studentsToSave.add(student);
@@ -193,11 +211,18 @@ public class StudentService {
                     student.setLastName(getCellValueAsString(row.getCell(1)));
                     student.setEmail(getCellValueAsString(row.getCell(2)));
                     student.setPhone(getCellValueAsString(row.getCell(3)));
-                    student.setDateOfBirth(parseDate(getCellValueAsString(row.getCell(4)))); // Use helper
+                    student.setDateOfBirth(parseDate(getCellValueAsString(row.getCell(4))));
                     student.setGender(getCellValueAsString(row.getCell(5)));
                     student.setAddress(getCellValueAsString(row.getCell(6)));
                     student.setCurrentGrade(getCellValueAsString(row.getCell(7)));
                     student.setSection(getCellValueAsString(row.getCell(8)));
+
+                    // --- THIS IS THE CORRECTED LOGIC ---
+                    String categoryName = getCellValueAsString(row.getCell(9)).trim().toUpperCase();
+                    StudentCategory category = studentCategoryRepository.findByName(categoryName)
+                            .orElse(defaultCategory); // Find by name, or use the default
+                    student.setCategory(category);
+
                     student.setEnrollmentStatus("ACTIVE");
                     student.setEnrollmentDate(LocalDate.now());
                     studentsToSave.add(student);
@@ -212,12 +237,8 @@ public class StudentService {
     }
 
 
-    // --- NEW HELPER METHOD FOR FLEXIBLE DATE PARSING ---
     private LocalDate parseDate(String dateStr) {
-        if (dateStr == null || dateStr.trim().isEmpty()) {
-            return null; // Handle empty date cells
-        }
-        // List of common date formats to try
+        if (dateStr == null || dateStr.trim().isEmpty()) { return null; }
         DateTimeFormatter[] formatters = new DateTimeFormatter[]{
                 DateTimeFormatter.ofPattern("yyyy-MM-dd"),
                 DateTimeFormatter.ofPattern("d/M/yyyy"),
@@ -225,40 +246,34 @@ public class StudentService {
                 DateTimeFormatter.ofPattern("M/d/yyyy"),
                 DateTimeFormatter.ofPattern("MM/dd/yyyy")
         };
-
         for (DateTimeFormatter formatter : formatters) {
-            try {
-                return LocalDate.parse(dateStr, formatter);
-            } catch (DateTimeParseException e) {
-                // Ignore and try the next format
-            }
+            try { return LocalDate.parse(dateStr, formatter); } catch (DateTimeParseException e) { /* continue */ }
         }
-        // If no format matches, throw an exception
-        throw new DateTimeParseException("Unable to parse date: " + dateStr + ". Please use a supported format like yyyy-MM-dd or d/M/yyyy.", dateStr, 0);
+        throw new DateTimeParseException("Unable to parse date: " + dateStr, dateStr, 0);
     }
 
-    // Helper method to safely get cell values from Excel as String
     private String getCellValueAsString(Cell cell) {
-        if (cell == null) {
-            return "";
-        }
+        if (cell == null) { return ""; }
         switch (cell.getCellType()) {
             case STRING:
-                return cell.getStringCellValue();
+                return cell.getStringCellValue().trim();
             case NUMERIC:
-                // Handle numeric cells, could be dates or just numbers
                 if (org.apache.poi.ss.usermodel.DateUtil.isCellDateFormatted(cell)) {
-                    return cell.getLocalDateTimeCellValue().toLocalDate().toString();
+                    return cell.getLocalDateTimeCellValue().toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE);
                 } else {
-                    return String.valueOf((long)cell.getNumericCellValue());
+                    return new java.text.DecimalFormat("0").format(cell.getNumericCellValue());
                 }
             case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
+                return String.valueOf(cell.getBooleanCellValue()).trim();
             case FORMULA:
-                return cell.getCellFormula();
+                // Attempt to evaluate the formula to a string. Handle errors gracefully.
+                try {
+                    return cell.getStringCellValue().trim();
+                } catch (Exception e) {
+                    return cell.getCellFormula();
+                }
             default:
                 return "";
         }
     }
-
 }

@@ -64,9 +64,11 @@ C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\pa
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\service\ReconciliationService.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\repository\PasswordPolicyRepository.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\model\StudentRegistration.java
+C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\service\StudentCategoryService.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\dto\SecurityFeaturesDto.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\controller\StudentManagementController.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\repository\StudentRepository.java
+C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\model\StudentCategory.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\service\AuditLogService.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\dto\LedgerEntryRequest.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\model\ErrorDetails.java
@@ -94,6 +96,7 @@ C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\pa
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\controller\AuditLogController.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\dto\UserStatisticsDto.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\model\ScheduleEventType.java
+C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\controller\StudentCategoryController.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\model\Role.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\model\Guardian.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\service\MainReportService.java
@@ -119,6 +122,7 @@ C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\pa
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\repository\SchoolInformationRepository.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\dto\BulkChargeRequest.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\dto\GradeDTO.java
+C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\repository\StudentCategoryRepository.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\PaymentServiceApplication.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\dto\StatCardDto.java
 C:\Users\smach\IdeaProjects\institution-payment-hub\backend\src\main\java\com\payments\service\FacilityService.java

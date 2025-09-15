@@ -28,6 +28,7 @@ com\payments\repository\BookRepository.class
 com\payments\repository\NotificationRepository.class
 com\payments\model\Event.class
 com\payments\model\ScheduleEvent.class
+com\payments\model\StudentCategory.class
 com\payments\repository\UserRepository.class
 com\payments\repository\ExamRepository.class
 com\payments\controller\AuditLogController.class
@@ -66,6 +67,7 @@ com\payments\service\ReconciliationService.class
 com\payments\model\StaffAttendance.class
 com\payments\config\JwtRequestFilter.class
 com\payments\service\MainReportService.class
+com\payments\controller\StudentCategoryController.class
 com\payments\model\SystemPreferences.class
 com\payments\service\AuditLogService.class
 com\payments\controller\StaffManagementController.class
@@ -101,6 +103,7 @@ com\payments\controller\UserController.class
 com\payments\dto\StudentPerformanceDto.class
 com\payments\service\StudentPortalService.class
 com\payments\dto\ClassPerformanceDto.class
+com\payments\service\StudentCategoryService.class
 com\payments\dto\SchoolInformationDto.class
 com\payments\model\SchoolInformation.class
 com\example\schoolschedule\repository\TimetableEntryRepository.class
@@ -166,3 +169,4 @@ com\payments\controller\StudentController.class
 com\payments\model\NotificationPreferences.class
 com\payments\service\PaymentProcessingService.class
 com\payments\model\Currency.class
+com\payments\repository\StudentCategoryRepository.class

@@ -1,3 +1,5 @@
+// src/pages/Financials.tsx
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, Navigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -9,14 +11,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Home, Plus, DollarSign, BookUser, UserSearch, Download, Edit, Trash2, LayoutDashboard, Users, FileText, FileSpreadsheet, FileJson, Printer } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { Home, Plus, DollarSign, BookUser, UserSearch, Edit, Trash2, LayoutDashboard, Users, FileSpreadsheet, FileJson, Printer } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { apiFetch } from "@/utils/apiClient";
 import { academicYears, currentAcademicYear, currentSemester, semesters } from "@/config/academicConfig";
 import { FeeType, LedgerEntry, StudentBalance, CurrencyBalance } from "@/types";
 
-// --- Helper Component for displaying multi-currency balances ---
+// Interface for dynamic categories
+interface Category {
+    id: number;
+    name: string;
+}
+
+// Helper Component for displaying multi-currency balances
 const BalanceDisplay = ({ title, balanceData, positiveColor, negativeColor }: { title: string, balanceData?: { [key: string]: number }, positiveColor: string, negativeColor: string }) => (
     <Card className="bg-purple-800/30 border-purple-600 text-center">
         <CardHeader className="p-4"><CardTitle className="text-lg text-gray-300">{title}</CardTitle></CardHeader>
@@ -39,6 +47,7 @@ export default function Financials() {
     const [view, setView] = useState<'overview' | 'ledger'>('overview');
     const [allStudents, setAllStudents] = useState<StudentBalance[]>([]);
     const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [currentStudent, setCurrentStudent] = useState<StudentBalance | null>(null);
     const [currentLedger, setCurrentLedger] = useState<LedgerEntry[]>([]);
     const [loading, setLoading] = useState(false);
@@ -57,110 +66,41 @@ export default function Financials() {
     const [bulkSemester, setBulkSemester] = useState(currentSemester);
     const [bulkFile, setBulkFile] = useState<File | null>(null);
     const [bulkManualIds, setBulkManualIds] = useState('');
+    const [bulkStudentCategoryId, setBulkStudentCategoryId] = useState('0'); // '0' for ALL
 
-    // --- State for exporting directly from the ledger view ---
     const [isExporting, setIsExporting] = useState(false);
     const [ledgerYearFilter, setLedgerYearFilter] = useState(currentAcademicYear);
     const [ledgerSemesterFilter, setLedgerSemesterFilter] = useState(currentSemester);
     const [ledgerCurrencyFilter, setLedgerCurrencyFilter] = useState('USD');
 
-    // --- Handler function to export/print the current student's ledger ---
-    const handleExportLedger = async (format: 'PDF' | 'XLSX' | 'CSV') => {
-        if (!currentStudent) {
-            toast.error("No student selected.");
-            return;
-        }
-
-        setIsExporting(true);
-        const toastId = toast.loading(`Generating ${format} statement...`);
-        try {
-            const filters = {
-                studentId: currentStudent.studentId,
-                academicYear: ledgerYearFilter,
-                semester: ledgerSemesterFilter,
-                currency: ledgerCurrencyFilter,
-            };
-            const requestBody = {
-                reportType: 'FINANCIAL_STATEMENT',
-                format,
-                filters,
-            };
-
-            const token = localStorage.getItem("jwt_token");
-            const response = await fetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/main-reports/export', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(requestBody),
-            });
-
-            if (response.ok) {
-                toast.success("Statement generated! Download will begin.", { id: toastId });
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none'; a.href = url;
-
-                const disposition = response.headers.get('content-disposition');
-                // --- THIS IS THE FIX: Using JavaScript's Date object, not Java's LocalDate ---
-                let filename = `${filters.studentId}_statement_${new Date().toISOString().split('T')[0]}.${format.toLowerCase()}`;
-                if (disposition?.includes('filename=')) {
-                    filename = disposition.split('filename=')[1].replace(/"/g, '');
-                }
-                a.download = filename;
-                document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); a.remove();
-            } else {
-                const errorText = await response.text();
-                toast.error(`Failed to generate statement: ${errorText}`, { id: toastId });
-            }
-        } catch (error) {
-            toast.error("A network error occurred while generating the statement.", { id: toastId });
-        } finally {
-            setIsExporting(false);
-        }
-    };
-
-    // --- CORRECTED LOGIC for role checking ---
     const canManageLedgerEntries = useMemo(() => {
         if (!user || !user.role) return false;
-        // Direct comparison is safer than .includes for a single role string
         return user.role === 'ADMIN' || user.role === 'FINANCE_ADMIN';
     }, [user]);
 
-    useEffect(() => {
-        if(user) {
-            fetchFeeTypes();
-            fetchAllStudentBalances();
-        }
-    }, [user]);
-
-    const fetchAllStudentBalances = async () => {
+    const fetchAllData = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/balances');
-            if (response.ok) {
-                setAllStudents(await response.json());
-            } else {
-                toast.error('Failed to fetch student financial overview.');
-            }
+            const [feesRes, studentsRes, categoriesRes] = await Promise.all([
+                apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types'),
+                apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/balances'),
+                apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/student-categories')
+            ]);
+            if (feesRes.ok) setFeeTypes(await feesRes.json());
+            if (studentsRes.ok) setAllStudents(await studentsRes.json());
+            if (categoriesRes.ok) setCategories(await categoriesRes.json());
         } catch (error) {
-            console.error(error);
+            toast.error("Failed to load initial financial data.");
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchFeeTypes = async () => {
-        try {
-            const response = await apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types');
-            if (response.ok) {
-                setFeeTypes(await response.json());
-            } else {
-                toast.error('Failed to fetch fee types.');
-            }
-        } catch (error) {
-            console.error(error);
+    useEffect(() => {
+        if (user) {
+            fetchAllData();
         }
-    };
+    }, [user, fetchAllData]);
 
     const handleViewLedger = async (student: StudentBalance) => {
         setLoading(true);
@@ -193,7 +133,7 @@ export default function Financials() {
                 toast.success(`Fee type ${selectedFeeType ? 'updated' : 'created'} successfully!`);
                 setIsFeeTypeDialogOpen(false);
                 setSelectedFeeType(null);
-                fetchFeeTypes();
+                fetchAllData();
             } else {
                 const err = await response.json();
                 throw new Error(err.message);
@@ -212,7 +152,7 @@ export default function Financials() {
             const response = await apiFetch(`http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/fee-types/${feeTypeId}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success('Fee type deleted successfully!');
-                fetchFeeTypes();
+                fetchAllData();
             } else {
                 const err = await response.json();
                 throw new Error(err.message);
@@ -230,13 +170,10 @@ export default function Financials() {
         setLoading(true);
         const formData = new FormData(e.currentTarget);
         const requestData = {
-            studentId: currentStudent.studentId,
-            amount: parseFloat(formData.get('amount') as string),
-            description: formData.get('description') as string,
-            transactionDate: formData.get('transactionDate') as string,
+            studentId: currentStudent.studentId, amount: parseFloat(formData.get('amount') as string),
+            description: formData.get('description') as string, transactionDate: formData.get('transactionDate') as string,
             feeTypeId: formData.get('feeTypeId') ? parseInt(formData.get('feeTypeId') as string) : null,
-            academicYear: formData.get('academicYear') as string,
-            semester: formData.get('semester') as string,
+            academicYear: formData.get('academicYear') as string, semester: formData.get('semester') as string,
             currency: formData.get('currency') as string
         };
         const url = transactionType === 'DEBIT' ? 'http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/charges' : 'http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/payments';
@@ -246,7 +183,7 @@ export default function Financials() {
                 toast.success('Transaction added successfully!');
                 setIsTransactionDialogOpen(false);
                 await handleViewLedger(currentStudent);
-                await fetchAllStudentBalances();
+                await fetchAllData();
             } else {
                 const errData = await response.json();
                 throw new Error(errData.message || 'Failed to add transaction');
@@ -264,12 +201,10 @@ export default function Financials() {
         setLoading(true);
         const formData = new FormData(e.currentTarget);
         const requestData = {
-            amount: parseFloat(formData.get('amount') as string),
-            description: formData.get('description') as string,
+            amount: parseFloat(formData.get('amount') as string), description: formData.get('description') as string,
             transactionDate: formData.get('transactionDate') as string,
             feeTypeId: formData.get('feeTypeId') ? parseInt(formData.get('feeTypeId') as string) : null,
-            academicYear: formData.get('academicYear') as string,
-            semester: formData.get('semester') as string,
+            academicYear: formData.get('academicYear') as string, semester: formData.get('semester') as string,
             currency: formData.get('currency') as string
         };
         const url = `http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/ledger/${selectedLedgerEntry.id}`;
@@ -279,10 +214,8 @@ export default function Financials() {
                 toast.success('Transaction updated successfully!');
                 setIsEditTransactionDialogOpen(false);
                 setSelectedLedgerEntry(null);
-                if (currentStudent) {
-                    await handleViewLedger(currentStudent);
-                }
-                await fetchAllStudentBalances();
+                if (currentStudent) { await handleViewLedger(currentStudent); }
+                await fetchAllData();
             } else {
                 const errData = await response.json();
                 throw new Error(errData.message || 'Failed to update transaction');
@@ -301,10 +234,8 @@ export default function Financials() {
             const response = await apiFetch(`http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/ledger/${ledgerId}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success('Transaction deleted successfully!');
-                if (currentStudent) {
-                    await handleViewLedger(currentStudent);
-                }
-                await fetchAllStudentBalances();
+                if (currentStudent) { await handleViewLedger(currentStudent); }
+                await fetchAllData();
             } else {
                 const errData = await response.json();
                 throw new Error(errData.message || 'Failed to delete transaction');
@@ -323,17 +254,24 @@ export default function Financials() {
         formData.append('feeTypeId', bulkFeeTypeId);
         formData.append('academicYear', bulkAcademicYear);
         formData.append('semester', bulkSemester);
+        if (bulkStudentCategoryId !== '0') {
+            formData.append('categoryId', bulkStudentCategoryId);
+        }
         if (bulkFile) formData.append('file', bulkFile);
         const manualIdList = bulkManualIds.split(/[\n,]/).map(id => id.trim()).filter(Boolean);
         manualIdList.forEach(id => formData.append('studentIds', id));
         try {
             const token = localStorage.getItem("jwt_token");
             if (!token) throw new Error("Authentication token not found.");
-            const response = await fetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/charges/bulk', { method: 'POST', body: formData, headers: { "Authorization": "Bearer " + token } });
+            const response = await fetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/charges/bulk', {
+                method: 'POST',
+                body: formData,
+                headers: { "Authorization": "Bearer " + token }
+            });
             if (response.ok) {
                 toast.success('Bulk charge applied successfully!');
                 setIsBulkChargeDialogOpen(false);
-                fetchAllStudentBalances();
+                fetchAllData();
             } else {
                 const err = await response.json();
                 throw new Error(err.message);
@@ -343,6 +281,43 @@ export default function Financials() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleExportLedger = async (format: 'PDF' | 'XLSX' | 'CSV') => {
+        if (!currentStudent) {
+            toast.error("No student selected.");
+            return;
+        }
+        setIsExporting(true);
+        const toastId = toast.loading(`Generating ${format} statement...`);
+        try {
+            const filters = { studentId: currentStudent.studentId, academicYear: ledgerYearFilter, semester: ledgerSemesterFilter, currency: ledgerCurrencyFilter };
+            const requestBody = { reportType: 'FINANCIAL_STATEMENT', format, filters };
+            const token = localStorage.getItem("jwt_token");
+            const response = await fetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/main-reports/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (response.ok) {
+                toast.success("Statement generated! Download will begin.", { id: toastId });
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none'; a.href = url;
+                const disposition = response.headers.get('content-disposition');
+                let filename = `${filters.studentId}_statement_${new Date().toISOString().split('T')[0]}.${format.toLowerCase()}`;
+                if (disposition?.includes('filename=')) {
+                    filename = disposition.split('filename=')[1].replace(/"/g, '');
+                }
+                a.download = filename;
+                document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); a.remove();
+            } else {
+                const errorText = await response.text();
+                toast.error(`Failed to generate statement: ${errorText}`, { id: toastId });
+            }
+        } catch (error) { toast.error("A network error occurred while generating the statement.", { id: toastId }); } finally { setIsExporting(false); }
     };
 
     const filteredStudents = useMemo(() => {
@@ -450,7 +425,6 @@ export default function Financials() {
                                     </CardContent>
                                 </Card>
 
-                                {/* --- THIS IS THE NEW UI SECTION THAT WAS PREVIOUSLY MISSING --- */}
                                 <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
                                     <CardHeader>
                                         <CardTitle>Export Statement</CardTitle>
@@ -458,36 +432,20 @@ export default function Financials() {
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div>
-                                                <Label>Academic Year</Label>
-                                                <Select value={ledgerYearFilter} onValueChange={setLedgerYearFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800">{academicYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select>
-                                            </div>
-                                            <div>
-                                                <Label>Semester</Label>
-                                                <Select value={ledgerSemesterFilter} onValueChange={setLedgerSemesterFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800">{semesters.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
-                                            </div>
-                                            <div>
-                                                <Label>Currency</Label>
-                                                <Select value={ledgerCurrencyFilter} onValueChange={setLedgerCurrencyFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select>
-                                            </div>
+                                            <div><Label>Academic Year</Label><Select value={ledgerYearFilter} onValueChange={setLedgerYearFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800">{academicYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                                            <div><Label>Semester</Label><Select value={ledgerSemesterFilter} onValueChange={setLedgerSemesterFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800">{semesters.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select></div>
+                                            <div><Label>Currency</Label><Select value={ledgerCurrencyFilter} onValueChange={setLedgerCurrencyFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div>
                                         </div>
                                         <div className="flex flex-col md:flex-row gap-4 pt-4">
-                                            <Button onClick={() => handleExportLedger('PDF')} disabled={isExporting} className="flex-1 bg-blue-600 hover:bg-blue-700">
-                                                <Printer className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Print Statement (PDF)'}
-                                            </Button>
-                                            <Button onClick={() => handleExportLedger('XLSX')} disabled={isExporting} className="flex-1 bg-green-600 hover:bg-green-700">
-                                                <FileSpreadsheet className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Export (Excel)'}
-                                            </Button>
-                                            <Button onClick={() => handleExportLedger('CSV')} disabled={isExporting} className="flex-1 bg-gray-500 hover:bg-gray-600">
-                                                <FileJson className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Export (CSV)'}
-                                            </Button>
+                                            <Button onClick={() => handleExportLedger('PDF')} disabled={isExporting} className="flex-1 bg-blue-600 hover:bg-blue-700"><Printer className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Print Statement (PDF)'}</Button>
+                                            <Button onClick={() => handleExportLedger('XLSX')} disabled={isExporting} className="flex-1 bg-green-600 hover:bg-green-700"><FileSpreadsheet className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Export (Excel)'}</Button>
+                                            <Button onClick={() => handleExportLedger('CSV')} disabled={isExporting} className="flex-1 bg-gray-500 hover:bg-gray-600"><FileJson className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Export (CSV)'}</Button>
                                         </div>
                                     </CardContent>
                                 </Card>
                             </div>
                         )}
                     </TabsContent>
-
                     <TabsContent value="fee_config">
                         <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
                             <CardHeader className="flex flex-row justify-between items-center">
@@ -500,7 +458,6 @@ export default function Financials() {
                 </Tabs>
             </main>
 
-            {/* --- ALL DIALOGS ARE NOW FULLY EXPANDED --- */}
             <Dialog open={isBulkChargeDialogOpen} onOpenChange={setIsBulkChargeDialogOpen}>
                 <DialogContent className="bg-purple-900 border-purple-700 text-white max-w-lg">
                     <DialogHeader><DialogTitle>Apply Fee to Multiple Students</DialogTitle></DialogHeader>
@@ -513,30 +470,27 @@ export default function Financials() {
                             </Select>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label>For Academic Year</Label>
-                                <Select name="academicYear" required value={bulkAcademicYear} onValueChange={setBulkAcademicYear}>
-                                    <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
-                                    <DialogPortal><SelectContent className="bg-purple-800">{academicYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></DialogPortal>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label>For Term / Semester</Label>
-                                <Select name="semester" required value={bulkSemester} onValueChange={setBulkSemester}>
-                                    <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
-                                    <DialogPortal><SelectContent className="bg-purple-800">{semesters.map(term => <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>)}</SelectContent></DialogPortal>
-                                </Select>
-                            </div>
+                            <div><Label>For Academic Year</Label><Select name="academicYear" required value={bulkAcademicYear} onValueChange={setBulkAcademicYear}><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{academicYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
+                            <div><Label>For Term / Semester</Label><Select name="semester" required value={bulkSemester} onValueChange={setBulkSemester}><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{semesters.map(term => <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
                         </div>
-                        <p className="text-sm text-center text-gray-400 font-bold">--- CHOOSE ONE STUDENT INPUT METHOD ---</p>
+
                         <div>
-                            <Label htmlFor="file">Method 1: Upload CSV or Excel File</Label>
-                            <Input id="file" name="file" type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" className="bg-purple-800 file:text-white" onChange={(e) => setBulkFile(e.target.files ? e.target.files[0] : null)} />
+                            <Label>Target Student Category</Label>
+                            <Select value={bulkStudentCategoryId} onValueChange={setBulkStudentCategoryId}>
+                                <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
+                                <SelectContent className="bg-purple-800">
+                                    <SelectItem value="0">All Students</SelectItem>
+                                    {categories.map(cat => (
+                                        <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-gray-400 mt-1">Fee will only apply to students in this category who are also in the list below (if provided).</p>
                         </div>
-                        <div>
-                            <Label htmlFor="studentIds_manual">Method 2: Manually Enter Student IDs</Label>
-                            <Textarea id="studentIds_manual" name="studentIds_manual" rows={5} placeholder="P2522029, S1234567" className="bg-purple-800" value={bulkManualIds} onChange={(e) => setBulkManualIds(e.target.value)} />
-                        </div>
+
+                        <p className="text-sm text-center text-gray-400 font-bold">--- OPTIONAL: Choose Specific Students ---</p>
+                        <div><Label htmlFor="file">Method 1: Upload CSV or Excel File of Student IDs</Label><Input id="file" name="file" type="file" accept=".csv, .xlsx, .xls" className="bg-purple-800 file:text-white" onChange={(e) => setBulkFile(e.target.files ? e.target.files[0] : null)} /></div>
+                        <div><Label htmlFor="studentIds_manual">Method 2: Manually Enter Student IDs</Label><Textarea id="studentIds_manual" name="studentIds_manual" rows={3} placeholder="P2522029, S1234567" className="bg-purple-800" value={bulkManualIds} onChange={(e) => setBulkManualIds(e.target.value)} /></div>
                         <div className="flex justify-end gap-2">
                             <Button type="button" variant="outline" onClick={() => setIsBulkChargeDialogOpen(false)}>Cancel</Button>
                             <Button type="submit" disabled={loading}>{loading ? 'Applying...' : 'Apply Charge'}</Button>
@@ -544,6 +498,7 @@ export default function Financials() {
                     </form>
                 </DialogContent>
             </Dialog>
+
             <Dialog open={isFeeTypeDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setSelectedFeeType(null); setIsFeeTypeDialogOpen(isOpen); }}><DialogContent className="bg-purple-900 border-purple-700 text-white"><DialogHeader><DialogTitle>{selectedFeeType ? 'Edit Fee Type' : 'Add New Fee Type'}</DialogTitle></DialogHeader><form onSubmit={handleFeeTypeSubmit} className="space-y-4"><div><Label htmlFor="name">Fee Name</Label><Input id="name" name="name" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.name} required /></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="defaultAmount">Default Amount</Label><Input id="defaultAmount" name="defaultAmount" type="number" step="0.01" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.defaultAmount} required /></div><div><Label htmlFor="currency">Currency</Label><Select name="currency" defaultValue={selectedFeeType?.currency || 'USD'}><SelectTrigger className="bg-purple-800 border-purple-600"><SelectValue /></SelectTrigger><SelectContent className="bg-purple-800 border-purple-600"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div></div><div><Label htmlFor="description">Description</Label><Input id="description" name="description" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.description} /></div><div className="flex justify-end gap-2"><Button type="submit" disabled={loading}>{loading ? 'Saving...' : (selectedFeeType ? 'Update Fee' : 'Add Fee')}</Button></div></form></DialogContent></Dialog>
             <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
                 <DialogContent className="bg-purple-900 border-purple-700 text-white">
