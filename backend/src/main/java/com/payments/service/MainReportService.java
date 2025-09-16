@@ -573,6 +573,32 @@ public class MainReportService {
                     return Arrays.asList(fl.getTransactionDate().toString(), fl.getDescription(), charge, payment, fl.getCurrency().toString());
                 }).collect(Collectors.toList()));
                 break;
+            case "ALL_STUDENTS":
+                data = findStudentsWithFilters(filters);
+                clazz = Student.class;
+                result.put("headers", getHeadersForClass(clazz));
+                result.put("rows", data.stream().limit(10)
+                        .map(item -> Arrays.asList(getValuesForClass(item, (Class<Object>) clazz)))
+                        .collect(Collectors.toList()));
+                break;
+            case "FULL_FINANCIAL_LEDGER":
+                data = findFullLedgerWithFilters(filters);
+                result.put("headers", new String[]{"Date", "Student Name", "Grade", "Description", "Charge", "Payment", "Currency"});
+                result.put("rows", data.stream().limit(10).map(item -> {
+                    FinancialLedger fl = (FinancialLedger) item;
+                    String charge = fl.getTransactionType() == TransactionType.DEBIT ? fl.getAmount().toString() : "";
+                    String payment = fl.getTransactionType() == TransactionType.CREDIT ? fl.getAmount().toString() : "";
+                    return Arrays.asList(
+                            fl.getTransactionDate().toString(),
+                            fl.getStudent().getFirstName() + " " + fl.getStudent().getLastName(),
+                            fl.getStudent().getCurrentGrade(),
+                            fl.getDescription(),
+                            charge,
+                            payment,
+                            fl.getCurrency().toString()
+                    );
+                }).collect(Collectors.toList()));
+                break;
 
             case "FINANCIAL_SUMMARY_PAYMENTS":
             case "FINANCIAL_SUMMARY_CHARGES":
@@ -671,4 +697,19 @@ public class MainReportService {
         }
     }
 
+    private List<Student> findStudentsWithFilters(Map<String, String> filters) {
+        String grade = filters.getOrDefault("grade", "All");
+        String section = filters.getOrDefault("section", "All");
+        // Assuming you have a repository method like this. If not, you'll need to create it.
+        return studentRepository.findWithFilters(grade, section);
+    }
+
+
+    private List<FinancialLedger> findFullLedgerWithFilters(Map<String, String> filters) {
+        String grade = filters.get("grade");
+        Long feeTypeId = filters.get("feeTypeId") != null && !filters.get("feeTypeId").isEmpty() ? Long.parseLong(filters.get("feeTypeId")) : null;
+        LocalDate startDate = filters.get("startDate") != null && !filters.get("startDate").isEmpty() ? LocalDate.parse(filters.get("startDate")) : null;
+        LocalDate endDate = filters.get("endDate") != null && !filters.get("endDate").isEmpty() ? LocalDate.parse(filters.get("endDate")) : null;
+        return ledgerRepository.findFullLedgerWithFilters(grade, feeTypeId, startDate, endDate);
+    }
 }
