@@ -14,7 +14,11 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.time.LocalDate;
+import java.time.Year;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class ZbApiService {
@@ -142,6 +146,9 @@ public class ZbApiService {
 
         if (payment.getNarrative() != null) {
             String[] parts = payment.getNarrative().split("\\|");
+            Pattern pattern = Pattern.compile("P\\s?\\d+");
+            Matcher matcher = pattern.matcher(payment.getNarrative());
+
             if (parts.length >= 3) {
                 String studentFullName = payment.getNr1() != null ? payment.getNr1() : parts[2];
                 String[] nameParts = studentFullName.trim().split("\\s+");
@@ -149,7 +156,10 @@ public class ZbApiService {
                     payment.setStudentSurname(nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
                     payment.setStudentName(nameParts.length > 1 ? String.join(" ", Arrays.copyOfRange(nameParts, 0, nameParts.length - 1)) : nameParts[0]);
                 }
-                if (parts.length > 4) {
+
+                if (matcher.find()){
+                    payment.setRegNumber(matcher.group().replaceAll("\\s", ""));
+                } else if (parts.length > 4) {
                     payment.setRegNumber(parts[4].trim());
                 }
             }
