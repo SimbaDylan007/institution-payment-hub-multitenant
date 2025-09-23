@@ -24,6 +24,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.Iterator;
+
 
 
 @Service
@@ -97,7 +102,7 @@ public class MainReportService {
         }
     }
 
-    // --- NEW METHOD TO GENERATE THE CONSOLIDATED LEDGER ---
+    // --- METHOD TO GENERATE THE CONSOLIDATED LEDGER ---
     private ByteArrayInputStream generateFullLedgerReport(String format, Map<String, String> filters) throws IOException {
         String grade = filters.get("grade");
         Long feeTypeId = filters.get("feeTypeId") != null && !filters.get("feeTypeId").isEmpty() ? Long.parseLong(filters.get("feeTypeId")) : null;
@@ -106,71 +111,170 @@ public class MainReportService {
 
         List<FinancialLedger> ledgerEntries = ledgerRepository.findFullLedgerWithFilters(grade, feeTypeId, startDate, endDate);
 
-        String[] headers = {"Date", "Student ID", "Student Name", "Grade", "Description", "Fee Type", "Currency", "Charge (Debit)", "Payment (Credit)"};
+        // Group entries by student to calculate running balance
+        Map<Student, List<FinancialLedger>> groupedByStudent = ledgerEntries.stream()
+                .sorted(Comparator.comparing(FinancialLedger::getTransactionDate))
+                .collect(Collectors.groupingBy(FinancialLedger::getStudent, LinkedHashMap::new, Collectors.toList()));
+
+        List<LedgerEntryWithBalance> processedEntries = new ArrayList<>();
+        for (Map.Entry<Student, List<FinancialLedger>> entry : groupedByStudent.entrySet()) {
+            BigDecimal currentBalance = BigDecimal.ZERO;
+            for (FinancialLedger ledger : entry.getValue()) {
+                if (ledger.getTransactionType() == TransactionType.DEBIT) {
+                    currentBalance = currentBalance.add(ledger.getAmount());
+                } else { // CREDIT
+                    currentBalance = currentBalance.subtract(ledger.getAmount());
+                }
+                processedEntries.add(new LedgerEntryWithBalance(ledger, currentBalance));
+            }
+        }
+
+        String[] headers = {"Date", "Student ID", "Student Name", "Grade", "Description", "Fee Type", "Currency", "Charge (Debit)", "Payment (Credit)", "Balance"};
         String title = "Full Financial Ledger";
 
         if ("XLSX".equalsIgnoreCase(format)) {
-            return createFullLedgerExcel(ledgerEntries, title, headers);
+            return createFullLedgerExcel(processedEntries, title, headers);
         } else if ("CSV".equalsIgnoreCase(format)) {
-            return createFullLedgerCsv(ledgerEntries, headers);
+            return createFullLedgerCsv(processedEntries, headers);
         }
         throw new IllegalArgumentException("Unsupported format for Full Ledger report: " + format);
     }
 
-    // --- NEW HELPER for Full Ledger Excel ---
-    private ByteArrayInputStream createFullLedgerExcel(List<FinancialLedger> ledger, String title, String[] headers) throws IOException {
+    // --- HELPER for Full Ledger Excel with Shading and Spacing ---
+    private ByteArrayInputStream createFullLedgerExcel(List<LedgerEntryWithBalance> ledgerWithBalance, String title, String[] headers) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet(title);
+
+            // --- Style for color shading ---
+            CellStyle shadedStyle = workbook.createCellStyle();
+            shadedStyle.setFillForegroundColor(IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
+            shadedStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
             Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < headers.length; i++) headerRow.createCell(i).setCellValue(headers[i]);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+            }
+
+            // Re-group by student to apply formatting
+            Map<Student, List<LedgerEntryWithBalance>> groupedForFormatting = ledgerWithBalance.stream()
+                    .collect(Collectors.groupingBy(entry -> entry.getLedgerEntry().getStudent(), LinkedHashMap::new, Collectors.toList()));
 
             int rowNum = 1;
-            for (FinancialLedger entry : ledger) {
-                Row row = sheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(entry.getTransactionDate().toString());
-                row.createCell(1).setCellValue(entry.getStudent().getStudentId());
-                row.createCell(2).setCellValue(entry.getStudent().getFirstName() + " " + entry.getStudent().getLastName());
-                row.createCell(3).setCellValue(entry.getStudent().getCurrentGrade());
-                row.createCell(4).setCellValue(entry.getDescription());
-                row.createCell(5).setCellValue(entry.getFeeType() != null ? entry.getFeeType().getName() : "N/A");
-                row.createCell(6).setCellValue(entry.getCurrency().toString());
+            int studentIndex = 0;
+            Iterator<Map.Entry<Student, List<LedgerEntryWithBalance>>> iterator = groupedForFormatting.entrySet().iterator();
 
-                if (entry.getTransactionType() == TransactionType.DEBIT) {
-                    row.createCell(7).setCellValue(entry.getAmount().doubleValue());
-                    row.createCell(8).setCellValue(""); // Empty payment cell
-                } else { // CREDIT
-                    row.createCell(7).setCellValue(""); // Empty charge cell
-                    row.createCell(8).setCellValue(entry.getAmount().doubleValue());
+            while (iterator.hasNext()) {
+                Map.Entry<Student, List<LedgerEntryWithBalance>> studentEntry = iterator.next();
+                List<LedgerEntryWithBalance> studentLedger = studentEntry.getValue();
+
+                // Determine if this student's rows should be shaded
+                boolean isShaded = studentIndex % 2 != 0;
+
+                for (LedgerEntryWithBalance entryWithBalance : studentLedger) {
+                    FinancialLedger entry = entryWithBalance.getLedgerEntry();
+                    Row row = sheet.createRow(rowNum++);
+
+                    // Create cells and apply style if needed
+                    for (int i = 0; i < headers.length; i++) {
+                        Cell cell = row.createCell(i);
+                        if (isShaded) {
+                            cell.setCellStyle(shadedStyle);
+                        }
+                    }
+
+                    row.getCell(0).setCellValue(entry.getTransactionDate().toString());
+                    row.getCell(1).setCellValue(entry.getStudent().getStudentId());
+                    row.getCell(2).setCellValue(entry.getStudent().getFirstName() + " " + entry.getStudent().getLastName());
+                    row.getCell(3).setCellValue(entry.getStudent().getCurrentGrade());
+                    row.getCell(4).setCellValue(entry.getDescription());
+                    row.getCell(5).setCellValue(entry.getFeeType() != null ? entry.getFeeType().getName() : "");
+                    row.getCell(6).setCellValue(entry.getCurrency().toString());
+
+                    if (entry.getTransactionType() == TransactionType.DEBIT) {
+                        row.getCell(7).setCellValue(entry.getAmount().doubleValue());
+                    } else { // CREDIT
+                        row.getCell(8).setCellValue(entry.getAmount().doubleValue());
+                    }
+                    row.getCell(9).setCellValue(entryWithBalance.getBalance().doubleValue());
                 }
+
+                // --- Add a blank row for spacing if this is not the last student ---
+                if (iterator.hasNext()) {
+                    rowNum++; // Increment row number to leave a blank row
+                }
+                studentIndex++;
             }
+
+            // Auto-size columns for better readability
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
             workbook.write(out);
             return new ByteArrayInputStream(out.toByteArray());
         }
     }
 
-    // --- NEW HELPER for Full Ledger CSV ---
-    private ByteArrayInputStream createFullLedgerCsv(List<FinancialLedger> ledger, String[] headers) throws IOException {
+    // --- HELPER for Full Ledger CSV with Spacing ---
+    private ByteArrayInputStream createFullLedgerCsv(List<LedgerEntryWithBalance> ledgerWithBalance, String[] headers) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (CSVWriter writer = new CSVWriter(new OutputStreamWriter(out))) {
             writer.writeNext(headers);
-            for (FinancialLedger entry : ledger) {
-                String charge = entry.getTransactionType() == TransactionType.DEBIT ? entry.getAmount().toString() : "";
-                String payment = entry.getTransactionType() == TransactionType.CREDIT ? entry.getAmount().toString() : "";
 
-                writer.writeNext(new String[]{
-                        entry.getTransactionDate().toString(),
-                        entry.getStudent().getStudentId(),
-                        entry.getStudent().getFirstName() + " " + entry.getStudent().getLastName(),
-                        entry.getStudent().getCurrentGrade(),
-                        entry.getDescription(),
-                        entry.getFeeType() != null ? entry.getFeeType().getName() : "N/A",
-                        entry.getCurrency().toString(),
-                        charge,
-                        payment
-                });
+            // Re-group by student to apply formatting
+            Map<Student, List<LedgerEntryWithBalance>> groupedForFormatting = ledgerWithBalance.stream()
+                    .collect(Collectors.groupingBy(entry -> entry.getLedgerEntry().getStudent(), LinkedHashMap::new, Collectors.toList()));
+
+            Iterator<Map.Entry<Student, List<LedgerEntryWithBalance>>> iterator = groupedForFormatting.entrySet().iterator();
+
+            while(iterator.hasNext()){
+                Map.Entry<Student, List<LedgerEntryWithBalance>> studentEntry = iterator.next();
+                for (LedgerEntryWithBalance entryWithBalance : studentEntry.getValue()) {
+                    FinancialLedger entry = entryWithBalance.getLedgerEntry();
+                    String charge = entry.getTransactionType() == TransactionType.DEBIT ? entry.getAmount().toString() : "";
+                    String payment = entry.getTransactionType() == TransactionType.CREDIT ? entry.getAmount().toString() : "";
+
+                    writer.writeNext(new String[]{
+                            entry.getTransactionDate().toString(),
+                            entry.getStudent().getStudentId(),
+                            entry.getStudent().getFirstName() + " " + entry.getStudent().getLastName(),
+                            entry.getStudent().getCurrentGrade(),
+                            entry.getDescription(),
+                            entry.getFeeType() != null ? entry.getFeeType().getName() : "",
+                            entry.getCurrency().toString(),
+                            charge,
+                            payment,
+                            entryWithBalance.getBalance().toString()
+                    });
+                }
+                // --- Add a blank row for spacing if this is not the last student ---
+                if (iterator.hasNext()) {
+                    writer.writeNext(new String[0]); // Writes an empty line
+                }
             }
         }
         return new ByteArrayInputStream(out.toByteArray());
+    }
+    /**
+     * A helper class to hold a FinancialLedger entry along with the running balance.
+     */
+    private static class LedgerEntryWithBalance {
+        private final FinancialLedger ledgerEntry;
+        private final BigDecimal balance;
+
+        public LedgerEntryWithBalance(FinancialLedger ledgerEntry, BigDecimal balance) {
+            this.ledgerEntry = ledgerEntry;
+            this.balance = balance;
+        }
+
+        public FinancialLedger getLedgerEntry() {
+            return ledgerEntry;
+        }
+
+        public BigDecimal getBalance() {
+            return balance;
+        }
     }
 
 
@@ -265,7 +369,8 @@ public class MainReportService {
 
     private ByteArrayInputStream createStudentStatementPdf(Student student, List<FinancialLedger> ledger, String currency, String year, String semester) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        String logoBase64 = "data:image/png;base64," + getImageAsBase64("static/images/logo.png");
+        // The logoBase64 will now be used for both the header logo and the watermark
+        String logoBase64 = "data:image/png;base64," + getImageAsBase64("resources/images/pachedu.png");
         String estampBase64 = "data:image/png;base64," + getImageAsBase64("static/images/estamp.png");
 
         StringBuilder html = new StringBuilder();
@@ -280,15 +385,22 @@ public class MainReportService {
                 .append(".student-info { border: 1px solid #ccc; padding: 10px; margin-top: 20px; border-radius: 5px; background-color: #f9f9f9; }")
                 .append(".summary { text-align: right; margin-top: 20px; font-size: 12pt; font-weight: bold; }")
                 .append("td.currency { text-align: right; }")
-                .append(".watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); z-index: -1000; font-size: 60pt; color: rgba(0, 0, 0, 0.07); font-weight: bold; text-align: center; pointer-events: none; }")
+                // --- CSS Changes Start ---
+                // 1. Removed font-specific styles from .watermark
+                .append(".watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); z-index: -1000; pointer-events: none; text-align: center; }")
+                // 2. Added new style for the image inside the watermark div
+                .append(".watermark img { opacity: 0.07; width: 400px; }")
+                // --- CSS Changes End ---
                 .append(".footer { position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 8pt; color: #888; border-top: 1px solid #ccc; padding-top: 5px; }")
                 .append(".estamp-container { position: absolute; bottom: 80px; right: 20px; }")
                 .append(".estamp-container img { max-width: 100px; max-height: 100px; opacity: 0.9; }")
                 .append("</style></head><body>")
-                .append("<div class='watermark'>Pachedu Junior School</div>")
+                // --- HTML Change ---
+                // 3. Replaced the text watermark with an img tag using the logo's base64 string
+                .append("<div class='watermark'><img src='").append(logoBase64).append("' alt='Watermark'/></div>")
                 .append("<div class='header'>")
-                .append("<img src='").append(logoBase64).append("' class='logo' alt='School Logo' />")
-                .append("<h1>Pachedu Junior School</h1>")
+                .append("<img src='resources/images/pachedu.png").append(logoBase64).append("' class='logo' alt='School Logo' />")
+                .append("<h1>Pachedu Junior Academy</h1>")
                 .append("<h3>Student Financial Statement</h3>")
                 .append("<p>Date Printed: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))).append("</p>")
                 .append("</div>")
@@ -297,8 +409,8 @@ public class MainReportService {
                 .append(buildSummaryHtml(ledger, currency))
                 .append("<div class='estamp-container'><img src='").append(estampBase64).append("' alt='Official Stamp' /></div>")
                 .append("<div class='footer'>")
-                .append("Pachedu Junior School | 123 Education Lane, Harare, Zimbabwe<br/>")
-                .append("Phone: +263 77 777 7777 | Email: accounts@pachedu.ac.zw")
+                .append("Pachedu Junior Academy | 508 Mupfure Heights, Mt Darwin, Zimbabwe<br/>")
+                .append("Phone: +263 717989858/771955399/714664391 | Email: 2019PJA@gmail.com | Website: https://www.pachedujunioracademy.com/<br/>")
                 .append("</div>")
                 .append("</body></html>");
 
