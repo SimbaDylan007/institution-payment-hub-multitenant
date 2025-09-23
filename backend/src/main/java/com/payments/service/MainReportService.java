@@ -365,58 +365,77 @@ public class MainReportService {
         throw new IllegalArgumentException("Unsupported format for list report: " + format);
     }
 
-    // --- FORMAT-SPECIFIC HELPERS (PDF, EXCEL, CSV) ---
-
     private ByteArrayInputStream createStudentStatementPdf(Student student, List<FinancialLedger> ledger, String currency, String year, String semester) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        // The logoBase64 will now be used for both the header logo and the watermark
-        String logoBase64 = "data:image/png;base64," + getImageAsBase64("resources/images/pachedu.png");
+
+        // Convert logos to Base64
+        String logoBase64 = "data:image/png;base64," + getImageAsBase64("images/pachedu.png");
         String estampBase64 = "data:image/png;base64," + getImageAsBase64("static/images/estamp.png");
 
         StringBuilder html = new StringBuilder();
         html.append("<html><head><style>")
-                .append("body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; }")
-                .append("h1 { font-size: 18pt; color: #2c3e50; margin: 0; } h3 { font-size: 14pt; color: #34495e; margin-bottom: 20px; }")
-                .append("table { width: 100%; border-collapse: collapse; margin-top: 20px; }")
+                // --- FIX: Reduced vertical padding to prevent overflow to a second page ---
+                .append("html, body { margin: 0; padding: 20px 25px; font-family: Helvetica, Arial, sans-serif; font-size: 10pt; }")
+
+                // --- Typography & Layout ---
+                .append("h1 { font-size: 18pt; color: #2c3e50; margin: 0; }")
+                .append("h3 { font-size: 14pt; color: #34495e; margin: 5px 0 15px 0; }")
+                .append("p { margin: 5px 0; }")
+                .append("table { width: 100%; border-collapse: collapse; margin-top: 15px; }") // Reduced margin
                 .append("th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }")
                 .append("th { background-color: #f2f2f2; }")
-                .append(".header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }")
+
+                // --- Header ---
+                .append(".header { text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; }")
                 .append(".header img.logo { max-width: 120px; max-height: 120px; margin-bottom: 10px; }")
-                .append(".student-info { border: 1px solid #ccc; padding: 10px; margin-top: 20px; border-radius: 5px; background-color: #f9f9f9; }")
-                .append(".summary { text-align: right; margin-top: 20px; font-size: 12pt; font-weight: bold; }")
+
+                // --- Student Info ---
+                .append(".student-info { border: 1px solid #ccc; padding: 10px; margin-top: 15px; border-radius: 5px; background-color: #f9f9f9; }") // Reduced margin
+
+                // --- Summary ---
+                .append(".summary { text-align: right; margin-top: 15px; font-size: 12pt; font-weight: bold; }") // Reduced margin
                 .append("td.currency { text-align: right; }")
-                // --- CSS Changes Start ---
-                // 1. Removed font-specific styles from .watermark
-                .append(".watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); z-index: -1000; pointer-events: none; text-align: center; }")
-                // 2. Added new style for the image inside the watermark div
-                .append(".watermark img { opacity: 0.07; width: 400px; }")
-                // --- CSS Changes End ---
-                .append(".footer { position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 8pt; color: #888; border-top: 1px solid #ccc; padding-top: 5px; }")
+
+                // --- Watermark (Centered on the full page) ---
+                .append(".watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); z-index: -1; pointer-events: none; text-align: center; }")
+                .append(".watermark img { opacity: 0.07; width: 500px; }")
+
+                // --- Footer ---
+                .append(".footer { position: fixed; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 8pt; color: #888; border-top: 1px solid #ccc; padding: 5px 25px 0 25px; background-color: white; }")
+
+                // --- eStamp ---
                 .append(".estamp-container { position: absolute; bottom: 80px; right: 20px; }")
                 .append(".estamp-container img { max-width: 100px; max-height: 100px; opacity: 0.9; }")
+
                 .append("</style></head><body>")
-                // --- HTML Change ---
-                // 3. Replaced the text watermark with an img tag using the logo's base64 string
+
                 .append("<div class='watermark'><img src='").append(logoBase64).append("' alt='Watermark'/></div>")
+
                 .append("<div class='header'>")
-                .append("<img src='resources/images/pachedu.png").append(logoBase64).append("' class='logo' alt='School Logo' />")
+                .append("<img src='").append(logoBase64).append("' class='logo' alt='School Logo' />")
                 .append("<h1>Pachedu Junior Academy</h1>")
                 .append("<h3>Student Financial Statement</h3>")
                 .append("<p>Date Printed: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))).append("</p>")
                 .append("</div>")
+
                 .append(buildStudentInfoHtml(student, year, semester, currency))
                 .append(buildLedgerTableHtml(ledger))
                 .append(buildSummaryHtml(ledger, currency))
+
                 .append("<div class='estamp-container'><img src='").append(estampBase64).append("' alt='Official Stamp' /></div>")
+
                 .append("<div class='footer'>")
                 .append("Pachedu Junior Academy | 508 Mupfure Heights, Mt Darwin, Zimbabwe<br/>")
                 .append("Phone: +263 717989858/771955399/714664391 | Email: 2019PJA@gmail.com | Website: https://www.pachedujunioracademy.com/<br/>")
                 .append("</div>")
+
                 .append("</body></html>");
 
         HtmlConverter.convertToPdf(html.toString(), new PdfWriter(outputStream));
         return new ByteArrayInputStream(outputStream.toByteArray());
     }
+
+
 
     private <T> ByteArrayInputStream createExcelForList(List<T> data, String sheetName, String[] headers, Class<T> clazz) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
