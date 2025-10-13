@@ -43,7 +43,7 @@ export default function AddMedicalRecordModal({ studentId, onRecordAdded }: AddM
     setLoading(true);
 
     try {
-      const response = await fetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students/${studentId}/medical-records`, {
+      const response = await fetch(`http://localhost:8082/api/students/${studentId}/medical-records`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

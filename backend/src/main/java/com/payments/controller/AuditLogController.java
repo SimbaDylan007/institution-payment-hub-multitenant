@@ -17,7 +17,7 @@ import java.time.LocalTime;
 @RestController
 @RequestMapping("/api/audit-logs")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
 public class AuditLogController {
 
     @Autowired

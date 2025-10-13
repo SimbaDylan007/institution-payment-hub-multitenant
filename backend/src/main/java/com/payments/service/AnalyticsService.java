@@ -1,14 +1,13 @@
 package com.payments.service;
 
 import com.payments.dto.*;
-import com.payments.repository.AcademicRecordRepository;
-import com.payments.repository.FinancialLedgerRepository; // <-- CORRECTED: Uses the new repository
-import com.payments.repository.ResourceUsageLogRepository;
-import com.payments.repository.StudentRepository;
+import com.payments.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-
+import com.payments.model.*;
+import org.springframework.security.core.Authentication; // <-- IMPORT
+import org.springframework.security.core.context.SecurityContextHolder; // <-- IMPORT
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,6 +21,8 @@ public class AnalyticsService {
     private final AcademicRecordRepository academicRecordRepository;
     private final StudentRepository studentRepository;
     private final ResourceUsageLogRepository resourceUsageLogRepository;
+
+    @Autowired private UserRepository userRepository;
 
     @Autowired
     public AnalyticsService(FinancialLedgerRepository ledgerRepository, // <-- CORRECTED: Injects the new repository

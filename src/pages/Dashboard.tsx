@@ -39,8 +39,8 @@ interface InstitutionAccount {
 }
 
 // --- API Endpoints ---
-const ACCOUNTS_API_BASE_URL = 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/accounts';
-const PAYMENTS_API_BASE_URL = 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/payments';
+const ACCOUNTS_API_BASE_URL = 'http://localhost:8082/api/accounts';
+const PAYMENTS_API_BASE_URL = 'http://localhost:8082/api/payments';
 
 
 // --- Helper Components ---
@@ -117,8 +117,17 @@ export default function Dashboard() {
   const [localSearchTerm, setLocalSearchTerm] = useState("");
   const [institutionAccounts, setInstitutionAccounts] = useState<InstitutionAccount[]>([]);
 
-  const canManagePayments = user?.role === 'ADMIN' || user?.role === 'FINANCE_ADMIN';
-  const canManageStudents = user?.role === 'ADMIN' || user?.role === 'IT_ADMIN';
+  const isSuperAdmin = user?.role?.includes('ROLE_SUPER_ADMIN') ?? false;
+
+    const canManagePayments =
+        isSuperAdmin ||
+        user?.role?.includes('ROLE_ADMIN') ||
+        user?.role?.includes('ROLE_FINANCE_ADMIN');
+
+    const canManageStudents =
+        isSuperAdmin ||
+        user?.role?.includes('ROLE_ADMIN') ||
+        user?.role?.includes('ROLE_IT_ADMIN');
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -186,24 +195,26 @@ export default function Dashboard() {
     }
   }, [backendFilters, fetchLocalPayments]);
 
-  useEffect(() => {
-    const handleInitialLoad = async () => {
-      if (canManagePayments) {
-        const accounts = await fetchAccounts();
-        if (accounts.length > 0) {
-          const allInstitutionIds = accounts.map(acc => acc.institutionId);
-          loadPayments('pending', allInstitutionIds);
-        } else {
-          // If no accounts are set up, just load local payments
-          loadPayments('all'); // This will trigger the non-remote path in loadPayments
-        }
-      } else {
-        setIsLoadingPayments(false);
-      }
-    };
 
-    handleInitialLoad();
-  }, [canManagePayments, loadPayments, fetchAccounts]);
+    useEffect(() => {
+        const handleInitialLoad = async () => {
+            if (canManagePayments) {
+                const accounts = await fetchAccounts();
+                if (accounts.length > 0) {
+                    const allInstitutionIds = accounts.map(acc => acc.institutionId);
+                    loadPayments('pending', allInstitutionIds);
+                } else {
+                    loadPayments('all');
+                }
+            } else {
+                setIsLoadingPayments(false);
+            }
+        };
+
+        handleInitialLoad();
+    }, [canManagePayments, loadPayments, fetchAccounts]);
+
+
 
   const handleBackendSearch = (newFilters: SearchFiltersType) => { setBackendFilters(newFilters); toast.info("Filters updated. Click 'Fetch New Payments' to apply."); };
   const handlePaymentReset = (paymentId: string) => { setAllFetchedPayments(prev => prev.filter(p => p.id !== paymentId)); toast.info("Payment reset."); };

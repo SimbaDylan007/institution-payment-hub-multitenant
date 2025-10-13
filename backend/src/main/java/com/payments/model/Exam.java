@@ -19,6 +19,10 @@ public class Exam {
     @ManyToOne
     @JoinColumn(name = "subject_id", nullable = false)
     private Subject subject;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
     
     @Column(nullable = false)
     private LocalDate examDate;
@@ -81,4 +85,8 @@ public class Exam {
     
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }
+

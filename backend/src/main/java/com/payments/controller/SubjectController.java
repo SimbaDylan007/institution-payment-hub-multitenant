@@ -10,7 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @RestController
 @RequestMapping("/api/subjects")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'TEACHER')")
+@PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATOR', 'TEACHER','SUPER_ADMIN')")
 public class SubjectController {
 
     @Autowired

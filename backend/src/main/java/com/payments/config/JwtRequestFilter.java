@@ -24,6 +24,19 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
+
+        final String requestURI = request.getRequestURI();
+
+        // --- THIS IS THE CORRECTED FIX ---
+        // The path must match what the frontend is calling and what SecurityConfig permits.
+        // It must start with "/api/auth/".
+        if (requestURI.startsWith("/api/auth/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+        // --- END OF FIX ---
+
+
         final String requestTokenHeader = request.getHeader("Authorization");
         String username = null;
         String jwtToken = null;
@@ -35,7 +48,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             } catch (IllegalArgumentException | ExpiredJwtException e) {
                 System.out.println("Unable to get JWT or JWT has expired");
             }
+        } else {
+            // This warning is expected for login, but good to have for other endpoints.
+            logger.warn("JWT Token does not begin with Bearer String for URL: " + requestURI);
         }
+
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);

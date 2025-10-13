@@ -4,14 +4,9 @@ package com.payments.service;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
-import com.payments.dto.LedgerEntryRequest;
-import com.payments.dto.PaymentAllocationRequest;
-import com.payments.dto.StudentBalanceDto;
+import com.payments.dto.*;
 import com.payments.model.*;
-import com.payments.repository.FeeTypeRepository;
-import com.payments.repository.FinancialLedgerRepository;
-import com.payments.repository.PaymentRepository;
-import com.payments.repository.StudentRepository;
+import com.payments.repository.*;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -23,7 +18,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import com.payments.dto.CurrencyBalanceDto;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -34,19 +28,55 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+
 
 @Service
+@Slf4j
 public class FinancialService {
+
+    private static final Logger log = LoggerFactory.getLogger(FinancialService.class);
+
 
     @Autowired private FeeTypeRepository feeTypeRepository;
     @Autowired private FinancialLedgerRepository ledgerRepository;
     @Autowired private StudentRepository studentRepository;
     @Autowired private PaymentRepository paymentRepository;
     @Autowired private SystemSettingsService settingsService;
+    @Autowired private UserRepository userRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     // --- Fee Type Management ---
     public List<FeeType> getAllFeeTypes() { return feeTypeRepository.findAll(); }
-    public FeeType createFeeType(FeeType feeType) { return feeTypeRepository.save(feeType); }
+    public FeeType createFeeType(FeeType feeType) {
+        // --- TENANCY ENFORCEMENT ---
+        User currentUser = getCurrentUser();
+        if (currentUser.getInstitution() == null && !isSuperAdmin(currentUser)) {
+            throw new IllegalStateException("User does not belong to an institution.");
+        }
+        // Stamp the new FeeType with the user's institution
+        feeType.setInstitution(currentUser.getInstitution());
+        return feeTypeRepository.save(feeType);
+    }
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = ((org.springframework.security.core.userdetails.User) authentication.getPrincipal()).getUsername();
+        return userRepository.findByUsername(username).orElseThrow(() -> new IllegalStateException("Authenticated user not found."));
+    }
+
+    private boolean isSuperAdmin(User user) {
+        return user.getRoles().stream().anyMatch(role -> role.getName().equals("ROLE_SUPER_ADMIN"));
+    }
+
     @Transactional
     public FeeType updateFeeType(Long id, FeeType feeTypeDetails) {
         FeeType feeType = feeTypeRepository.findById(id).orElseThrow(() -> new RuntimeException("FeeType not found"));
@@ -58,15 +88,27 @@ public class FinancialService {
     }
     @Transactional
     public void deleteFeeType(Long id) {
-        if (!feeTypeRepository.existsById(id)) { throw new RuntimeException("FeeType not found"); }
-        if (ledgerRepository.existsByFeeTypeId(id)) { throw new IllegalStateException("Cannot delete fee type: it is in use."); }
+        // findById is automatically filtered.
+        FeeType feeType = feeTypeRepository.findById(id).orElseThrow(() -> new RuntimeException("FeeType not found"));
+        // Check for usage WITHIN the same institution.
+        if (ledgerRepository.existsByFeeTypeIdAndInstitution(id, feeType.getInstitution())) {
+            throw new IllegalStateException("Cannot delete fee type: it is in use by ledger entries.");
+        }
         feeTypeRepository.deleteById(id);
     }
 
-    // --- Payment Allocation ---
 
+    // --- Payment Allocation (Now Tenant-Aware) ---
     public List<PaymentAlert> getUnallocatedPayments() {
-        return paymentRepository.findByStatus("PENDING");
+        // --- TENANCY ENFORCEMENT ---
+        User currentUser = getCurrentUser();
+        if (isSuperAdmin(currentUser)) {
+            // Super-admins see all pending payments from all institutions
+            return paymentRepository.findByStatus("PENDING");
+        }
+        if (currentUser.getInstitution() == null) return List.of(); // Non-admin with no institution sees nothing
+        // Regular users only see pending payments for their own institution
+        return paymentRepository.findByStatusAndInstitution("PENDING", currentUser.getInstitution());
     }
 
     public Page<PaymentAlert> getPaymentsByStatus(String status, String searchTerm, Pageable pageable) {
@@ -80,12 +122,19 @@ public class FinancialService {
                 .orElseThrow(() -> new RuntimeException("PaymentAlert not found"));
         Student student = studentRepository.findByStudentId(request.getStudentId())
                 .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        // --- Cross-Tenancy Check ---
+        if (!Objects.equals(payment.getInstitution().getId(), student.getInstitution().getId())) {
+            throw new SecurityException("Cannot allocate payment to a student from a different institution.");
+        }
+
         if (!"PENDING".equalsIgnoreCase(payment.getStatus())) {
             throw new IllegalStateException("Payment already allocated.");
         }
 
         FinancialLedger creditEntry = new FinancialLedger();
         creditEntry.setStudent(student);
+        creditEntry.setInstitution(student.getInstitution());
         creditEntry.setTransactionType(TransactionType.CREDIT);
         creditEntry.setAmount(payment.getAmount());
         creditEntry.setCurrency(Currency.valueOf(payment.getCurrency()));
@@ -105,8 +154,16 @@ public class FinancialService {
     public void applyBulkCharge(Long feeTypeId, List<String> studentIds, MultipartFile file, String academicYear, String semester, Long  categoryId)
             throws IOException, CsvValidationException {
 
-        FeeType feeType = feeTypeRepository.findById(feeTypeId).orElseThrow(() -> new RuntimeException("FeeType not found"));
+        User currentUser = getCurrentUser();
+        Institution targetInstitution = currentUser.getInstitution();
+        if (targetInstitution == null) {
+            throw new IllegalStateException("You must belong to an institution to apply bulk charges.");
+        }
 
+        FeeType feeType = feeTypeRepository.findById(feeTypeId).orElseThrow(() -> new RuntimeException("FeeType not found"));
+        if (!Objects.equals(feeType.getInstitution().getId(), targetInstitution.getId())) {
+            throw new SecurityException("Cannot apply a fee type from another institution.");
+        }
 
         // Step 1: Get the base list of students based on the category filter
         List<Student> studentsInCategory;
@@ -148,6 +205,7 @@ public class FinancialService {
         for (Student student : studentsToCharge) {
             FinancialLedger charge = new FinancialLedger();
             charge.setStudent(student);
+            charge.setInstitution(targetInstitution);
             charge.setFeeType(feeType);
             charge.setTransactionType(TransactionType.DEBIT);
             charge.setAmount(feeType.getDefaultAmount());
@@ -215,6 +273,7 @@ public class FinancialService {
         }
         FinancialLedger entry = new FinancialLedger();
         entry.setStudent(student);
+        entry.setInstitution(student.getInstitution());
         entry.setFeeType(feeType);
         entry.setTransactionType(TransactionType.DEBIT);
         entry.setAmount(request.getAmount());
@@ -232,44 +291,105 @@ public class FinancialService {
 
     @Transactional
     public FinancialLedger addPayment(LedgerEntryRequest request) {
-        Student student = studentRepository.findByStudentId(request.getStudentId()).orElseThrow(() -> new RuntimeException("Student not found"));
+        // 1. Fetch the student. The Hibernate Filter automatically ensures the user
+        //    can only access students from their own institution.
+        Student student = studentRepository.findByStudentId(request.getStudentId())
+                .orElseThrow(() -> new RuntimeException("Student not found with ID: " + request.getStudentId()));
+
+        // 2. Create the new ledger entry.
         FinancialLedger entry = new FinancialLedger();
+
+        // --- CRITICAL TENANCY ENFORCEMENT ---
+        // 3. Explicitly set the institution from the verified student object.
+        entry.setInstitution(student.getInstitution());
+
         entry.setStudent(student);
         entry.setTransactionType(TransactionType.CREDIT);
         entry.setAmount(request.getAmount());
-        entry.setCurrency(request.getCurrency() != null ? request.getCurrency() : Currency.USD);
+        entry.setCurrency(request.getCurrency() != null ? request.getCurrency() : Currency.USD); // Default currency
         entry.setDescription(request.getDescription());
         entry.setTransactionDate(request.getTransactionDate());
         entry.setAcademicYear(request.getAcademicYear());
         entry.setSemester(request.getSemester());
+
+        // 4. Save the new, tenant-stamped entry.
         return ledgerRepository.save(entry);
     }
 
     @Transactional
     public FinancialLedger updateLedgerEntry(Long id, LedgerEntryRequest request) {
-        FinancialLedger entry = ledgerRepository.findById(id).orElseThrow(() -> new RuntimeException("Ledger entry not found"));
-        entry.setAmount(request.getAmount());
-        entry.setDescription(request.getDescription());
-        entry.setTransactionDate(request.getTransactionDate());
-        entry.setAcademicYear(request.getAcademicYear());
-        entry.setSemester(request.getSemester());
-        entry.setCurrency(request.getCurrency());
-        if (entry.getTransactionType() == TransactionType.DEBIT && request.getFeeTypeId() != null) {
-            FeeType feeType = feeTypeRepository.findById(request.getFeeTypeId()).orElseThrow(() -> new RuntimeException("FeeType not found"));
-            entry.setFeeType(feeType);
+        // 1. Fetch the existing ledger entry. The Hibernate Filter automatically ensures
+        //    a user can only fetch an entry from their own institution.
+        FinancialLedger existingEntry = ledgerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ledger entry not found with id: " + id));
+
+        // --- (Optional but Recommended) Security Check for FeeType ---
+        if (existingEntry.getTransactionType() == TransactionType.DEBIT && request.getFeeTypeId() != null) {
+            // Fetch the FeeType to be assigned. This findById is also automatically filtered.
+            FeeType feeType = feeTypeRepository.findById(request.getFeeTypeId())
+                    .orElseThrow(() -> new RuntimeException("FeeType not found with id: " + request.getFeeTypeId()));
+
+            // This check prevents assigning a FeeType from a different institution.
+            // The filter on findById makes this redundant but adds an explicit layer of security.
+            if (!Objects.equals(feeType.getInstitution().getId(), existingEntry.getInstitution().getId())) {
+                throw new SecurityException("Cannot assign a FeeType from a different institution.");
+            }
+            existingEntry.setFeeType(feeType);
+        } else {
+            // If it's a payment (CREDIT) or no fee type is provided, ensure it's set to null.
+            existingEntry.setFeeType(null);
         }
-        return ledgerRepository.save(entry);
+        // --- End Security Check ---
+
+        // 2. Update the properties of the existing entry.
+        // We do NOT update the student or institution, as this should be a separate business process.
+        existingEntry.setAmount(request.getAmount());
+        existingEntry.setDescription(request.getDescription());
+        existingEntry.setTransactionDate(request.getTransactionDate());
+        existingEntry.setAcademicYear(request.getAcademicYear());
+        existingEntry.setSemester(request.getSemester());
+        existingEntry.setCurrency(request.getCurrency());
+
+        // 3. Save the updated entry.
+        return ledgerRepository.save(existingEntry);
     }
 
     @Transactional
     public void deleteLedgerEntry(Long id) {
-        FinancialLedger entry = ledgerRepository.findById(id).orElseThrow(() -> new RuntimeException("Ledger entry not found"));
-        if (entry.getPaymentAlertId() != null) {
-            paymentRepository.findById(entry.getPaymentAlertId()).ifPresent(paymentAlert -> {
-                paymentAlert.setStatus("PENDING");
-                paymentRepository.save(paymentAlert);
+        // 1. Fetch the ledger entry. The Hibernate Filter ensures the user can only access
+        //    entries from their own institution. If not found, it throws an exception.
+        FinancialLedger entry = ledgerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ledger entry not found with id: " + id));
+
+        // 2. Check if this ledger entry is linked to a payment alert.
+        String paymentAlertId = entry.getPaymentAlertId();
+        if (paymentAlertId != null && !paymentAlertId.isBlank()) {
+
+            // 3. Fetch the associated payment alert.
+            paymentRepository.findById(paymentAlertId).ifPresent(paymentAlert -> {
+
+                // --- CRITICAL SECURITY CHECK ---
+                // 4. Verify that the payment alert belongs to the SAME institution
+                //    as the ledger entry we are deleting.
+                if (Objects.equals(paymentAlert.getInstitution().getId(), entry.getInstitution().getId())) {
+
+                    // 5. If they match, reset the payment alert's status.
+                    paymentAlert.setStatus("PENDING");
+                    paymentRepository.save(paymentAlert);
+
+                } else {
+                    // This case should be rare but is a critical security boundary.
+                    // It indicates a potential data integrity issue.
+                    log.error("SECURITY ALERT: Attempted to modify PaymentAlert ID {} from Institution {} " +
+                                    "while deleting LedgerEntry ID {} from Institution {}. Operation aborted.",
+                            paymentAlert.getId(), paymentAlert.getInstitution().getId(),
+                            entry.getId(), entry.getInstitution().getId());
+                    // We do not modify the paymentAlert from the wrong institution.
+                }
             });
         }
+
+        // 6. Finally, delete the ledger entry itself.
         ledgerRepository.delete(entry);
     }
 

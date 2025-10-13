@@ -35,6 +35,11 @@ public class Book {
     private String location;
     
     private String status; // AVAILABLE, ISSUED, MAINTENANCE
+
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
     
     // Constructors
     public Book() {}
@@ -72,4 +77,7 @@ public class Book {
     
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

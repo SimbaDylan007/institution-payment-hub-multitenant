@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/accounts")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasAnyRole('ADMIN', 'FINANCE_ADMIN')")// Allow your React app to access this
+@PreAuthorize("hasAnyRole('ADMIN', 'FINANCE_ADMIN','SUPER_ADMIN')")// Allow your React app to access this
 public class InstitutionAccountController {
 
     @Autowired
@@ -32,12 +32,7 @@ public class InstitutionAccountController {
     // POST a new account or update an existing one based on institutionId
     @PostMapping
     public ResponseEntity<InstitutionAccount> addOrUpdateAccount(@RequestBody InstitutionAccount account) {
-        // If an account with the same institutionId already exists, update it
-        // Otherwise, create a new one.
-        // Note: The 'id' in your frontend was 'institutionId', which is a string.
-        // The backend's primary key 'id' is a Long.
-        // For simplicity, let's assume if institutionId matches, we update.
-        // If you want true separate add/update, you'd need more logic or separate endpoints.
+
 
         Optional<InstitutionAccount> existingAccount = accountService.getAccountByInstitutionId(account.getInstitutionId());
 

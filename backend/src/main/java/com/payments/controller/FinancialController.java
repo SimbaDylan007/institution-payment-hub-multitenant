@@ -24,7 +24,7 @@ import com.payments.dto.CurrencyBalanceDto;
 @RestController
 @RequestMapping("/api/financials")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasAnyRole('ADMIN', 'FINANCE_ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'FINANCE_ADMIN','SUPER_ADMIN')")
 public class FinancialController {
 
     @Autowired private FinancialService financialService;

@@ -1,30 +1,28 @@
 
 package com.payments.controller;
 
-import com.payments.model.Student;
-import com.payments.model.Guardian;
-import com.payments.model.MedicalRecord;
-import com.payments.model.AcademicRecord;
-import com.payments.model.Enrollment;
-import com.payments.service.StudentService;
+import com.opencsv.exceptions.CsvValidationException;
+import com.payments.model.*;
 import com.payments.service.EnrollmentService;
+import com.payments.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.HttpStatus;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import com.opencsv.exceptions.CsvValidationException;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/students")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN','TEACHER')")
+// Updated security to include SUPER_ADMIN
+@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN', 'TEACHER', 'SUPER_ADMIN')")
 public class StudentManagementController {
     
     @Autowired
@@ -36,8 +34,10 @@ public class StudentManagementController {
     @GetMapping
     public ResponseEntity<Page<Student>> getAllStudents(
             Pageable pageable,
-            @RequestParam(required = false, defaultValue = "") String searchTerm) {
-        Page<Student> studentPage = studentService.getAllStudents(pageable, searchTerm);
+            @RequestParam(required = false, defaultValue = "") String searchTerm,
+            @RequestParam(required = false) Long institutionId) { // <-- Accept optional institutionId
+        // Pass institutionId to the service method
+        Page<Student> studentPage = studentService.getAllStudents(pageable, searchTerm, institutionId);
         return ResponseEntity.ok(studentPage);
     }
     
@@ -87,12 +87,12 @@ public class StudentManagementController {
         }
         return ResponseEntity.notFound().build();
     }
-    
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteStudent(@PathVariable Long id) {
         boolean deleted = studentService.deleteStudent(id);
         if (deleted) {
-            return ResponseEntity.ok().build();
+            return ResponseEntity.noContent().build(); // Use 204 No Content
         }
         return ResponseEntity.notFound().build();
     }
@@ -185,15 +185,18 @@ public class StudentManagementController {
     }
 
     @PostMapping("/bulk-upload")
-    public ResponseEntity<?> bulkAddStudents(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> bulkAddStudents(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) Long institutionId) { // <-- Accept optional institutionId
         if (file.isEmpty()) {
-            return new ResponseEntity<>("Please upload a file!", HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body("Please upload a file!");
         }
         try {
-            List<Student> savedStudents = studentService.bulkAddStudents(file);
+            // Pass institutionId to the service method
+            List<Student> savedStudents = studentService.bulkAddStudents(file, institutionId);
             return new ResponseEntity<>(savedStudents, HttpStatus.CREATED);
         } catch (IOException | CsvValidationException | RuntimeException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }

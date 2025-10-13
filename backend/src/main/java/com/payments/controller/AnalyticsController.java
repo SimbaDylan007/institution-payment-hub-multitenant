@@ -11,7 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/analytics")
-@PreAuthorize("hasAnyRole('ADMIN', 'FINANCE_ADMIN', 'ADMINISTRATOR', 'TEACHER')")
+@PreAuthorize("hasAnyRole('ADMIN', 'FINANCE_ADMIN', 'ADMINISTRATOR', 'TEACHER','SUPER_ADMIN')")
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;

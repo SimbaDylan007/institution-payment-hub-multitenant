@@ -13,7 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
-
+import com.itextpdf.io.source.ByteArrayOutputStream;
+import com.itextpdf.html2pdf.ConverterProperties;
 import java.io.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -63,6 +64,9 @@ public class MainReportService {
                 return generateFinancialSummaryReport(TransactionType.DEBIT, format, filters);
             case "FULL_FINANCIAL_LEDGER":
                 return generateFullLedgerReport(format, filters);
+            // --- MODIFIED CASE to call the new main method ---
+            case "FULL_FINANCIAL_LEDGER_SUMMARIZED":
+                return generateSummarizedLedgerReport(format, filters);
             case "PAYMENT_ALERTS":
                 return generateListReport(paymentRepository.findAll(), "Payment Alerts", format, PaymentAlert.class);
             case "ALL_FEE_TYPES":
@@ -102,6 +106,7 @@ public class MainReportService {
         }
     }
 
+
     // --- METHOD TO GENERATE THE CONSOLIDATED LEDGER ---
     private ByteArrayInputStream generateFullLedgerReport(String format, Map<String, String> filters) throws IOException {
         String grade = filters.get("grade");
@@ -138,6 +143,28 @@ public class MainReportService {
             return createFullLedgerCsv(processedEntries, headers);
         }
         throw new IllegalArgumentException("Unsupported format for Full Ledger report: " + format);
+    }
+
+    private ByteArrayInputStream generateSummarizedLedgerReport(String format, Map<String, String> filters) throws IOException {
+        // Step 1: Reuse the existing filter logic to get the correct data
+        List<FinancialLedger> ledgerEntries = findFullLedgerWithFilters(filters);
+
+        // Step 2: Process the filtered data to get the summarized view
+        List<Map<String, Object>> summarizedData = createSummarizedLedger(ledgerEntries);
+
+        String title = "Summarized Financial Ledger";
+        // --- CHANGE THIS LINE ---
+        String[] headers = {"Student ID", "Student Name", "Grade", "Currency", "Total Charges", "Total Payments", "Balance"};
+
+        // Step 3: Generate the report in the requested format
+        if ("XLSX".equalsIgnoreCase(format)) {
+            // This will now require an updated helper, see Step 3
+            return createSummarizedLedgerExcel(summarizedData, title, headers);
+        } else if ("CSV".equalsIgnoreCase(format)) {
+            // This will now require an updated helper, see Step 3
+            return createSummarizedLedgerCsv(summarizedData, headers);
+        }
+        throw new IllegalArgumentException("Unsupported format for Summarized Ledger report: " + format);
     }
 
     // --- HELPER for Full Ledger Excel with Shading and Spacing ---
@@ -215,6 +242,56 @@ public class MainReportService {
             return new ByteArrayInputStream(out.toByteArray());
         }
     }
+
+    private ByteArrayInputStream createSummarizedLedgerExcel(List<Map<String, Object>> summarizedData, String title, String[] headers) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet(title);
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                headerRow.createCell(i).setCellValue(headers[i]);
+            }
+
+            int rowNum = 1;
+            for (Map<String, Object> rowData : summarizedData) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(safeToString(rowData.get("studentId")));
+                row.createCell(1).setCellValue(safeToString(rowData.get("studentName")));
+                row.createCell(2).setCellValue(safeToString(rowData.get("grade")));
+                row.createCell(3).setCellValue(safeToString(rowData.get("currency")));
+                row.createCell(4).setCellValue(((BigDecimal) rowData.get("totalCharges")).doubleValue());
+                row.createCell(5).setCellValue(((BigDecimal) rowData.get("totalPayments")).doubleValue());
+                row.createCell(6).setCellValue(((BigDecimal) rowData.get("balance")).doubleValue());
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+        }
+    }
+
+    // --- NEW: HELPER for Summarized Ledger CSV ---
+    private ByteArrayInputStream createSummarizedLedgerCsv(List<Map<String, Object>> summarizedData, String[] headers) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (CSVWriter writer = new CSVWriter(new OutputStreamWriter(out))) {
+            writer.writeNext(headers);
+            for (Map<String, Object> rowData : summarizedData) {
+                writer.writeNext(new String[]{
+                        safeToString(rowData.get("studentId")),
+                        safeToString(rowData.get("studentName")),
+                        safeToString(rowData.get("grade")),
+                        safeToString(rowData.get("currency")),
+                        safeToString(rowData.get("totalCharges")),
+                        safeToString(rowData.get("totalPayments")),
+                        safeToString(rowData.get("balance"))
+                });
+            }
+        }
+        return new ByteArrayInputStream(out.toByteArray());
+    }
+
 
     // --- HELPER for Full Ledger CSV with Spacing ---
     private ByteArrayInputStream createFullLedgerCsv(List<LedgerEntryWithBalance> ledgerWithBalance, String[] headers) throws IOException {
@@ -365,52 +442,59 @@ public class MainReportService {
         throw new IllegalArgumentException("Unsupported format for list report: " + format);
     }
 
-    private ByteArrayInputStream createStudentStatementPdf(Student student, List<FinancialLedger> ledger, String currency, String year, String semester) throws IOException {
+
+    public ByteArrayInputStream createStudentStatementPdf(
+            Student student,
+            List<FinancialLedger> ledger,
+            String currency,
+            String year,
+            String semester
+    ) throws IOException {
+
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-        // Convert logos to Base64
-        String logoBase64 = "data:image/png;base64," + getImageAsBase64("images/pachedu.png");
+        // Convert images to Base64
+        String logoBase64   = "data:image/png;base64," + getImageAsBase64("images/pachedu.png");
         String estampBase64 = "data:image/png;base64," + getImageAsBase64("static/images/estamp.png");
+        String wmBase64   = "data:image/png;base64," + getImageAsBase64("images/pachedu_wm.png");
+
 
         StringBuilder html = new StringBuilder();
         html.append("<html><head><style>")
-                // --- FIX: Reduced vertical padding to prevent overflow to a second page ---
-                .append("html, body { margin: 0; padding: 20px 25px; font-family: Helvetica, Arial, sans-serif; font-size: 10pt; }")
 
-                // --- Typography & Layout ---
-                .append("h1 { font-size: 18pt; color: #2c3e50; margin: 0; }")
-                .append("h3 { font-size: 14pt; color: #34495e; margin: 5px 0 15px 0; }")
-                .append("p { margin: 5px 0; }")
-                .append("table { width: 100%; border-collapse: collapse; margin-top: 15px; }") // Reduced margin
-                .append("th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }")
-                .append("th { background-color: #f2f2f2; }")
+                /* Page margins and font */
+                .append("html, body { margin:0; padding:20px 25px; font-family:Helvetica, Arial, sans-serif; font-size:10pt; }")
 
-                // --- Header ---
-                .append(".header { text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; }")
-                .append(".header img.logo { max-width: 120px; max-height: 120px; margin-bottom: 10px; }")
+                /* --- Page-wide watermark --- */
+                .append("@page { ")
+                .append("background: url('").append(wmBase64).append("') center center no-repeat; ")
+                .append("background-opacity: 0.07; ") // supported by iText pdfHTML 3.x+
+                .append("}")
 
-                // --- Student Info ---
-                .append(".student-info { border: 1px solid #ccc; padding: 10px; margin-top: 15px; border-radius: 5px; background-color: #f9f9f9; }") // Reduced margin
+                /* Header / footer / tables */
+                .append("h1 { font-size:18pt; color:#2c3e50; margin:0; }")
+                .append("h3 { font-size:14pt; color:#34495e; margin:5px 0 15px 0; }")
+                .append("p { margin:5px 0; }")
+                .append("table { width:100%; border-collapse:collapse; margin-top:15px; }")
+                .append("th, td { border:1px solid #ccc; padding:8px; text-align:left; }")
+                .append("th { background-color:#f2f2f2; }")
 
-                // --- Summary ---
-                .append(".summary { text-align: right; margin-top: 15px; font-size: 12pt; font-weight: bold; }") // Reduced margin
-                .append("td.currency { text-align: right; }")
+                .append(".header { text-align:center; border-bottom:2px solid #3498db; padding-bottom:10px; }")
+                .append(".header img.logo { max-width:120px; max-height:120px; margin-bottom:10px; }")
 
-                // --- Watermark (Centered on the full page) ---
-                .append(".watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); z-index: -1; pointer-events: none; text-align: center; }")
-                .append(".watermark img { opacity: 0.07; width: 500px; }")
+                .append(".student-info { border:1px solid #ccc; padding:10px; margin-top:15px; border-radius:5px; background-color:#f9f9f9; }")
+                .append(".summary { text-align:right; margin-top:15px; font-size:12pt; font-weight:bold; }")
+                .append("td.currency { text-align:right; }")
 
-                // --- Footer ---
-                .append(".footer { position: fixed; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 8pt; color: #888; border-top: 1px solid #ccc; padding: 5px 25px 0 25px; background-color: white; }")
+                .append(".footer { position:fixed; bottom:20px; left:0; right:0; text-align:center; "
+                        + "font-size:8pt; color:#888; border-top:1px solid #ccc; padding:5px 25px 0 25px; background-color:white; }")
 
-                // --- eStamp ---
-                .append(".estamp-container { position: absolute; bottom: 80px; right: 20px; }")
-                .append(".estamp-container img { max-width: 100px; max-height: 100px; opacity: 0.9; }")
+                .append(".estamp-container { position:absolute; bottom:80px; right:20px; }")
+                .append(".estamp-container img { max-width:100px; max-height:100px; opacity:0.9; }")
 
                 .append("</style></head><body>")
 
-                .append("<div class='watermark'><img src='").append(logoBase64).append("' alt='Watermark'/></div>")
-
+                /* Normal body content (no separate watermark div needed) */
                 .append("<div class='header'>")
                 .append("<img src='").append(logoBase64).append("' class='logo' alt='School Logo' />")
                 .append("<h1>Pachedu Junior Academy</h1>")
@@ -425,13 +509,15 @@ public class MainReportService {
                 .append("<div class='estamp-container'><img src='").append(estampBase64).append("' alt='Official Stamp' /></div>")
 
                 .append("<div class='footer'>")
-                .append("Pachedu Junior Academy | 508 Mupfure Heights, Mt Darwin, Zimbabwe<br/>")
-                .append("Phone: +263 717989858/771955399/714664391 | Email: 2019PJA@gmail.com | Website: https://www.pachedujunioracademy.com/<br/>")
+                .append("Pachedu Junior Academy | 508 Mupfure Heights, Mt Darwin, Zimbabwe")
+                .append("Phone: +263 717989858/771955399/714664391 | Email: 2019PJA@gmail.com | Website: https://www.pachedujunioracademy.com/")
                 .append("</div>")
-
                 .append("</body></html>");
 
-        HtmlConverter.convertToPdf(html.toString(), new PdfWriter(outputStream));
+        // Convert HTML to PDF
+        ConverterProperties props = new ConverterProperties();
+        HtmlConverter.convertToPdf(html.toString(), outputStream, props);
+
         return new ByteArrayInputStream(outputStream.toByteArray());
     }
 
@@ -526,9 +612,18 @@ public class MainReportService {
         return new String[]{};
     }
 
+
     // --- PDF TEMPLATE HELPERS ---
     private String buildStudentInfoHtml(Student student, String year, String semester, String currency) {
-        return String.format("<div class='student-info'>" + "<b>Student Name:</b> %s %s<br/>" + "<b>Student ID:</b> %s<br/>" + "<b>Grade:</b> %s<br/>" + "<b>Statement for:</b> Year %s, %s<br/>" + "<b>Currency:</b> %s" + "</div>", student.getFirstName(), student.getLastName(), student.getStudentId(), student.getCurrentGrade(), year, semester, currency);
+        if (semester.equals("SEMESTER_1")) {
+            semester = "Term 1";
+        } else if (semester.equals("SEMESTER_2")) {
+            semester = "Term 2";
+        }
+        else {
+            semester = "Term 3";
+        }
+        return String.format("<div class='student-info'>" + "<b>Student Name:</b> %s %s<br/>" + "<b>Student ID:</b> %s<br/>" + "<b>Grade:</b> %s<br/>" + "<b>Statement for:</b> Year %s, %s<br/>" + "<b>Currency:</b> %s" + "</div>", student.getFirstName(), student.getLastName(), student.getStudentId(), student.getCurrentGrade(), year.substring(0,4), semester, currency);
     }
 
     private String buildLedgerTableHtml(List<FinancialLedger> ledger) {
@@ -685,6 +780,59 @@ public class MainReportService {
         return new ByteArrayInputStream(out.toByteArray());
     }
 
+    // --- HELPER for Summarized Ledger (Corrected with Currency Grouping and Correct Keys) ---
+    private List<Map<String, Object>> createSummarizedLedger(List<FinancialLedger> fullLedger) {
+        // Group first by student, then by currency for accurate, separate summaries
+        Map<Student, Map<Currency, List<FinancialLedger>>> groupedData = fullLedger.stream()
+                .collect(Collectors.groupingBy(
+                        FinancialLedger::getStudent,
+                        Collectors.groupingBy(FinancialLedger::getCurrency)
+                ));
+
+        List<Map<String, Object>> summarizedData = new ArrayList<>();
+
+        // Sort students by their ID for a consistent report order
+        List<Student> sortedStudents = new ArrayList<>(groupedData.keySet());
+        sortedStudents.sort(Comparator.comparing(Student::getStudentId));
+
+        for (Student student : sortedStudents) {
+            Map<Currency, List<FinancialLedger>> transactionsByCurrency = groupedData.get(student);
+
+            // Also sort by currency name (e.g., USD, ZWL) for consistent ordering
+            List<Currency> sortedCurrencies = new ArrayList<>(transactionsByCurrency.keySet());
+            sortedCurrencies.sort(Comparator.comparing(Enum::name));
+
+            for (Currency currency : sortedCurrencies) {
+                List<FinancialLedger> transactions = transactionsByCurrency.get(currency);
+
+                // Calculate totals for this specific currency
+                BigDecimal totalCharges = transactions.stream()
+                        .filter(t -> t.getTransactionType() == TransactionType.DEBIT)
+                        .map(FinancialLedger::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                BigDecimal totalPayments = transactions.stream()
+                        .filter(t -> t.getTransactionType() == TransactionType.CREDIT)
+                        .map(FinancialLedger::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                BigDecimal balance = totalCharges.subtract(totalPayments);
+
+                // Create a single row using the CORRECT keys that the other methods expect
+                Map<String, Object> summaryRow = new LinkedHashMap<>();
+                summaryRow.put("studentId", student.getStudentId());
+                summaryRow.put("studentName", student.getFirstName() + " " + student.getLastName());
+                summaryRow.put("grade", student.getCurrentGrade());
+                summaryRow.put("currency", currency.toString()); // Use "currency" key
+                summaryRow.put("totalCharges", totalCharges);   // Use "totalCharges" key
+                summaryRow.put("totalPayments", totalPayments); // Use "totalPayments" key
+                summaryRow.put("balance", balance);             // Use "balance" key
+                summarizedData.add(summaryRow);
+            }
+        }
+        return summarizedData;
+    }
+
     // --- NEW PUBLIC METHOD FOR PREVIEW GENERATION ---
     public Map<String, Object> generatePreview(String reportType, Map<String, String> filters) {
         Map<String, Object> result = new HashMap<>();
@@ -730,6 +878,26 @@ public class MainReportService {
                     );
                 }).collect(Collectors.toList()));
                 break;
+            case "FULL_FINANCIAL_LEDGER_SUMMARIZED":
+                List<FinancialLedger> fullLedgerData = findFullLedgerWithFilters(filters);
+                List<Map<String, Object>> summarizedData = createSummarizedLedger(fullLedgerData);
+
+                // --- 1. CHANGE THE HEADERS ---
+                result.put("headers", new String[]{"Student ID", "Student Name", "Grade", "Currency", "Total Charges", "Total Payments", "Balance"});
+
+                // --- 2. CHANGE THE ROW MAPPING ---
+                result.put("rows", summarizedData.stream().limit(12).map(row ->
+                        Arrays.asList(
+                                safeToString(row.get("studentId")),
+                                safeToString(row.get("studentName")),
+                                safeToString(row.get("grade")),
+                                safeToString(row.get("currency")),
+                                safeToString(row.get("totalCharges")),
+                                safeToString(row.get("totalPayments")),
+                                safeToString(row.get("balance"))
+                        )
+                ).collect(Collectors.toList()));
+                break;
 
             case "FINANCIAL_SUMMARY_PAYMENTS":
             case "FINANCIAL_SUMMARY_CHARGES":
@@ -769,6 +937,10 @@ public class MainReportService {
         LocalDate startDate = filters.get("startDate") != null && !filters.get("startDate").isEmpty() ? LocalDate.parse(filters.get("startDate")) : null;
         LocalDate endDate = filters.get("endDate") != null && !filters.get("endDate").isEmpty() ? LocalDate.parse(filters.get("endDate")) : null;
         return ledgerRepository.findFinancialsWithFilters(type, grade, feeTypeId, startDate, endDate);
+    }
+
+    private String safeToString(Object obj) {
+        return obj == null ? "" : obj.toString();
     }
 
     // Helper to get raw data for simple reports

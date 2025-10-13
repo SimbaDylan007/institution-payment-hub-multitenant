@@ -1,8 +1,10 @@
 package com.payments.repository;
 
 import com.payments.model.FeeType;
+import com.payments.model.Institution;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.Optional; // <-- IMPORT
 
-@Repository
-public interface FeeTypeRepository extends JpaRepository<FeeType, Long> {}
+public interface FeeTypeRepository extends JpaRepository<FeeType, Long> {
+    Optional<FeeType> findByNameAndInstitution(String name, Institution institution);
+}

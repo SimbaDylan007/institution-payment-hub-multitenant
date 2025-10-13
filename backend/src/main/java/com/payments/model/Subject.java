@@ -27,6 +27,11 @@ public class Subject {
     
     @Column(name = "is_active")
     private Boolean isActive = true;
+
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
     
     // Constructors
     public Subject() {}
@@ -58,4 +63,8 @@ public class Subject {
     
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
+    // --- ADD GETTER AND SETTER FOR INSTITUTION ---
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

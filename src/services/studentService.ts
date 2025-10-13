@@ -2,7 +2,7 @@ import { StudentRegistration, StudentRegistrationRequest } from "@/types";
 import { toast } from "sonner";
 import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
-const API_BASE_URL = "http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/billpay";
+const API_BASE_URL = "http://localhost:8082/api/billpay";
 
 // 2. The local `fetchWithErrorHandling` function has been removed.
 //    Authentication, headers, and network error toasts are now handled by `apiFetch`.

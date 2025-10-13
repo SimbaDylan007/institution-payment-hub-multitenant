@@ -14,6 +14,11 @@ public class Enrollment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
+
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
     
     @Column(nullable = false)
     private String academicYear;
@@ -73,4 +78,8 @@ public class Enrollment {
     
     public String getComments() { return comments; }
     public void setComments(String comments) { this.comments = comments; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
+
 }

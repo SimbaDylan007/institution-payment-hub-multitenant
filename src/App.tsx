@@ -26,37 +26,62 @@ import NotFound from "./pages/NotFound";
 import Financials from "@/pages/Financials.tsx";
 import PaymentAllocation from './pages/PaymentAllocation';
 import AuditTrail from './pages/AuditTrail';
-import MainReports from "./pages/MainReports"; // <-- Add this import
-
+import MainReports from "./pages/MainReports";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AccessDeniedPage from "./pages/AccessDeniedPage"
 
 const queryClient = new QueryClient();
 
 function AppContent() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/student-management" element={<StudentManagement />} />
-        <Route path="/students" element={<Students />} />
-        <Route path="/staff" element={<Staff />} />
-        <Route path="/academics" element={<Academics />} />
-        <Route path="/library" element={<Library />} />
-        <Route path="/schedule" element={<Schedule />} />
-        <Route path="/communication" element={<Communication />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/facilities" element={<Facilities />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/student-portal" element={<StudentPortal />} />
-        <Route path="*" element={<NotFound />} />
-        <Route path="/financials" element={<Financials />} />
-        <Route path="/payment-allocation" element={<PaymentAllocation />} />
-        <Route path="/audit-trail" element={<AuditTrail />} /><Route path="/main-reports" element={<MainReports />} />
+    return (
+        <Router>
+            <Routes>
+                {/* --- Public Routes --- */}
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/access-denied" element={<AccessDeniedPage />} />
+                <Route path="*" element={<NotFound />} />
 
-      </Routes>
-    </Router>
-  );
+                {/* --- Generic Authenticated User Route --- */}
+                {/* Any logged-in user can see the dashboard */}
+                <Route element={<ProtectedRoute allowedRoles={["ROLE_ADMIN", "ROLE_IT_ADMIN", "ROLE_FINANCE_ADMIN", "ROLE_ADMINISTRATOR", "ROLE_TEACHER", "ROLE_STUDENT", "ROLE_SUPER_ADMIN"]} />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/student-portal" element={<StudentPortal />} />
+                </Route>
+
+                {/* --- Super Admin & Admin Only Routes --- */}
+                <Route element={<ProtectedRoute allowedRoles={["ROLE_SUPER_ADMIN", "ROLE_ADMIN"]} />}>
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/audit-trail" element={<AuditTrail />} />
+                    <Route path="/main-reports" element={<MainReports />} />
+                    <Route path="/facilities" element={<Facilities />} />
+                </Route>
+
+                {/* --- Admin & IT Admin Routes --- */}
+                <Route element={<ProtectedRoute allowedRoles={["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_IT_ADMIN"]} />}>
+                    <Route path="/student-management" element={<StudentManagement />} />
+                    <Route path="/students" element={<Students />} />
+                    <Route path="/staff" element={<Staff />} />
+                </Route>
+
+                {/* --- Admin & Finance Admin Routes --- */}
+                <Route element={<ProtectedRoute allowedRoles={["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_FINANCE_ADMIN"]} />}>
+                    <Route path="/financials" element={<Financials />} />
+                    <Route path="/payment-allocation" element={<PaymentAllocation />} />
+                </Route>
+
+                {/* --- Routes for Academics Staff --- */}
+                <Route element={<ProtectedRoute allowedRoles={["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_ADMINISTRATOR", "ROLE_TEACHER"]} />}>
+                    <Route path="/academics" element={<Academics />} />
+                    <Route path="/library" element={<Library />} />
+                    <Route path="/schedule" element={<Schedule />} />
+                    <Route path="/communication" element={<Communication />} />
+                    <Route path="/reports" element={<Reports />} />
+                </Route>
+
+            </Routes>
+        </Router>
+    );
 }
 
 const App = () => (

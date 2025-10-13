@@ -1,192 +1,124 @@
-
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import React, { useState, useEffect, FC } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { createStaff } from "@/services/staffApiService";
+import { toast } from "sonner";
+import { apiFetch } from "@/utils/apiClient";
+import InstitutionSelect from "./InstitutionSelect";
+import { Staff } from "@/types";
 
 interface AddStaffModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
 }
 
-export default function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps) {
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    employeeId: "",
-    email: "",
-    phone: "",
-    dateOfBirth: "",
-    gender: "",
-    address: "",
-    hireDate: new Date().toISOString().split('T')[0],
-    department: "",
-    position: "",
-    employmentStatus: "ACTIVE",
-    salary: "",
-    qualifications: "",
-    specializations: ""
-  });
+// Updated initial state to include all fields
+const initialFormData: Partial<Staff> = {
+    firstName: "", lastName: "", employeeId: "", email: "", phone: "",
+    dateOfBirth: "", gender: "MALE", // Default value
+    address: "", hireDate: new Date().toISOString().split('T')[0],
+    department: "", position: "", employmentStatus: "ACTIVE", salary: "",
+    qualifications: "", specializations: ""
+};
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+const AddStaffModal: FC<AddStaffModalProps> = ({ isOpen, onClose, onSuccess }) => {
+    const { isSuperAdmin } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
+    const [formData, setFormData] = useState(initialFormData);
+    const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>('');
 
-    try {
-      await createStaff({
-        ...formData,
-        salary: formData.salary ? parseFloat(formData.salary) : undefined
-      });
-      toast({
-        title: "Success",
-        description: "Staff member added successfully",
-      });
-      onSuccess();
-      onClose();
-      setFormData({
-        firstName: "",
-        lastName: "",
-        employeeId: "",
-        email: "",
-        phone: "",
-        dateOfBirth: "",
-        gender: "",
-        address: "",
-        hireDate: new Date().toISOString().split('T')[0],
-        department: "",
-        position: "",
-        employmentStatus: "ACTIVE",
-        salary: "",
-        qualifications: "",
-        specializations: ""
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add staff member",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    useEffect(() => {
+        if (!isOpen) {
+            setFormData(initialFormData);
+            setSelectedInstitutionId('');
+        }
+    }, [isOpen]);
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-[#1A1F2C] dark:bg-white border-gray-800 dark:border-gray-200">
-        <DialogHeader>
-          <DialogTitle>Add New Staff Member</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                required
-                className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300"
-              />
-            </div>
-            <div>
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                required
-                className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="employeeId">Employee ID</Label>
-              <Input
-                id="employeeId"
-                value={formData.employeeId}
-                onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                required
-                className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-                className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300"
-              />
-            </div>
-          </div>
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="department">Department</Label>
-              <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
-                <SelectTrigger className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300">
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Mathematics">Mathematics</SelectItem>
-                  <SelectItem value="Science">Science</SelectItem>
-                  <SelectItem value="English">English</SelectItem>
-                  <SelectItem value="History">History</SelectItem>
-                  <SelectItem value="Administration">Administration</SelectItem>
-                  <SelectItem value="Sports">Sports</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="position">Position</Label>
-              <Input
-                id="position"
-                value={formData.position}
-                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                required
-                className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300"
-              />
-            </div>
-          </div>
+        if (isSuperAdmin && !selectedInstitutionId) {
+            toast.error("As a Super Admin, you must select an institution.");
+            setIsLoading(false);
+            return;
+        }
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="dateOfBirth">Date of Birth</Label>
-              <Input
-                id="dateOfBirth"
-                type="date"
-                value={formData.dateOfBirth}
-                onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                required
-                className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300"
-              />
-            </div>
-            <div>
-              <Label htmlFor="gender">Gender</Label>
-              <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
-                <SelectTrigger className="bg-[#252e3e] dark:bg-gray-50 border-gray-700 dark:border-gray-300">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="MALE">Male</SelectItem>
-                  <SelectItem value="FEMALE">Female</SelectItem>
-                  <SelectItem value="OTHER">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+        const payload: any = {
+            ...formData,
+            salary: formData.salary ? parseFloat(String(formData.salary)) : undefined
+        };
+
+        if (isSuperAdmin) {
+            payload.institutionId = parseInt(selectedInstitutionId);
+        }
+
+        try {
+            const response = await apiFetch('http://localhost:8082/api/staff', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: "Failed to add staff member."}));
+                throw new Error(errorData.message);
+            }
+
+            toast.success("Staff member added successfully");
+            onSuccess();
+            onClose();
+        } catch (error) {
+            toast.error((error as Error).message || "An unexpected error occurred.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-2xl bg-[#1A1F2C] text-white border-gray-800">
+                <DialogHeader>
+                    <DialogTitle>Add New Staff Member</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4">
+
+                    <InstitutionSelect
+                        value={selectedInstitutionId}
+                        onValueChange={setSelectedInstitutionId}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div><Label htmlFor="firstName">First Name *</Label><Input id="firstName" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} required className="bg-[#252e3e] border-gray-700"/></div>
+                        <div><Label htmlFor="lastName">Last Name *</Label><Input id="lastName" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} required className="bg-[#252e3e] border-gray-700"/></div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div><Label htmlFor="employeeId">Employee ID (auto)</Label><Input id="employeeId" value={formData.employeeId} readOnly disabled className="bg-[#1A1F2C] cursor-not-allowed"/></div>
+                        <div><Label htmlFor="email">Email *</Label><Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required className="bg-[#252e3e] border-gray-700"/></div>
+                    </div>
+
+                    {/* --- ADDED FORM FIELDS FOR GENDER and DOB --- */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                            <Input id="dateOfBirth" type="date" value={formData.dateOfBirth} onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })} className="bg-[#252e3e] border-gray-700" />
+                        </div>
+                        <div>
+                            <Label htmlFor="gender">Gender</Label>
+                            <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
+                                <SelectTrigger className="bg-[#252e3e] border-gray-700"><SelectValue placeholder="Select gender" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="MALE">Male</SelectItem>
+                                    <SelectItem value="FEMALE">Female</SelectItem>
+                                    <SelectItem value="OTHER">Other</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
 
           <div>
             <Label htmlFor="salary">Salary</Label>

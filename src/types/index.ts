@@ -1,16 +1,162 @@
 
+// export interface User {
+//   id: string;
+//   name: string;
+//   email: string;
+//   role: string;
+//   username?: string;
+//   institutionId: number | null;
+//   institutionName: string | null;
+//   institution?: Institution;
+// }
+export interface Role {
+    id: number;
+    name: string;
+}
+
+export interface GradeDTO {
+    studentId: string;
+    subjectId: string; // Or subjectCode, depending on your backend DTO
+    assessmentType: string;
+    marksObtained: number;
+    maxMarks: number;
+    letterGrade: string;
+    academicYear: string;
+    semester: string;
+}
+
+export interface Grade {
+    id: number;
+    student: { studentId: string };
+    subject: { code: string; name: string; };
+    assessmentType: string;
+    marksObtained: number;
+    maxMarks: number;
+    letterGrade: string;
+    academicYear: string;
+    semester: string;
+    institution?: Institution; // For multi-tenancy
+}
+
 export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  username?: string;
+    id: number; // The backend sends a number for the ID
+    name: string;
+    email: string;
+    enabled: boolean; // <-- ADDED: Matches the backend 'enabled' field
+    role: string;
+    username?: string;
+    // Tenancy fields
+    institutionId?: number | null;
+    institutionName?: string | null;
+    institution?: Institution;
+}
+
+export interface Staff {
+    id?: number;
+    firstName: string;
+    lastName: string;
+    employeeId: string;
+    email: string;
+    phone?: string;
+    dateOfBirth?: string; // Should be a "YYYY-MM-DD" string
+    gender?: string;
+    address?: string;
+    department?: string;
+    position?: string;
+    employmentStatus: string;
+    hireDate?: string; // Expect "YYYY-MM-DD" string from backend
+    salary?: string;
+    qualifications?: string;
+    specializations?: string;
+    institution?: Institution;
+}
+
+export interface Subject {
+    id?: number;
+    name: string;
+    code: string;
+    description?: string;
+    credits?: number;
+    grade: string;
+    isActive: boolean;
+    institution?: Institution;
+}
+
+// This corresponds to your Timetable.java entity
+export interface TimetableEntry {
+    id?: number;
+    subject: string;
+    teacher: string; // The backend likely resolves this to a simple string name
+    grade: string;
+    section: string;
+    dayOfWeek: string;
+    startTime: string; // "HH:mm:ss"
+    endTime: string;   // "HH:mm:ss"
+    room: string;
+    academicYear: string;
+    institution?: Institution;
+}
+
+// This corresponds to the DTO used for creation by the form
+export interface CreateTimetableEntryRequest {
+    subject: string;
+    teacher: string;
+    grade: string;
+    section: string;
+    dayOfWeek: string;
+    startTime: string;
+    endTime: string;
+    room: string;
+    academicYear: string;
+    institutionId?: number; // Optional ID for super-admins
+}
+
+export interface Institution {
+    id: number;
+    name: string;
+    address?: string;
+}
+
+export interface StudentCategory {
+    id: number;
+    name: string;
+    institution?: Institution;
 }
 
 export interface LoginCredentials {
   username?: string;
   email?: string;
   password: string;
+}
+
+export interface Student {
+    id?: number;
+    studentId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    currentGrade: string;
+    section?: string;
+    dateOfBirth: string;
+    gender: string;
+    address?: string;
+    enrollmentDate: string;
+    enrollmentStatus: string;
+    category: StudentCategory;
+    institution?: Institution; // <-- Add this optional property
+}
+
+export interface Facility {
+    id?: number;
+    name: string;
+    description?: string;
+    type: string;
+    capacity?: number;
+    location?: string;
+    status: string;
+    equipment?: string;
+    institution?: Institution;
 }
 
 export interface RegisterData {

@@ -45,7 +45,7 @@ interface Page<T> {
 }
 
 export default function Students() {
-    const { user } = useAuth();
+    const { user, isSuperAdmin, selectedInstitution } = useAuth();
     const [studentPage, setStudentPage] = useState<Page<Student> | null>(null);
     const [loading, setLoading] = useState(true); // Start with loading true
     const [searchTerm, setSearchTerm] = useState("");
@@ -57,8 +57,19 @@ export default function Students() {
 
     const fetchStudents = useCallback((page = 0, search = "") => {
         setLoading(true);
-        const url = `http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students?page=${page}&size=10&sort=firstName,asc&searchTerm=${encodeURIComponent(search)}`;
-        apiFetch(url)
+        const params = new URLSearchParams({
+            page: page.toString(),
+            size: '10',
+            sort: 'firstName,asc',
+            searchTerm: encodeURIComponent(search)
+        });
+
+        if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+            params.append('institutionId', selectedInstitution.id.toString());
+        }
+
+
+        apiFetch(`/api/students?${params.toString()}`) // Use relative URL
             .then(res => {
                 if (res.ok) return res.json();
                 throw new Error("Failed to fetch students");
@@ -66,14 +77,14 @@ export default function Students() {
             .then(data => setStudentPage(data))
             .catch(() => toast.error('Could not retrieve student data.'))
             .finally(() => setLoading(false));
-    }, []);
+    }, [isSuperAdmin, selectedInstitution]); // Add dependencies
 
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchStudents(currentPage, searchTerm);
         }, 300);
         return () => clearTimeout(timer);
-    }, [searchTerm, currentPage, fetchStudents]);
+    }, [searchTerm, currentPage, fetchStudents, selectedInstitution]);
 
     const handleStudentSaved = () => {
         setIsFormDialogOpen(false);
@@ -90,7 +101,7 @@ export default function Students() {
     const handleDeleteStudent = async (id: number) => {
         if (window.confirm('Are you sure you want to delete this student?')) {
             try {
-                const response = await apiFetch(`http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students/${id}`, { method: 'DELETE' });
+                const response = await apiFetch(`/api/students/${id}`, { method: 'DELETE' });
                 if (response.ok) {
                     toast.success('Student deleted successfully');
                     fetchStudents(currentPage, searchTerm);
@@ -99,7 +110,6 @@ export default function Students() {
                     toast.error(error.message || 'Failed to delete student');
                 }
             } catch (error) {
-                // Network errors are already handled by apiFetch's toast
                 console.error('Error deleting student:', error);
             }
         }
@@ -120,7 +130,7 @@ export default function Students() {
         const formData = new FormData();
         formData.append('file', importFile);
         try {
-            const response = await apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students/bulk-upload', {
+            const response = await apiFetch('/api/students/bulk-upload', {
                 method: 'POST',
                 body: formData,
             });

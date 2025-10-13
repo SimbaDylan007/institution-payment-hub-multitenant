@@ -8,9 +8,14 @@ import java.time.LocalDate;
 import java.util.List;
 import java.time.Year;
 import java.util.Random;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 
 @Entity
 @Table(name = "students")
+@FilterDef(name = "institutionFilter", parameters = @ParamDef(name = "institutionId", type = "long"))
+@Filter(name = "institutionFilter", condition = "institution_id = :institutionId")
 public class Student {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,6 +64,7 @@ public class Student {
     @JoinColumn(name = "user_id", referencedColumnName = "id", unique = true)
     private User user;
 
+
     @JsonManagedReference
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Guardian> guardians;
@@ -68,6 +74,11 @@ public class Student {
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<AcademicRecord> academicRecords;
+
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
 
     @PrePersist
     public void generateStudentId() {
@@ -118,4 +129,6 @@ public class Student {
     public void setMedicalRecords(List<MedicalRecord> medicalRecords) { this.medicalRecords = medicalRecords; }
     public List<AcademicRecord> getAcademicRecords() { return academicRecords; }
     public void setAcademicRecords(List<AcademicRecord> academicRecords) { this.academicRecords = academicRecords; }
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

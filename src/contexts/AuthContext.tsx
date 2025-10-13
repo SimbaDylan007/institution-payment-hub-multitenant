@@ -1,153 +1,161 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User, LoginCredentials, RegisterData } from "../types";
+import { jwtDecode } from "jwt-decode";
+import { User, LoginCredentials, RegisterData, Institution } from "../types";
 import { toast } from "sonner";
-import { apiFetch } from "@/utils/apiClient";
+import { apiFetch } from "@/utils/apiClient"; // Assuming you have this for other calls
 
 // --- Context Type Definition ---
 interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<boolean>;
-  register: (data: RegisterData) => Promise<boolean>;
-  logout: () => void;
+    user: User | null;
+    isLoading: boolean;
+    login: (credentials: LoginCredentials) => Promise<boolean>;
+    register: (data: RegisterData) => Promise<boolean>;
+    logout: () => void;
+    isSuperAdmin: boolean;
+    selectedInstitution: Institution | 'all' | null;
+    setSelectedInstitution: React.Dispatch<React.SetStateAction<Institution | 'all' | null>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+    const context = useContext(AuthContext);
+    if (context === undefined) throw new Error("useAuth must be used within an AuthProvider");
+    return context;
 };
 
 // --- AuthProvider Component ---
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [selectedInstitution, setSelectedInstitution] = useState<Institution | 'all' | null>('all');
 
-  useEffect(() => {
-    // On initial app load, check if user data and token are in storage
-    const storedUser = localStorage.getItem("user");
-    const token = localStorage.getItem("jwt_token");
-    if (storedUser && token) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        // If stored data is corrupt, clear it
-        localStorage.clear();
-      }
-    }
-    setIsLoading(false);
-  }, []);
+    const isSuperAdmin = user?.role.includes('ROLE_SUPER_ADMIN') ?? false;
 
-  const login = async (credentials: LoginCredentials) => {
-    setIsLoading(true);
-    const loginUsername = credentials.username || credentials.email;
-    if (!loginUsername) {
-      toast.error("Username or email is required.");
-      setIsLoading(false);
-      return false;
-    }
+    useEffect(() => {
+        const token = localStorage.getItem("jwt_token");
+        if (token) {
+            try {
+                const decodedToken: any = jwtDecode(token);
+                if (decodedToken.exp * 1000 < Date.now()) {
+                    localStorage.removeItem("user");
+                    localStorage.removeItem("jwt_token");
+                    setUser(null);
+                    return;
+                }
+                const authUser: User = {
+                    enabled: false,
+                    id: decodedToken.sub,
+                    name: decodedToken.sub,
+                    username: decodedToken.sub,
+                    email: decodedToken.email || '',
+                    // --- FINAL FIX ---
+                    // Read from the plural 'roles' key in the token
+                    role: decodedToken.roles || [],
+                    institutionId: decodedToken.institutionId || null,
+                    institutionName: decodedToken.institutionName || null
+                };
+                setUser(authUser);
 
-    try {
-      // The login endpoint is a special case that doesn't use the apiFetch wrapper
-      // because we don't have a token yet. We use the raw fetch here.
-      const response = await fetch("http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/auth/login", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: loginUsername,
-          password: credentials.password
-        })
-      });
+                if (!authUser.role.includes('ROLE_SUPER_ADMIN') && authUser.institutionId) {
+                    setSelectedInstitution({ id: authUser.institutionId, name: authUser.institutionName! });
+                }
+            } catch (e) {
+                localStorage.removeItem("user");
+                localStorage.removeItem("jwt_token");
+                setUser(null);
+            }
+        }
+        setIsLoading(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-      if (!response.ok) {
-        toast.error("Invalid username or password.");
-        return false;
-      }
+    const login = async (credentials: LoginCredentials): Promise<boolean> => {
+        setIsLoading(true);
+        try {
+            const response = await fetch("/api/auth/login", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: credentials.username, password: credentials.password })
+            });
+            if (!response.ok) throw new Error("Invalid credentials");
 
-      const data = await response.json();
-      const token = data.token;
-      const foundUser = data.user;
+            const data = await response.json();
+            const token = data.jwttoken;
+            localStorage.setItem("jwt_token", token);
 
-      if (!token || !foundUser) {
-        toast.error("Login failed: Invalid response from server.");
-        return false;
-      }
+            const decodedToken: any = jwtDecode(token);
+            const authUser: User = {
+                enabled: false,
+                id: decodedToken.sub, name: decodedToken.sub, username: decodedToken.sub,
+                email: decodedToken.email || '',
+                // --- FINAL FIX ---
+                // Read from the plural 'roles' key in the token
+                role: decodedToken.roles || [],
+                institutionId: decodedToken.institutionId || null,
+                institutionName: decodedToken.institutionName || null
+            };
+            setUser(authUser);
+            localStorage.setItem("user", JSON.stringify(authUser));
 
-      const userRole = foundUser.roles && Array.isArray(foundUser.roles) && foundUser.roles.length > 0
-          ? foundUser.roles[0].name.replace('ROLE_', '')
-          : "USER";
+            if (!authUser.role.includes('ROLE_SUPER_ADMIN') && authUser.institutionId) {
+                setSelectedInstitution({ id: authUser.institutionId, name: authUser.institutionName! });
+            } else {
+                setSelectedInstitution('all');
+            }
 
-      const authUser: User = {
-        id: foundUser.id.toString(),
-        email: foundUser.email,
-        name: foundUser.username,
-        role: userRole.toUpperCase(),
-        username: foundUser.username,
-      };
+            toast.success("Login successful! Redirecting...");
+            return true;
+        } catch (error) {
+            toast.error((error as Error).message);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-      setUser(authUser);
+    const register = async (data: RegisterData): Promise<boolean> => {
+        setIsLoading(true);
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: data.username || data.email.split('@')[0],
+                    email: data.email,
+                    password: data.password,
+                    roleNames: ["ROLE_STUDENT"]
+                })
+            });
 
-      // Store the token and user details separately in localStorage
-      localStorage.setItem("jwt_token", token);
-      localStorage.setItem("user", JSON.stringify(authUser));
+            if (response.ok) {
+                toast.success("Registration successful! Please sign in.");
+                return true;
+            } else {
+                const errorData = await response.json().catch(() => ({ message: "Registration failed." }));
+                toast.error(errorData.message || "Registration failed. Username or email may already exist.");
+                return false;
+            }
+        } catch (error) {
+            toast.error("An error occurred during registration");
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-      toast.success("Login successful! Redirecting...");
-      return true;
+    const logout = () => {
+        setUser(null);
+        setSelectedInstitution('all');
+        localStorage.removeItem("user");
+        localStorage.removeItem("jwt_token");
+        toast.info("You have been logged out.");
+        window.location.href = '/auth';
+    };
 
-    } catch (error) {
-      toast.error("Unable to connect to the authentication server.");
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const register = async (data: RegisterData) => {
-    setIsLoading(true);
-    try {
-      // Registration is an unauthenticated endpoint, so we use raw fetch.
-      const response = await fetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: data.username || data.email.split('@')[0],
-          email: data.email,
-          password: data.password
-        })
-      });
-
-      if (response.ok) {
-        toast.success("Registration successful! Please sign in.");
-        return true;
-      } else {
-        const errorData = await response.json().catch(() => ({ message: "Registration failed." }));
-        toast.error(errorData.message || "Registration failed. Username or email may already exist.");
-        return false;
-      }
-    } catch (error) {
-      toast.error("An error occurred during registration");
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("user");
-    localStorage.removeItem("jwt_token");
-    toast.info("You have been logged out.");
-    // Force a redirect to the login page to clear all state
-    window.location.href = '/auth';
-  };
-
-  return (
-      <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
-        {children}
-      </AuthContext.Provider>
-  );
+    return (
+        <AuthContext.Provider value={{ user, isLoading, login, register, logout, isSuperAdmin, selectedInstitution, setSelectedInstitution }}>
+            {children}
+        </AuthContext.Provider>
+    );
 };

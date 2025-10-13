@@ -1,10 +1,7 @@
 package com.payments.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Transient;
+import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
@@ -22,6 +19,10 @@ public class PaymentAlert implements Serializable {
 
     @Column(length = 10)
     private String currency;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id")
+    private Institution institution;
 
     @Transient
     private Object date;
@@ -90,4 +91,6 @@ public class PaymentAlert implements Serializable {
     public void setRegNumber(String regNumber) { this.regNumber = regNumber; }
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; }
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

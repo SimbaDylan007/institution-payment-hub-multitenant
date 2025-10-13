@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
+import com.payments.model.*;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,4 +28,14 @@ public interface BookTransactionRepository extends JpaRepository<BookTransaction
             countQuery = "SELECT COUNT(bt) FROM BookTransaction bt WHERE " +
                     "(:studentId IS NULL OR bt.student.studentId = :studentId)")
     Page<BookTransaction> findWithFilters(@Param("studentId") String studentId, Pageable pageable);
+
+    @Query(value = "SELECT bt FROM BookTransaction bt " +
+            "WHERE bt.institution.id = :institutionId AND " +
+            "(:studentId IS NULL OR LOWER(bt.student.studentId) LIKE LOWER(CONCAT('%', :studentId, '%')))",
+            countQuery = "SELECT COUNT(bt) FROM BookTransaction bt " +
+                    "WHERE bt.institution.id = :institutionId AND " +
+                    "(:studentId IS NULL OR LOWER(bt.student.studentId) LIKE LOWER(CONCAT('%', :studentId, '%')))")
+    Page<BookTransaction> findByInstitutionIdWithFilters(@Param("institutionId") Long institutionId, @Param("studentId") String studentId, Pageable pageable);
+
+    Optional<BookTransaction> findFirstByBookAndStudentAndStatusOrderByIssueDateDesc(Book book, Student student, String status);
 }

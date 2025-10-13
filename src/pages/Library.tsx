@@ -21,7 +21,7 @@ interface BookTransaction { id: number; book: { title: string }; student: { stud
 interface Page<T> { content: T[]; totalPages: number; number: number; }
 
 export default function Library() {
-  const { user } = useAuth();
+    const { user, isSuperAdmin, selectedInstitution } = useAuth()
   const [bookPage, setBookPage] = useState<Page<Book> | null>(null);
   const [loanPage, setLoanPage] = useState<Page<BookTransaction> | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,17 +37,41 @@ export default function Library() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [studentId, setStudentId] = useState("");
 
-  const fetchBooks = useCallback((page = 0, search = "") => {
-    setLoading(true);
-    const url = `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/library/books?page=${page}&size=10&sort=title,asc&searchTerm=${encodeURIComponent(search)}`;
-    apiFetch(url).then(res => res.json()).then(setBookPage).catch(() => toast.error('Failed to fetch books.')).finally(() => setLoading(false));
-  }, []);
+    const fetchBooks = useCallback((page = 0, search = "") => {
+        setLoading(true);
+        const params = new URLSearchParams({ page: page.toString(), size: '10', sort: 'title,asc', searchTerm: search });
 
-  const fetchLoans = useCallback((page = 0, search = "") => {
-    setLoading(true);
-    const url = `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/library/transactions?page=${page}&size=10&studentId=${encodeURIComponent(search)}`;
-    apiFetch(url).then(res => res.json()).then(setLoanPage).catch(err => toast.error(err.message)).finally(() => setLoading(false));
-  }, []);
+        // --- TENANCY LOGIC ---
+        if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+            params.append('institutionId', selectedInstitution.id.toString());
+        }
+
+        const url = `http://localhost:8082/api/library/books?${params.toString()}`;
+        apiFetch(url).then(res => res.json()).then(setBookPage).catch(() => toast.error('Failed to fetch books.')).finally(() => setLoading(false));
+    }, [isSuperAdmin, selectedInstitution]);
+
+    const fetchLoans = useCallback((page = 0, search = "") => {
+        setLoading(true);
+        const params = new URLSearchParams({ page: page.toString(), size: '10', studentId: search });
+
+        // --- TENANCY LOGIC ---
+        if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+            params.append('institutionId', selectedInstitution.id.toString());
+        }
+
+        const url = `http://localhost:8082/api/library/transactions?${params.toString()}`;
+        apiFetch(url).then(res => res.json()).then(setLoanPage).catch(err => toast.error(err.message)).finally(() => setLoading(false));
+    }, [isSuperAdmin, selectedInstitution]); // <-- Add dependencies
+
+    useEffect(() => {
+        const timer = setTimeout(() => { fetchBooks(bookPageNum, bookSearch); }, 300);
+        return () => clearTimeout(timer);
+    }, [bookSearch, bookPageNum, fetchBooks]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => { fetchLoans(loanPageNum, loanSearch); }, 300);
+        return () => clearTimeout(timer);
+    }, [loanSearch, loanPageNum, fetchLoans]);
 
   useEffect(() => {
     const timer = setTimeout(() => { fetchBooks(bookPageNum, bookSearch); }, 300);
@@ -63,7 +87,7 @@ export default function Library() {
     e.preventDefault(); setLoading(true);
     const formData = new FormData(e.currentTarget);
     const bookData = { title: formData.get('title'), author: formData.get('author'), isbn: formData.get('isbn'), publisher: formData.get('publisher'), publishedDate: formData.get('publishedDate'), category: formData.get('category'), totalCopies: parseInt(formData.get('totalCopies') as string), location: formData.get('location') };
-    const url = selectedBook ? `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/library/books/${selectedBook.id}` : 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/library/books';
+    const url = selectedBook ? `http://localhost:8082/api/library/books/${selectedBook.id}` : 'http://localhost:8082/api/library/books';
     const method = selectedBook ? 'PUT' : 'POST';
     try {
       const response = await apiFetch(url, { method, body: JSON.stringify(bookData) });
@@ -78,7 +102,7 @@ export default function Library() {
   const handleDeleteBook = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this book?')) return;
     try {
-      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/library/books/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`http://localhost:8082/api/library/books/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success('Book deleted successfully');
         fetchBooks(bookPageNum, bookSearch);
@@ -92,7 +116,7 @@ export default function Library() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/library/books/bulk-upload', { method: 'POST', body: formData });
+      const response = await apiFetch('http://localhost:8082/api/library/books/bulk-upload', { method: 'POST', body: formData });
       if (response.ok) {
         const newBooks = await response.json();
         toast.success(`${newBooks.length} books imported/updated successfully!`);
@@ -118,7 +142,7 @@ export default function Library() {
     e.preventDefault();
     if (!selectedBook || !studentId) return toast.error("Book and Student ID are required.");
     setLoading(true);
-    const url = `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/library/books/${transactionType}?bookId=${selectedBook.id}&studentId=${studentId}`;
+    const url = `http://localhost:8082/api/library/books/${transactionType}?bookId=${selectedBook.id}&studentId=${studentId}`;
     try {
       const response = await apiFetch(url, { method: 'POST' });
       if (response.ok) {

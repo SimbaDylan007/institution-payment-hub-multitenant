@@ -1,17 +1,13 @@
 package com.payments.service;
 
 import com.payments.dto.AnnouncementRequest;
-import com.payments.model.Guardian;
-import com.payments.model.Notification;
-import com.payments.model.Student;
-import com.payments.model.User;
-import com.payments.repository.GuardianRepository;
-import com.payments.repository.NotificationRepository;
-import com.payments.repository.StudentRepository;
-import com.payments.repository.UserRepository;
+import com.payments.model.*;
+import com.payments.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication; // <-- IMPORT
+import org.springframework.security.core.context.SecurityContextHolder; // <-- IMPORT
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,19 +53,30 @@ public class NotificationService {
     }
 
     @Transactional
-    public void sendAnnouncement(AnnouncementRequest request, String senderUsername) {
-        User sender = userRepository.findByUsername(senderUsername)
-                .orElseThrow(() -> new RuntimeException("Sender not found: " + senderUsername));
+    public void sendAnnouncement(AnnouncementRequest request, String senderUsername, Long institutionIdOverride) {
+        User sender = userRepository.findByUsername(senderUsername).orElseThrow(() -> new RuntimeException("Sender not found"));
+        Institution targetInstitution;
 
-        List<User> recipients = findRecipients(request.getTargetAudience(), request.getSpecificUserIds());
+        boolean isSuperAdmin = sender.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_SUPER_ADMIN"));
+
+        if (isSuperAdmin && institutionIdOverride != null) {
+            targetInstitution = new Institution();
+            targetInstitution.setId(institutionIdOverride);
+        } else {
+            targetInstitution = sender.getInstitution();
+            if (targetInstitution == null) throw new IllegalStateException("You must belong to an institution to send announcements.");
+        }
+
+        List<User> recipients = findRecipients(request.getTargetAudience(), targetInstitution);
         if (recipients.isEmpty()) return;
 
         List<Notification> notifications = new ArrayList<>();
         for (User recipient : recipients) {
             Notification notification = new Notification();
+            notification.setInstitution(targetInstitution);
             notification.setRecipient(recipient);
             notification.setSubject(request.getSubject());
-            notification.setContent("From " + sender.getUsername() + ":\n\n" + request.getContent());
+            notification.setContent(request.getContent());
             notification.setCreatedAt(LocalDateTime.now());
             notification.setType("ANNOUNCEMENT");
             notifications.add(notification);
@@ -77,36 +84,32 @@ public class NotificationService {
         notificationRepository.saveAll(notifications);
     }
 
-    private List<User> findRecipients(String targetAudience, List<Long> specificUserIds) {
-        if (specificUserIds != null && !specificUserIds.isEmpty()) {
-            return userRepository.findAllById(specificUserIds);
-        }
-
+    private List<User> findRecipients(String targetAudience, Institution institution) {
         if (targetAudience != null && targetAudience.startsWith("PARENTS_GRADE_")) {
             String gradeNumber = targetAudience.substring("PARENTS_GRADE_".length());
             String gradeName = "Grade " + gradeNumber;
 
-            List<Student> studentsInGrade = studentRepository.findByCurrentGrade(gradeName);
+            List<Student> studentsInGrade = studentRepository.findByCurrentGradeAndInstitution(gradeName, institution);
             if (studentsInGrade.isEmpty()) return new ArrayList<>();
 
             List<Guardian> guardians = guardianRepository.findByStudentIn(studentsInGrade);
+            if (guardians.isEmpty()) return new ArrayList<>();
 
             List<String> guardianEmails = guardians.stream()
                     .map(Guardian::getEmail)
                     .filter(email -> email != null && !email.isEmpty())
                     .distinct()
                     .collect(Collectors.toList());
-
             if (guardianEmails.isEmpty()) return new ArrayList<>();
-
             return userRepository.findByEmailIn(guardianEmails);
         }
 
         switch (targetAudience != null ? targetAudience.toUpperCase() : "") {
-            case "ALL": return userRepository.findAll();
-            case "ALL_STAFF": return userRepository.findByRoles_Name("ROLE_TEACHER");
-            case "ALL_STUDENTS": return userRepository.findByRoles_Name("ROLE_STUDENT");
+            case "ALL": return userRepository.findByInstitution(institution);
+            case "ALL_STAFF": return userRepository.findByRoles_NameAndInstitution("ROLE_TEACH-ER", institution); // Assuming ROLE_TEACHER
+            case "ALL_STUDENTS": return userRepository.findByRoles_NameAndInstitution("ROLE_STUDENT", institution);
             default: return new ArrayList<>();
         }
     }
+
 }

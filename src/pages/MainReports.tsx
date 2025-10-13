@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-// --- THIS IS THE MISSING IMPORT LINE ---
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, LayoutDashboard, ChevronsUpDown, Check, Eye } from "lucide-react";
@@ -27,6 +26,7 @@ const reportOptions = [
             { value: 'FINANCIAL_SUMMARY_PAYMENTS', label: 'Financial Summary (Payments)', formats: ['XLSX', 'CSV'] },
             { value: 'FINANCIAL_SUMMARY_CHARGES', label: 'Financial Summary (Charges)', formats: ['XLSX', 'CSV'] },
             { value: 'FULL_FINANCIAL_LEDGER', label: 'Full Financial Ledger (All Transactions)', formats: ['XLSX', 'CSV'] },
+            { value: 'FULL_FINANCIAL_LEDGER_SUMMARIZED', label: 'Full Financial Ledger (All Transactions) Summarized', formats: ['XLSX', 'CSV'] },
             { value: 'PAYMENT_ALERTS', label: 'Payment Alerts (from Bank)', formats: ['XLSX', 'CSV'] },
             { value: 'ALL_FEE_TYPES', label: 'All Fee Types', formats: ['XLSX', 'CSV'] },
         ]},
@@ -58,14 +58,14 @@ const formatOptions = [ { value: 'PDF', label: 'PDF' }, { value: 'XLSX', label: 
 const grades = ["GRADE 1", "GRADE 2", "GRADE 3", "GRADE 4", "GRADE 5", "GRADE 6", "GRADE 7", "ECD"];
 const departments = ["Academics", "Administration", "Finance", "Support Staff", "IT"];
 const staffStatuses = ["ACTIVE", "ON_LEAVE", "TERMINATED", "INACTIVE"];
-const API_BASE_URL = 'http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com';
+const API_BASE_URL = 'http://localhost:8082';
 
 
 export default function MainReports() {
-    const { user } = useAuth();
+    const { user, isSuperAdmin, selectedInstitution } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [reportType, setReportType] = useState('FINANCIAL_STATEMENT');
-    const [format, setFormat] = useState('PDF');
+    const [reportType, setReportType] = useState('ALL_STUDENTS');
+    const [format, setFormat] = useState('XLSX');
 
     // All Filter States
     const [allStudents, setAllStudents] = useState<StudentBalance[]>([]);
@@ -88,25 +88,67 @@ export default function MainReports() {
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [previewData, setPreviewData] = useState<{ headers: string[], rows: string[][] }>({ headers: [], rows: [] });
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const availableFormats = allOptions.find(opt => opt.value === reportType)?.formats || [];
 
-    useEffect(() => { if (!availableFormats.includes(format)) setFormat(availableFormats[0]); }, [reportType, format, availableFormats]);
+    interface ReportFilters {
+        studentId: string;
+        academicYear: string;
+        semester: string;
+        currency: string;
+        grade: string;
+        section: string;
+        department: string;
+        status: string;
+        feeTypeId: string;
+        startDate: string;
+        endDate: string;
+        institutionId?: number;
+    }
 
     useEffect(() => {
-        if (user?.role === 'ADMIN') {
-            const fetchDropdownData = async () => {
-                try {
-                    const [studentsRes, feesRes] = await Promise.all([
-                        apiFetch(`${API_BASE_URL}/api/students`),
-                        apiFetch(`${API_BASE_URL}/api/financials/fee-types`)
-                    ]);
-                    if (studentsRes.ok) setAllStudents((await studentsRes.json()).content); else toast.error("Failed to load students.");
-                    if (feesRes.ok) setFeeTypes(await feesRes.json()); else toast.error("Failed to load fee types.");
-                } catch (error) { toast.error("Network error while loading filter data."); }
-            };
-            fetchDropdownData();
+        if (!availableFormats.includes(format)) {
+            setFormat(availableFormats[0]);
         }
-    }, [user]);
+    }, [reportType, format, availableFormats]);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchDropdownData = async () => {
+            const params = new URLSearchParams();
+            if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+                params.append('institutionId', selectedInstitution.id.toString());
+            }
+            const queryString = params.toString() ? `?${params.toString()}` : '';
+
+            try {
+                // Use relative URLs and the dynamic query string
+                const [studentsRes, feesRes] = await Promise.all([
+                    apiFetch(`/api/students?size=2000${queryString ? '&' + queryString : ''}`),
+                    apiFetch(`/api/financials/fee-types${queryString}`)
+                ]);
+                if (studentsRes.ok) {
+                    const studentData = await studentsRes.json();
+                    setAllStudents(studentData.content || []);
+                    // Automatically populate grades filter from the fetched students
+                    const uniqueGrades = [...new Set((studentData.content || []).map((s: any) => s.currentGrade).filter(Boolean))].sort();
+                    // setGrades(uniqueGrades); // If you decide to make grades dynamic
+                } else {
+                    toast.error("Failed to load students for filters.");
+                }
+
+                if (feesRes.ok) {
+                    setFeeTypes(await feesRes.json());
+                } else {
+                    toast.error("Failed to load fee types for filters.");
+                }
+
+            } catch (error) { toast.error("Network error while loading filter data."); }
+        };
+        fetchDropdownData();
+    }, [user, isSuperAdmin, selectedInstitution]);
+
 
     const handleGenerateReport = async () => {
         if (reportType === 'FINANCIAL_STATEMENT' && !selectedStudentId) {
@@ -114,16 +156,24 @@ export default function MainReports() {
         }
         setLoading(true);
         try {
-            const filters = {
-                studentId: selectedStudentId, academicYear, semester, currency, grade: filterGrade,
-                section: filterSection, department: filterDepartment, status: filterStaffStatus,
-                feeTypeId: filterFeeTypeId === 'all' ? '' : filterFeeTypeId,
-                startDate, endDate,
+            const filters: any = {
+                studentId: selectedStudentId || null, academicYear, semester, currency,
+                gradeLevel: filterGrade === 'All' ? null : filterGrade,
+                section: filterSection, department: filterDepartment === 'All' ? null : filterDepartment,
+                status: filterStaffStatus === 'All' ? null : filterStaffStatus,
+                feeTypeId: filterFeeTypeId === 'all' ? null : filterFeeTypeId,
+                startDate: startDate || null, endDate: endDate || null,
             };
-            const requestBody = { reportType, format, filters };
 
+            // Add institutionId to the filters for the backend
+            if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+                filters.institutionId = selectedInstitution.id;
+            }
+            const requestBody = { reportType, format, filters };
             const token = localStorage.getItem("jwt_token");
-            const response = await fetch(`${API_BASE_URL}/api/main-reports/export`, {
+
+            // Use fetch for blob response, but with a relative URL
+            const response = await fetch('/api/main-reports/export', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(requestBody),
@@ -141,10 +191,10 @@ export default function MainReports() {
                 a.download = filename;
                 document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); a.remove();
             } else {
-                const errorText = await response.text();
-                toast.error(`Failed to generate report: ${errorText}`);
+                const errorData = await response.json().catch(() => ({ message: "Failed to generate report" }));
+                toast.error(`Error: ${errorData.message || 'Unknown error'}`);
             }
-        } catch (error) { toast.error("A network error occurred."); } finally { setLoading(false); }
+        } catch (error) { toast.error("A network error occurred while generating the report."); } finally { setLoading(false); }
     };
 
     const handlePreviewReport = async () => {
@@ -156,34 +206,39 @@ export default function MainReports() {
         setIsPreviewOpen(true);
         setPreviewData({ headers: [], rows: [] });
         try {
-            const filters = {
-                studentId: selectedStudentId, academicYear, semester, currency, grade: filterGrade,
-                section: filterSection, department: filterDepartment, status: filterStaffStatus,
-                feeTypeId: filterFeeTypeId === 'all' ? '' : filterFeeTypeId,
-                startDate, endDate,
+            const filters: any = {
+                studentId: selectedStudentId || null, academicYear, semester, currency,
+                gradeLevel: filterGrade === 'All' ? null : filterGrade,
+                section: filterSection, department: filterDepartment === 'All' ? null : filterDepartment,
+                status: filterStaffStatus === 'All' ? null : filterStaffStatus,
+                feeTypeId: filterFeeTypeId === 'all' ? null : filterFeeTypeId,
+                startDate: startDate || null, endDate: endDate || null,
             };
+
+            if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+                filters.institutionId = selectedInstitution.id;
+            }
             const requestBody = { reportType, filters };
-            const token = localStorage.getItem("jwt_token");
-            const response = await fetch(`${API_BASE_URL}/api/main-reports/preview`, {
+
+            // Use relative URL
+            const response = await apiFetch('/api/main-reports/preview', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(requestBody),
             });
+
             if (response.ok) {
-                const data = await response.json();
-                setPreviewData(data);
+                setPreviewData(await response.json());
             } else {
                 toast.error("Failed to fetch preview data.");
                 setIsPreviewOpen(false);
             }
         } catch (error) {
-            toast.error("A network error occurred.");
+            toast.error("A network error occurred during preview.");
             setIsPreviewOpen(false);
         } finally {
             setIsPreviewLoading(false);
         }
     };
-
     // --- THIS IS THE MISSING FUNCTION BODY ---
     const renderFilters = () => {
         switch (reportType) {
@@ -229,6 +284,7 @@ export default function MainReports() {
                     </div>
                 );
             case 'FULL_FINANCIAL_LEDGER':
+            case 'FULL_FINANCIAL_LEDGER_SUMMARIZED':
             case 'FINANCIAL_SUMMARY_PAYMENTS':
             case 'FINANCIAL_SUMMARY_CHARGES':
                 return (
@@ -261,7 +317,12 @@ export default function MainReports() {
         }
     };
 
-    if (user?.role !== 'ADMIN') { return <Navigate to="/dashboard" replace />; }
+    const canViewPage = user?.role?.includes('ROLE_ADMIN') || user?.role?.includes('ROLE_SUPER_ADMIN');
+
+    if (!user) { return <Navigate to="/dashboard" replace />; }
+
+    if (!canViewPage) { return <Navigate to="/dashboard" replace />; }
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">

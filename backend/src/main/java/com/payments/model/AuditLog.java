@@ -16,6 +16,11 @@ public class AuditLog {
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = true)
+    private Institution institution;
+
     @Column(nullable = false)
     private String username;
 
@@ -46,4 +51,7 @@ public class AuditLog {
     public void setStatus(String status) { this.status = status; }
     public String getIpAddress() { return ipAddress; }
     public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

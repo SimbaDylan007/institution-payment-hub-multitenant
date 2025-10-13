@@ -24,6 +24,8 @@ public interface StaffRepository extends JpaRepository<Staff, Long> {
     List<Staff> findByPosition(String position);
     
     Long countByEmploymentStatus(String employmentStatus);
+
+    long countByInstitutionId(Long institutionId);
     
     Optional<Staff> findByEmail(String email);
 
@@ -35,6 +37,13 @@ public interface StaffRepository extends JpaRepository<Staff, Long> {
             "LOWER(s.department) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
             "LOWER(s.position) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     Page<Staff> findAllWithSearch(@Param("searchTerm") String searchTerm, Pageable pageable);
+
+    @Query("SELECT s FROM Staff s WHERE s.institution.id = :institutionId AND (" +
+            "LOWER(s.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(s.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(s.employeeId) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(s.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<Staff> findAllByInstitutionIdAndSearch(@Param("institutionId") Long institutionId, @Param("searchTerm") String searchTerm, Pageable pageable);
 
     // --- NEW METHOD FOR FILTERED LIST REPORTS ---
     @Query("SELECT s FROM Staff s WHERE " +

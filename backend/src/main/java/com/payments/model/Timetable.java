@@ -18,6 +18,11 @@ public class Timetable {
     @ManyToOne
     @JoinColumn(name = "teacher_id")
     private User teacher;
+
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
     
     @Column(nullable = false)
     private String grade;
@@ -72,4 +77,7 @@ public class Timetable {
     
     public String getAcademicYear() { return academicYear; }
     public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

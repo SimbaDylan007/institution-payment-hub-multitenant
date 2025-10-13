@@ -22,7 +22,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN', 'FINANCE_ADMIN', 'ADMINISTRATOR', 'TEACHER')")
+@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN', 'FINANCE_ADMIN', 'ADMINISTRATOR', 'TEACHER','SUPER_ADMIN')")
 public class StatsController {
 
     private final StudentRepository studentRepository;

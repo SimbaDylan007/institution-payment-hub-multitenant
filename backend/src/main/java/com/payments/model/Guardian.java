@@ -15,6 +15,11 @@ public class Guardian {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
+
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
     
     @Column(nullable = false)
     private String firstName;
@@ -82,4 +87,7 @@ public class Guardian {
     
     public boolean isEmergencyContact() { return isEmergencyContact; }
     public void setEmergencyContact(boolean emergencyContact) { isEmergencyContact = emergencyContact; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

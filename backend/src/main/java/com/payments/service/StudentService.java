@@ -1,5 +1,3 @@
-// src/main/java/com/payments/service/StudentService.java
-
 package com.payments.service;
 
 import com.opencsv.CSVReader;
@@ -17,7 +15,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.hibernate.Session;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -46,8 +48,23 @@ public class StudentService {
     @Autowired
     private StudentCategoryRepository studentCategoryRepository;
 
+    @Autowired
+    private UserRepository userRepository;
 
-    public Page<Student> getAllStudents(Pageable pageable, String searchTerm) {
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    public Page<Student> getAllStudents(Pageable pageable, String searchTerm, Long institutionId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isSuperAdmin = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+        if (isSuperAdmin && institutionId != null) {
+            Session session = entityManager.unwrap(Session.class);
+            session.disableFilter("institutionFilter");
+            return studentRepository.findAllByInstitutionIdAndSearch(institutionId, searchTerm, pageable);
+        }
+
         return studentRepository.findAllWithSearch(searchTerm, pageable);
     }
 
@@ -67,30 +84,47 @@ public class StudentService {
         return studentRepository.findByCurrentGrade(grade);
     }
 
+
     @Transactional
     public Student createStudent(Student student) {
+        User currentUser = getCurrentUser();
+        Institution institution = currentUser.getInstitution();
+        if (institution == null && !isSuperAdmin(currentUser)) {
+            throw new IllegalStateException("User does not belong to an institution and cannot create students.");
+        }
+
+        if (student.getInstitution() == null) {
+            student.setInstitution(institution);
+        }
+
         return studentRepository.save(student);
     }
 
-    @Transactional
+
     public Student updateStudent(Long id, Student studentDetails) {
-        Optional<Student> optionalStudent = studentRepository.findById(id);
-        if (optionalStudent.isPresent()) {
-            Student student = optionalStudent.get();
-            student.setFirstName(studentDetails.getFirstName());
-            student.setLastName(studentDetails.getLastName());
-            student.setEmail(studentDetails.getEmail());
-            student.setPhone(studentDetails.getPhone());
-            student.setDateOfBirth(studentDetails.getDateOfBirth());
-            student.setGender(studentDetails.getGender());
-            student.setAddress(studentDetails.getAddress());
-            student.setEnrollmentStatus(studentDetails.getEnrollmentStatus());
-            student.setCurrentGrade(studentDetails.getCurrentGrade());
-            student.setSection(studentDetails.getSection());
-            student.setCategory(studentDetails.getCategory());
-            return studentRepository.save(student);
+
+        Student existingStudent = studentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Student not found with id: " + id));
+
+
+        if (studentDetails.getInstitution() != null &&
+                !studentDetails.getInstitution().getId().equals(existingStudent.getInstitution().getId())) {
+            throw new SecurityException("Updating a student's institution is not allowed. Please use a dedicated transfer process.");
         }
-        return null;
+
+        existingStudent.setFirstName(studentDetails.getFirstName());
+        existingStudent.setLastName(studentDetails.getLastName());
+        existingStudent.setEmail(studentDetails.getEmail());
+        existingStudent.setPhone(studentDetails.getPhone());
+        existingStudent.setDateOfBirth(studentDetails.getDateOfBirth());
+        existingStudent.setGender(studentDetails.getGender());
+        existingStudent.setAddress(studentDetails.getAddress());
+        existingStudent.setEnrollmentStatus(studentDetails.getEnrollmentStatus());
+        existingStudent.setCurrentGrade(studentDetails.getCurrentGrade());
+        existingStudent.setSection(studentDetails.getSection());
+        existingStudent.setCategory(studentDetails.getCategory());
+
+        return studentRepository.save(existingStudent);
     }
 
     @Transactional
@@ -102,7 +136,6 @@ public class StudentService {
         return false;
     }
 
-    // Guardian management
     public List<Guardian> getStudentGuardians(Long studentId) {
         return guardianRepository.findByStudentId(studentId);
     }
@@ -157,11 +190,22 @@ public class StudentService {
     }
 
     @Transactional
-    public List<Student> bulkAddStudents(MultipartFile file) throws IOException, CsvValidationException {
-        // Find the "OTHER" category once, to use as a default.
-        // This makes the import much more efficient.
-        StudentCategory defaultCategory = studentCategoryRepository.findByName("OTHER")
-                .orElseThrow(() -> new RuntimeException("Default 'OTHER' category not found in the database."));
+    public List<Student> bulkAddStudents(MultipartFile file, Long institutionIdOverride) throws IOException, CsvValidationException {
+        User currentUser = getCurrentUser();
+        Institution targetInstitution;
+
+        if (isSuperAdmin(currentUser) && institutionIdOverride != null) {
+            targetInstitution = entityManager.find(Institution.class, institutionIdOverride);
+            if (targetInstitution == null) throw new IllegalArgumentException("Invalid institution ID provided for bulk import.");
+        } else {
+            targetInstitution = currentUser.getInstitution();
+            if (targetInstitution == null) {
+                throw new IllegalStateException("You must belong to an institution to bulk import students.");
+            }
+        }
+
+        StudentCategory defaultCategory = studentCategoryRepository.findByNameAndInstitution("OTHER", targetInstitution)
+                .orElseThrow(() -> new RuntimeException("Default 'OTHER' category not found for the institution. Please create it in the settings."));
 
         List<Student> studentsToSave = new ArrayList<>();
         String filename = file.getOriginalFilename();
@@ -186,11 +230,11 @@ public class StudentService {
                     student.setAddress(line[6]);
                     student.setCurrentGrade(line[7]);
                     student.setSection(line[8]);
+                    student.setInstitution(targetInstitution);
 
-                    // --- THIS IS THE CORRECTED LOGIC ---
                     String categoryName = line[9].trim().toUpperCase();
-                    StudentCategory category = studentCategoryRepository.findByName(categoryName)
-                            .orElse(defaultCategory); // Find by name, or use the default
+                    StudentCategory category = studentCategoryRepository.findByNameAndInstitution(categoryName, targetInstitution)
+                            .orElse(defaultCategory);
                     student.setCategory(category);
 
                     student.setEnrollmentStatus("ACTIVE");
@@ -200,7 +244,7 @@ public class StudentService {
             } catch (Exception e) {
                 throw new RuntimeException("Failed to parse CSV file: " + e.getMessage());
             }
-        } else { // XLSX
+        } else {
             try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
                 Sheet sheet = workbook.getSheetAt(0);
                 for (int i = 1; i <= sheet.getLastRowNum(); i++) {
@@ -216,11 +260,11 @@ public class StudentService {
                     student.setAddress(getCellValueAsString(row.getCell(6)));
                     student.setCurrentGrade(getCellValueAsString(row.getCell(7)));
                     student.setSection(getCellValueAsString(row.getCell(8)));
+                    student.setInstitution(targetInstitution);
 
-                    // --- THIS IS THE CORRECTED LOGIC ---
                     String categoryName = getCellValueAsString(row.getCell(9)).trim().toUpperCase();
-                    StudentCategory category = studentCategoryRepository.findByName(categoryName)
-                            .orElse(defaultCategory); // Find by name, or use the default
+                    StudentCategory category = studentCategoryRepository.findByNameAndInstitution(categoryName, targetInstitution)
+                            .orElse(defaultCategory);
                     student.setCategory(category);
 
                     student.setEnrollmentStatus("ACTIVE");
@@ -234,6 +278,19 @@ public class StudentService {
 
         if (studentsToSave.isEmpty()) { throw new IllegalArgumentException("File contains no student data to import."); }
         return studentRepository.saveAll(studentsToSave);
+    }
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.User)) {
+            throw new IllegalStateException("User not authenticated.");
+        }
+        String username = ((org.springframework.security.core.userdetails.User) authentication.getPrincipal()).getUsername();
+        return userRepository.findByUsername(username).orElseThrow(() -> new IllegalStateException("Authenticated user not found in database."));
+    }
+
+    private boolean isSuperAdmin(User user) {
+        return user.getRoles().stream().anyMatch(role -> role.getName().equals("ROLE_SUPER_ADMIN"));
     }
 
 
@@ -266,7 +323,6 @@ public class StudentService {
             case BOOLEAN:
                 return String.valueOf(cell.getBooleanCellValue()).trim();
             case FORMULA:
-                // Attempt to evaluate the formula to a string. Handle errors gracefully.
                 try {
                     return cell.getStringCellValue().trim();
                 } catch (Exception e) {

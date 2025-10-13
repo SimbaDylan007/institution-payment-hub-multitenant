@@ -16,7 +16,11 @@ public class Fee {
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
-    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
+
     @Column(nullable = false)
     private String feeType;
     
@@ -99,5 +103,8 @@ public class Fee {
 
     public BigDecimal getAmountDue() { return amountDue; }
     public void setAmountDue(BigDecimal amountDue) { this.amountDue = amountDue; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 
 }

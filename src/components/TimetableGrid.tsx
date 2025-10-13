@@ -37,7 +37,7 @@ export default function TimetableGrid({ grade, section, onEditEntry, onAddEntry 
     setLoading(true);
     try {
       // 2. Use the apiFetch wrapper for the request.
-      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/timetables/grade/${selectedGrade}/section/${selectedSection}`);
+      const response = await apiFetch(`http://localhost:8082/api/timetables/grade/${selectedGrade}/section/${selectedSection}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -56,7 +56,7 @@ export default function TimetableGrid({ grade, section, onEditEntry, onAddEntry 
   const deleteEntry = async (id: number) => {
     try {
       // 3. Use the apiFetch wrapper for the DELETE request.
-      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/timetables/${id}`, {
+      const response = await apiFetch(`http://localhost:8082/api/timetables/${id}`, {
         method: 'DELETE'
       });
       if (response.ok) {

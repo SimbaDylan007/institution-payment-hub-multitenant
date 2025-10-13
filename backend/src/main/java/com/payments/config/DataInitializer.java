@@ -15,7 +15,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final PasswordPolicyRepository passwordPolicyRepository;
     private final SecurityFeaturesRepository securityFeaturesRepository;
-    // Inject other settings repositories if they also use FIXED_ID and need init
+    private final InstitutionRepository institutionRepository;
     private final SchoolInformationRepository schoolInformationRepository;
     private final SystemPreferencesRepository systemPreferencesRepository;
     private final NotificationPreferencesRepository notificationPreferencesRepository;
@@ -26,33 +26,43 @@ public class DataInitializer implements CommandLineRunner {
                            SchoolInformationRepository schoolInformationRepository,
                            SystemPreferencesRepository systemPreferencesRepository,
                            NotificationPreferencesRepository notificationPreferencesRepository,
-                           RoleRepository roleRepository) {
+                           RoleRepository roleRepository,
+                           InstitutionRepository institutionRepository) {
         this.passwordPolicyRepository = passwordPolicyRepository;
         this.securityFeaturesRepository = securityFeaturesRepository;
         this.schoolInformationRepository = schoolInformationRepository;
         this.systemPreferencesRepository = systemPreferencesRepository;
         this.notificationPreferencesRepository = notificationPreferencesRepository;
         this.roleRepository = roleRepository;
+        this.institutionRepository = institutionRepository;
     }
 
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+        // --- Create a Master Institution for Global Roles ---
+        Institution masterInstitution = institutionRepository.findByName("Master Institution").orElseGet(() -> {
+            Institution newInst = new Institution();
+            newInst.setName("Master Institution");
+            newInst.setAddress("System Address");
+            newInst.setSchoolEmail("system@system.com");
+            System.out.println("Creating Master Institution.");
+            return institutionRepository.save(newInst);
+        });
+
         // --- Initialize Roles ---
-        // Using the "ROLE_" prefix is a common convention for Spring Security
         List<String> roleNames = Arrays.asList(
-                "ROLE_ADMIN",
-                "ROLE_IT_ADMIN",
-                "ROLE_FINANCE_ADMIN",
-                "ROLE_ADMINISTRATOR",
-                "ROLE_TEACHER",
-                "ROLE_STUDENT" // It's good to have a default role for new users
+                "ROLE_ADMIN", "ROLE_IT_ADMIN", "ROLE_FINANCE_ADMIN",
+                "ROLE_ADMINISTRATOR", "ROLE_TEACHER", "ROLE_STUDENT", "ROLE_SUPER_ADMIN"
         );
 
         for (String roleName : roleNames) {
-            if (roleRepository.findByName(roleName).isEmpty()) {
-                roleRepository.save(new Role(roleName));
-                System.out.println("Created role: " + roleName);
+            // Use the new, correct method here to avoid ambiguity
+            if (roleRepository.findByNameAndInstitution(roleName, masterInstitution).isEmpty()) {
+                Role newRole = new Role(roleName);
+                newRole.setInstitution(masterInstitution);
+                roleRepository.save(newRole);
+                System.out.println("Created role: " + roleName + " for " + masterInstitution.getName());
             }
         }
 

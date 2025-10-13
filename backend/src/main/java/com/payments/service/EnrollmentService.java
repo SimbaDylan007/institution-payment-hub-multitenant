@@ -6,17 +6,27 @@ import com.payments.repository.EnrollmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.payments.model.Institution;
+import com.payments.model.User;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import com.payments.repository.UserRepository;
+import org.hibernate.Session;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 
 @Service
 public class EnrollmentService {
     
     @Autowired
     private EnrollmentRepository enrollmentRepository;
-    
+
+    @Autowired
+    private UserRepository userRepository;
+
     public List<Enrollment> getAllEnrollments() {
         return enrollmentRepository.findAll();
     }
@@ -39,15 +49,29 @@ public class EnrollmentService {
     
     @Transactional
     public Enrollment createEnrollment(Enrollment enrollment) {
-        if (enrollment.getEnrollmentDate() == null) {
-            enrollment.setEnrollmentDate(LocalDate.now());
+        // --- TENANCY ENFORCEMENT ---
+        // We ensure the student being enrolled belongs to the current user's institution.
+        // The student object must be fetched and set before calling this service.
+        if (enrollment.getStudent() == null) {
+            throw new IllegalArgumentException("Cannot create an enrollment without a student.");
         }
-        if (enrollment.getEnrollmentStatus() == null) {
-            enrollment.setEnrollmentStatus("ACTIVE");
+
+        User currentUser = getCurrentUser();
+        Institution institution = currentUser.getInstitution();
+
+        if (institution != null && !institution.getId().equals(enrollment.getStudent().getInstitution().getId())) {
+            throw new SecurityException("Cannot enroll a student in a different institution.");
         }
+
+        // Stamp the institution on the enrollment record itself for data integrity.
+        enrollment.setInstitution(enrollment.getStudent().getInstitution());
+
+        if (enrollment.getEnrollmentDate() == null) { enrollment.setEnrollmentDate(LocalDate.now()); }
+        if (enrollment.getEnrollmentStatus() == null) { enrollment.setEnrollmentStatus("ACTIVE"); }
         return enrollmentRepository.save(enrollment);
     }
-    
+
+
     @Transactional
     public Enrollment updateEnrollment(Long id, Enrollment enrollmentDetails) {
         Optional<Enrollment> optionalEnrollment = enrollmentRepository.findById(id);
@@ -64,6 +88,14 @@ public class EnrollmentService {
             return enrollmentRepository.save(enrollment);
         }
         return null;
+    }
+
+    // --- HELPER METHOD ---
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = ((org.springframework.security.core.userdetails.User) authentication.getPrincipal()).getUsername();
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found in database."));
     }
     
     @Transactional

@@ -12,7 +12,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/student-categories")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','FINANCE_ADMIN')")
 public class StudentCategoryController {
 
     @Autowired private StudentCategoryService categoryService;

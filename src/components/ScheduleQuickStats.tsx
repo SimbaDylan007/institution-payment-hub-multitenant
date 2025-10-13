@@ -22,7 +22,7 @@ export default function ScheduleQuickStats() {
     setLoading(true);
     try {
 // Use the new, correct endpoint
-      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/schedule/stats');
+      const response = await apiFetch('http://localhost:8082/api/schedule/stats');
 
       if (response.ok) {
         const data = await response.json();

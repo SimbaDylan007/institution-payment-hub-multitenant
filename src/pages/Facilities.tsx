@@ -20,37 +20,47 @@ interface Facility { id: number; name: string; description?: string; type: strin
 interface Page<T> { content: T[]; totalPages: number; number: number; }
 
 export default function Facilities() {
-  const { user } = useAuth();
+    const { user, isSuperAdmin, selectedInstitution } = useAuth();
   const [facilityPage, setFacilityPage] = useState<Page<Facility> | null>(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ status: 'ALL', type: 'ALL', searchTerm: '' });
   const [currentPage, setCurrentPage] = useState(0);
 
-  const fetchFacilities = useCallback((page = 0, currentFilters = filters) => {
-    setLoading(true);
-    const params = new URLSearchParams({
-      page: page.toString(),
-      size: '10',
-      sort: 'name,asc',
-      ...currentFilters
-    }).toString();
+    const fetchFacilities = useCallback((page = 0, currentFilters = filters) => {
+        setLoading(true);
+        const params = new URLSearchParams({
+            page: page.toString(),
+            size: '10',
+            sort: 'name,asc',
+            ...currentFilters
+        });
 
-    apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/facilities?${params}`)
-        .then(res => res.json())
-        .then(data => setFacilityPage(data))
-        .catch(() => toast.error("Failed to fetch facilities."))
-        .finally(() => setLoading(false));
-  }, [filters]);
+        // --- TENANCY LOGIC ---
+        if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+            params.append('institutionId', selectedInstitution.id.toString());
+        }
 
-  useEffect(() => {
-    const timer = setTimeout(() => fetchFacilities(currentPage, filters), 300);
-    return () => clearTimeout(timer);
-  }, [currentPage, filters, fetchFacilities]);
+        apiFetch(`/api/facilities?${params.toString()}`)
+            .then(res => res.json())
+            .then(data => setFacilityPage(data))
+            .catch(() => toast.error("Failed to fetch facilities."))
+            .finally(() => setLoading(false));
+    }, [filters, isSuperAdmin, selectedInstitution]);
 
-  const handleDelete = async (id: number) => {
+    useEffect(() => {
+        const timer = setTimeout(() => fetchFacilities(currentPage, filters), 300);
+        return () => clearTimeout(timer);
+    }, [currentPage, filters, fetchFacilities]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => fetchFacilities(currentPage, filters), 300);
+        return () => clearTimeout(timer);
+    }, [currentPage, filters, fetchFacilities, selectedInstitution]);
+
+    const handleDelete = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this facility?")) return;
     try {
-      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/facilities/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`http://localhost:8082/api/facilities/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success("Facility deleted successfully.");
         fetchFacilities(currentPage); // Refresh
@@ -62,9 +72,13 @@ export default function Facilities() {
     }
   };
 
-  if (!user) return <Navigate to="/" replace />;
-  // Add role check if needed
-  if (!['ADMIN', 'ADMINISTRATOR'].includes(user.role)) return <div>Access Denied</div>;
+    const canViewPage = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_SUPER_ADMIN';
+
+
+    if (!user) return <Navigate to="/" replace />;
+    if (!canViewPage) {
+        return <Navigate to="/access-denied" replace />;
+    }
 
   return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">

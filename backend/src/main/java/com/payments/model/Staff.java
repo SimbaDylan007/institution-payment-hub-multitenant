@@ -77,6 +77,11 @@ public class Staff {
     
     @OneToMany(mappedBy = "staff", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<LeaveRequest> leaveRequests;
+
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id",referencedColumnName = "id", nullable = false)
+    private Institution institution;
     
     // Constructors
     public Staff() {}
@@ -135,4 +140,7 @@ public class Staff {
     
     public List<LeaveRequest> getLeaveRequests() { return leaveRequests; }
     public void setLeaveRequests(List<LeaveRequest> leaveRequests) { this.leaveRequests = leaveRequests; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

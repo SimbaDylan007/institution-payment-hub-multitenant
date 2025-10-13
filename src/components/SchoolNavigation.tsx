@@ -43,7 +43,6 @@ const navigationItems: NavigationItem[] = [
     { name: "Schedule", href: "/schedule", icon: Calendar, description: "Timetables and scheduling" },
     { name: "Communication", href: "/communication", icon: MessageSquare, description: "Messages and announcements" },
     { name: "Reports", href: "/reports", icon: BarChart3, description: "Analytics and reporting" },
-    // --- NEW MENU ITEM ADDED HERE ---
     { name: "Data Exports", href: "/main-reports", icon: FileOutput, description: "Export system data to PDF/Excel" },
     { name: "Facilities", href: "/facilities", icon: Building, description: "Infrastructure and resources" },
     { name: "Settings", href: "/settings", icon: Settings, description: "System configuration" },
@@ -55,40 +54,47 @@ const navigationItems: NavigationItem[] = [
 
 // This is the "source of truth" for your frontend access control.
 const rolePermissions: { [key: string]: string[] } = {
-    "Dashboard": ["ADMIN", "IT_ADMIN", "FINANCE_ADMIN", "ADMINISTRATOR", "TEACHER", "STUDENT"],
-    "Students": ["ADMIN", "IT_ADMIN"],
-    "Staff": ["ADMIN", "IT_ADMIN"],
-    "Academics": ["ADMIN", "ADMINISTRATOR", "TEACHER"],
-    "Finance": ["ADMIN", "FINANCE_ADMIN"],
-    "Library": ["ADMIN", "ADMINISTRATOR"],
-    "Schedule": ["ADMIN", "ADMINISTRATOR", "TEACHER"],
-    "Communication": ["ADMIN", "ADMINISTRATOR", "TEACHER"],
-    "Reports": ["ADMIN", "FINANCE_ADMIN", "ADMINISTRATOR", "TEACHER"],
-    // --- NEW PERMISSION ADDED HERE ---
-    "Data Exports": ["ADMIN"],
-    "Facilities": ["ADMIN", "ADMINISTRATOR"],
-    "Settings": ["ADMIN", "IT_ADMIN"],
-    "Payment Allocation": ["ADMIN", "FINANCE_ADMIN"],
-    "Audit Trail": ["ADMIN"],
-    "My Portal": ["STUDENT"],
+    "Dashboard": ["ROLE_ADMIN", "ROLE_IT_ADMIN", "ROLE_FINANCE_ADMIN", "ROLE_ADMINISTRATOR", "ROLE_TEACHER", "ROLE_STUDENT", "ROLE_SUPER_ADMIN"],
+    "Students": ["ROLE_ADMIN", "ROLE_IT_ADMIN", "ROLE_SUPER_ADMIN"],
+    "Staff": ["ROLE_ADMIN", "ROLE_IT_ADMIN", "ROLE_SUPER_ADMIN"],
+    "Academics": ["ROLE_ADMIN", "ROLE_ADMINISTRATOR", "ROLE_TEACHER", "ROLE_SUPER_ADMIN"],
+    "Finance": ["ROLE_ADMIN", "ROLE_FINANCE_ADMIN", "ROLE_SUPER_ADMIN"],
+    "Library": ["ROLE_ADMIN", "ROLE_ADMINISTRATOR", "ROLE_SUPER_ADMIN"],
+    "Schedule": ["ROLE_ADMIN", "ROLE_ADMINISTRATOR", "ROLE_TEACHER", "ROLE_SUPER_ADMIN"],
+    "Communication": ["ROLE_ADMIN", "ROLE_ADMINISTRATOR", "ROLE_TEACHER", "ROLE_SUPER_ADMIN"],
+    "Reports": ["ROLE_ADMIN", "ROLE_FINANCE_ADMIN", "ROLE_ADMINISTRATOR", "ROLE_TEACHER", "ROLE_SUPER_ADMIN"],
+    "Data Exports": ["ROLE_ADMIN", "ROLE_SUPER_ADMIN"],
+    "Facilities": ["ROLE_ADMIN", "ROLE_ADMINISTRATOR", "ROLE_SUPER_ADMIN"],
+    "Settings": ["ROLE_ADMIN", "ROLE_IT_ADMIN", "ROLE_SUPER_ADMIN"],
+    "Payment Allocation": ["ROLE_ADMIN", "ROLE_FINANCE_ADMIN", "ROLE_SUPER_ADMIN"],
+    "Audit Trail": ["ROLE_ADMIN", "ROLE_SUPER_ADMIN"],
+    "My Portal": ["ROLE_STUDENT"],
 };
 
 
 export default function SchoolNavigation() {
     const location = useLocation();
-    const { user } = useAuth(); // GET the currently logged-in user from the context
+    const { user } = useAuth();
 
-    // FILTER the full list of navigation items down to only what the current user is allowed to see.
     const accessibleNavItems = navigationItems.filter(item => {
-        // If the user is not logged in or has no role, they can't see any items.
-        if (!user || !user.role) {
+        if (!user || !user.role || user.role.length === 0) {
             return false;
         }
-        // Get the array of roles allowed to see this specific item.
-        const allowedRoles = rolePermissions[item.name];
 
-        // Check if the user's role is included in the array of allowed roles.
-        return allowedRoles?.includes(user.role);
+        if (item.name === "Dashboard") {
+            return true;
+        }
+
+        if (user.role.includes("ROLE_SUPER_ADMIN")) {
+            return true;
+        }
+
+        const allowedRoles = rolePermissions[item.name];
+        if (!allowedRoles) {
+            return false;
+        }
+
+        return user.role.some(userRole => allowedRoles.includes(userRole));
     });
 
     return (

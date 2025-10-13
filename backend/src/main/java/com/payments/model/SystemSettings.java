@@ -1,17 +1,20 @@
 package com.payments.model;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 
 @Entity
 @Table(name = "system_settings")
 public class SystemSettings {
 
-    // We will only ever have one row in this table, so we use a fixed ID.
     @Id
     private Long id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false, unique = true)
+    @JsonIgnore
+    private Institution institution;
 
     @Column(nullable = false)
     private String currentAcademicYear;
@@ -24,6 +27,8 @@ public class SystemSettings {
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
     public String getCurrentAcademicYear() { return currentAcademicYear; }
     public void setCurrentAcademicYear(String currentAcademicYear) { this.currentAcademicYear = currentAcademicYear; }
     public String getCurrentSemester() { return currentSemester; }

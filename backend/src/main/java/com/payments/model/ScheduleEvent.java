@@ -19,6 +19,10 @@ public class ScheduleEvent {
     @Column(nullable = false)
     private ScheduleEventType eventType;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
+
     @Column(nullable = false)
     private LocalDate startDate;
 
@@ -62,4 +66,6 @@ public class ScheduleEvent {
     public void setSubjectCode(String subjectCode) { this.subjectCode = subjectCode; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

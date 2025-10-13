@@ -1,21 +1,26 @@
 package com.payments.config;
 
+import com.payments.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
 import java.io.Serializable;
-import java.nio.charset.StandardCharsets; // Import StandardCharsets
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtUtil implements Serializable {
@@ -27,11 +32,8 @@ public class JwtUtil implements Serializable {
 
     private SecretKey secretKey;
 
-    /**
-     * CORRECTED: This method now directly converts the secret string from your properties
-     * into a secure key object without trying to decode it as Base64.
-     * This is the most robust and recommended approach.
-     */
+    @Autowired private UserRepository userRepository;
+
     @PostConstruct
     public void init() {
         this.secretKey = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8));
@@ -51,7 +53,6 @@ public class JwtUtil implements Serializable {
     }
 
     private Claims getAllClaimsFromToken(String token) {
-        // Use the modern parserBuilder with the SecretKey object
         return Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token).getBody();
     }
 
@@ -62,15 +63,27 @@ public class JwtUtil implements Serializable {
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        // You can add roles or other info to the token here if you want
-        // claims.put("roles", userDetails.getAuthorities());
+
+        userRepository.findByUsername(userDetails.getUsername()).ifPresent(user -> {
+            if (user.getInstitution() != null) {
+                claims.put("institutionId", user.getInstitution().getId());
+                claims.put("institutionName", user.getInstitution().getName());
+            }
+        });
+
+
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
+        // Put the list into the token with the key "roles" (plural)
+        claims.put("roles", roles);
+
         return doGenerateToken(claims, userDetails.getUsername());
     }
 
     private String doGenerateToken(Map<String, Object> claims, String subject) {
         return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000))
-                // Use the SecretKey object for signing
                 .signWith(secretKey, SignatureAlgorithm.HS512).compact();
     }
 

@@ -19,31 +19,39 @@ interface Notification { id: number; subject: string; content: string; createdAt
 interface Page<T> { content: T[]; totalPages: number; number: number; }
 
 export default function Communication() {
-  const { user } = useAuth();
+    const { user, isSuperAdmin, selectedInstitution } = useAuth();
   const [notificationsPage, setNotificationsPage] = useState<Page<Notification> | null>(null);
   const [loading, setLoading] = useState(false);
   const [isComposeOpen, setIsComposeOpen] = useState(false);
 
   // CORRECTED: This function now uses the apiFetch wrapper
-  const fetchNotifications = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/notifications?page=0&size=20');
-      if (response.ok) {
-        const data: Page<Notification> = await response.json();
-        setNotificationsPage(data);
-      } else {
-        // The wrapper will have already shown a 403 toast, but we can add a fallback.
-        toast.error("Failed to load notifications.");
-      }
-    } catch (error) {
-      // The wrapper handles network error toasts.
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+    const fetchNotifications = useCallback(async () => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const params = new URLSearchParams({ page: '0', size: '20' });
+
+            // --- TENANCY LOGIC ---
+            if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+                params.append('institutionId', selectedInstitution.id.toString());
+            }
+
+            const response = await apiFetch(`http://localhost:8082/api/notifications?${params.toString()}`);
+            if (response.ok) {
+                setNotificationsPage(await response.json());
+            } else {
+                toast.error("Failed to load notifications.");
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    }, [user, isSuperAdmin, selectedInstitution]); // <-- Add dependencies
+
+    useEffect(() => {
+        fetchNotifications();
+    }, [fetchNotifications]);
 
   useEffect(() => {
     fetchNotifications();
@@ -56,7 +64,7 @@ export default function Communication() {
     const formData = new FormData(e.currentTarget);
     const announcementData = { subject: formData.get('subject'), content: formData.get('content'), targetAudience: formData.get('targetAudience'), };
     try {
-      const res = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/notifications/announcements', {
+      const res = await apiFetch('http://localhost:8082/api/notifications/announcements', {
         method: 'POST',
         body: JSON.stringify(announcementData)
       });
@@ -77,7 +85,7 @@ export default function Communication() {
   // CORRECTED: This function now uses the apiFetch wrapper
   const handleMarkAsRead = async (id: number) => {
     try {
-      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/notifications/${id}/read`, { method: 'POST' });
+      const response = await apiFetch(`http://localhost:8082/api/notifications/${id}/read`, { method: 'POST' });
       if(response.ok) {
         setNotificationsPage(prev => {
           if (!prev) return null;

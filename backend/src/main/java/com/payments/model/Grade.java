@@ -24,6 +24,11 @@ public class Grade {
     @ManyToOne
     @JoinColumn(name = "exam_id")
     private Exam exam;
+
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id",referencedColumnName = "id", nullable = false)
+    private Institution institution;
     
     @Column(nullable = false)
     private String assessmentType; // EXAM, ASSIGNMENT, QUIZ, PROJECT
@@ -92,4 +97,8 @@ public class Grade {
     
     public String getSemester() { return semester; }
     public void setSemester(String semester) { this.semester = semester; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
+
 }

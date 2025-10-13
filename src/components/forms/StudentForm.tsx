@@ -1,6 +1,5 @@
-// src/components/forms/StudentForm.tsx
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, FC } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,31 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { apiFetch } from "@/utils/apiClient";
+import InstitutionSelect from "./InstitutionSelect";
+import { Student, StudentCategory as Category } from "@/types";
 
-// --- UPDATED INTERFACES ---
-interface Category {
-    id: number;
-    name: string;
-}
-
-interface Student {
-    id?: number;
-    studentId: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-    currentGrade: string;
-    section?: string;
-    dateOfBirth: string;
-    gender: string;
-    address?: string;
-    enrollmentDate: string;
-    enrollmentStatus: string;
-    category: Category; // Now an object
-}
-
-// Updated FormData to handle categoryId
 interface StudentFormData extends Omit<Partial<Student>, 'category'> {
     categoryId?: string;
 }
@@ -44,63 +21,60 @@ interface StudentFormProps {
 }
 
 const initialFormData: StudentFormData = {
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    currentGrade: "",
-    section: "",
-    dateOfBirth: "",
-    gender: "Male",
-    address: "",
+    firstName: "", lastName: "", email: "", phone: "", currentGrade: "",
+    section: "", dateOfBirth: "", gender: "Male", address: "",
     enrollmentDate: new Date().toISOString().split('T')[0],
-    enrollmentStatus: "ACTIVE",
-    categoryId: "", // Default to empty, user must select
+    enrollmentStatus: "ACTIVE", categoryId: "",
 };
 
-export default function StudentForm({ student, onSave, onCancel }: StudentFormProps) {
+const StudentForm: FC<StudentFormProps> = ({ student, onSave, onCancel }) => {
+    const { isSuperAdmin, selectedInstitution } = useAuth(); // <-- Get tenancy context
     const [formData, setFormData] = useState<StudentFormData>(initialFormData);
     const [loading, setLoading] = useState(false);
-    // --- NEW STATE for dynamic categories ---
     const [categories, setCategories] = useState<Category[]>([]);
 
-    // --- NEW useEffect to fetch categories ---
+    // State for the super-admin's institution selection
+    const [formInstitutionId, setFormInstitutionId] = useState<string>('');
+
     useEffect(() => {
         const fetchCategories = async () => {
+            const params = new URLSearchParams();
+            // If super-admin is using the form to create a student, filter categories by the selected institution
+            if (isSuperAdmin && formInstitutionId) {
+                params.append('institutionId', formInstitutionId);
+            }
+            // For regular admins, the backend filter will apply automatically
+
             try {
-                const response = await apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/student-categories');
+                const response = await apiFetch(`http://localhost:8082/api/student-categories?${params.toString()}`);
                 if (response.ok) {
-                    const data = await response.json();
-                    setCategories(data);
-                    if (!student) {
-                        // Set default category for new students once categories are loaded
-                        setFormData(prev => ({ ...prev, categoryId: String(data[0]?.id || '') }));
-                    }
+                    setCategories(await response.json());
                 } else {
                     toast.error("Could not load student categories.");
                 }
-            } catch (error) {
-                // Error is handled by apiFetch
-            }
+            } catch (error) { /* Handled by apiFetch */ }
         };
-        fetchCategories();
-    }, [student]);
 
+        // Fetch categories when the component mounts or when the super-admin changes the selected institution in the form
+        fetchCategories();
+    }, [isSuperAdmin, formInstitutionId]);
 
     useEffect(() => {
         if (student) {
             setFormData({
                 ...student,
-                dateOfBirth: student.dateOfBirth || "",
-                enrollmentDate: student.enrollmentDate || new Date().toISOString().split('T')[0],
-                // Set the categoryId from the nested student object
                 categoryId: String(student.category?.id || ''),
             });
+            // If editing, set the initial institution ID for the dropdown
+            if (isSuperAdmin && student.institution) {
+                setFormInstitutionId(student.institution.id.toString());
+            }
         } else {
-            // Reset form, but wait for categories to load for default
             setFormData(initialFormData);
+            // If super admin is creating, don't set a default. If a regular admin is creating, it's handled by backend.
+            setFormInstitutionId('');
         }
-    }, [student]);
+    }, [student, isSuperAdmin]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -121,27 +95,31 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
             return;
         }
 
-        // Prepare data for the backend, converting categoryId back to a nested object
-        const payload = {
+        // --- TENANCY LOGIC ---
+        const payload: any = {
             ...formData,
-            category: {
-                id: Number(formData.categoryId)
-            }
+            category: { id: Number(formData.categoryId) }
         };
-        delete (payload as any).categoryId; // Clean up the temporary field
+        delete payload.categoryId;
+
+        if (isSuperAdmin && !student?.id) { // Only on creation for super-admin
+            if (!formInstitutionId) {
+                toast.error("As a Super Admin, you must select an institution.");
+                setLoading(false);
+                return;
+            }
+            payload.institutionId = parseInt(formInstitutionId);
+        }
 
         try {
-            const url = student ? `http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students/${student.id}` : 'http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students';
+            const url = student ? `http://localhost:8082/api/students/${student.id}` : 'http://localhost:8082/api/students';
             const method = student ? 'PUT' : 'POST';
 
-            const response = await apiFetch(url, {
-                method,
-                body: JSON.stringify(payload)
-            });
+            const response = await apiFetch(url, { method, body: JSON.stringify(payload) });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: "An unknown server error occurred." }));
-                throw new Error(errorData.message || "Failed to save student data.");
+                const errorData = await response.json().catch(() => ({ message: "Failed to save student data." }));
+                throw new Error(errorData.message);
             }
             toast.success(`Student data successfully ${student ? 'updated' : 'created'}.`);
             onSave();
@@ -154,11 +132,19 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4">
+
+            {/* Conditionally render the InstitutionSelect for super-admins creating a new student */}
+            {!student?.id && (
+                <InstitutionSelect
+                    value={formInstitutionId}
+                    onValueChange={setFormInstitutionId}
+                />
+            )}
+
             <div className="grid grid-cols-2 gap-4">
                 <div><Label htmlFor="firstName">First Name *</Label><Input id="firstName" name="firstName" value={formData.firstName || ''} onChange={handleInputChange} required className="bg-gray-800" /></div>
                 <div><Label htmlFor="lastName">Last Name *</Label><Input id="lastName" name="lastName" value={formData.lastName || ''} onChange={handleInputChange} required className="bg-gray-800" /></div>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
                 {student && (
                     <div>
@@ -219,3 +205,5 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
         </form>
     );
 }
+
+export default StudentForm;

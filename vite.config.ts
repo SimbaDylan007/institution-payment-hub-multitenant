@@ -11,9 +11,9 @@ export default defineConfig(({ mode }) => ({
     // FIX 2: Add the proxy to forward API calls to the backend
     proxy: {
       // Any request from the frontend that starts with "/api"
-      // will be sent to "http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api"
+      // will be sent to "http://localhost:8082/api"
       '/api': {
-        target: 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com', // Your Spring Boot backend address
+        target: 'http://localhost:8082', // Your Spring Boot backend address
         changeOrigin: true, // Recommended for avoiding CORS issues
       }
     }

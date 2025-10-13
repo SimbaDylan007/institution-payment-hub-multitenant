@@ -27,4 +27,17 @@ public interface FacilityRepository extends JpaRepository<Facility, Long> {
             @Param("type") String type,
             @Param("searchTerm") String searchTerm,
             Pageable pageable);
+
+    // --- ADD THIS METHOD FOR SUPER-ADMIN OVERRIDE ---
+    @Query("SELECT f FROM Facility f WHERE f.institution.id = :institutionId AND " +
+            "(:status IS NULL OR f.status = :status) AND " +
+            "(:type IS NULL OR f.type = :type) AND " +
+            "(:searchTerm IS NULL OR LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(f.location) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<Facility> findByInstitutionIdWithFilters(
+            @Param("institutionId") Long institutionId,
+            @Param("status") String status,
+            @Param("type") String type,
+            @Param("searchTerm") String searchTerm,
+            Pageable pageable
+    );
 }

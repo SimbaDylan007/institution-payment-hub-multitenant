@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Page; // <-- IMPORT
+import org.springframework.data.domain.Pageable; // <-- IMPORT
 
 import java.time.LocalDate;
 import java.util.List;
@@ -29,4 +31,6 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
     List<Exam> findByGradeAndDateRange(@Param("grade") String grade, 
                                        @Param("startDate") LocalDate startDate, 
                                        @Param("endDate") LocalDate endDate);
+
+    Page<Exam> findByInstitutionId(Long institutionId, Pageable pageable);
 }

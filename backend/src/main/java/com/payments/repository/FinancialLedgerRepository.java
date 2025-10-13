@@ -13,10 +13,14 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
-
+import com.payments.model.Institution;
 
 @Repository
 public interface FinancialLedgerRepository extends JpaRepository<FinancialLedger, Long> {
+
+    // --- ADD THIS NEW METHOD ---
+    // Efficiently checks if a fee type is in use within a specific institution
+    boolean existsByFeeTypeIdAndInstitution(Long feeTypeId, Institution institution);
 
     // --- Methods for the Financials Page ---
     List<FinancialLedger> findByStudentOrderByTransactionDateAsc(Student student);

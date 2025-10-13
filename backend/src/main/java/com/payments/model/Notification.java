@@ -16,6 +16,11 @@ public class Notification {
     @JoinColumn(name = "recipient_id", nullable = false)
     private User recipient; // The user who receives the notification
 
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
+
     @Column(nullable = false)
     private String subject;
 
@@ -49,4 +54,6 @@ public class Notification {
     public void setType(String type) { this.type = type; }
     public String getRelatedEntityId() { return relatedEntityId; }
     public void setRelatedEntityId(String relatedEntityId) { this.relatedEntityId = relatedEntityId; }
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

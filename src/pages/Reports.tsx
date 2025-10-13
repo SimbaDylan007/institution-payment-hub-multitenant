@@ -20,7 +20,7 @@ interface ReportCard { studentName: string; studentId: string; gradeLevel: strin
 interface FinancialSummary { studentName: string; studentId: string; gradeLevel: string; totalCharges: number; totalPayments: number; periodBalance: number; outstandingBalance: number; }
 
 export default function Reports() {
-  const { user } = useAuth();
+    const { user, isSuperAdmin, selectedInstitution } = useAuth();
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [grades, setGrades] = useState<string[]>([]);
@@ -33,45 +33,68 @@ export default function Reports() {
 
   const [generatedData, setGeneratedData] = useState<any[] | null>(null);
 
-  useEffect(() => {
-    // --- THIS IS THE ROBUST FIX ---
-    apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/students?size=1000')
-        .then(res => {
-          if (!res.ok) throw new Error("Failed to fetch student list for filters.");
-          return res.json();
-        })
-        .then(data => {
-          // Safely access the content property only if data exists
-          const studentList = data?.content || [];
-          setStudents(studentList);
-          const uniqueGrades = [...new Set(studentList.map((s: any) => s.currentGrade).filter(Boolean))].sort();
-          setGrades(uniqueGrades as string[]);
-        })
-        .catch(error => {
-          toast.error(error.message);
-          // Set to empty arrays to prevent crashes
-          setStudents([]);
-          setGrades([]);
-        });
-  }, []);
+    useEffect(() => {
+        if (!user) return;
+
+        const params = new URLSearchParams({ size: '1000' });
+
+        if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+            params.append('institutionId', selectedInstitution.id.toString());
+        }
+
+        apiFetch(`/api/students?${params.toString()}`)
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to fetch student list for filters.");
+                return res.json();
+            })
+            .then(data => {
+                const studentList = data?.content || [];
+                setStudents(studentList);
+                const uniqueGrades = [...new Set(studentList.map((s: any) => s.currentGrade).filter(Boolean))].sort();
+                setGrades(uniqueGrades as string[]);
+            })
+            .catch(error => {
+                toast.error(error.message);
+                setStudents([]);
+                setGrades([]);
+            });
+    }, [user, isSuperAdmin, selectedInstitution]);
 
   const handleGenerateReport = async () => {
     setLoading(true);
     setGeneratedData(null);
-    const requestBody = {
-      reportType, academicYear, semester,
-      studentId: selectedStudent === 'ALL' ? null : selectedStudent,
-      gradeLevel: selectedGrade === 'ALL' ? null : selectedGrade,
-    };
-    try {
-      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/reports/generate', { method: 'POST', body: JSON.stringify(requestBody) });
-      if (response.ok) {
-        const data = await response.json();
-        setGeneratedData(data);
-        toast.success(`${data.length} record(s) generated successfully.`);
-      } else { throw new Error("Failed to generate report."); }
-    } catch (error) { toast.error((error as Error).message); }
-    finally { setLoading(false); }
+
+      const filters = {
+          studentId: selectedStudent === 'ALL' ? null : selectedStudent,
+          gradeLevel: selectedGrade === 'ALL' ? null : selectedGrade,
+      };
+      console.log(filters);
+
+      const requestBody = { reportType, academicYear, semester, filters };
+
+      // Also add institutionId to the request body for the backend to use.
+      if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+          requestBody.filters.institutionId = selectedInstitution.id;
+      }
+
+      try {
+          const response = await apiFetch('/api/reports/generate', {
+              method: 'POST',
+              body: JSON.stringify(requestBody)
+          });
+          if (response.ok) {
+              const data = await response.json();
+              setGeneratedData(data);
+              toast.success(`${data.length} record(s) generated successfully.`);
+          } else {
+              const error = await response.json().catch(() => ({ message: "Failed to generate report." }));
+              throw new Error(error.message);
+          }
+      } catch (error) {
+          toast.error((error as Error).message);
+      } finally {
+          setLoading(false);
+      }
   };
 
 

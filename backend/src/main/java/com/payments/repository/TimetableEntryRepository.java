@@ -1,11 +1,13 @@
-package com.example.schoolschedule.repository;
+package com.payments.repository;
 
-import com.example.schoolschedule.model.TimetableEntry;
+import com.payments.model.*;
+import com.payments.repository.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.time.DayOfWeek;
 
 @Repository
 public interface TimetableEntryRepository extends JpaRepository<TimetableEntry, Long> {
-    // You can add custom query methods here if needed, e.g.,
-    // List<TimetableEntry> findByDayOfWeek(DayOfWeek dayOfWeek);
+ List<TimetableEntry> findByDayOfWeek(DayOfWeek dayOfWeek);
 }

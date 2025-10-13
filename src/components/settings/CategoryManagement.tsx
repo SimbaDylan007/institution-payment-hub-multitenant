@@ -24,7 +24,7 @@ export default function CategoryManagement() {
     const fetchCategories = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/student-categories');
+            const response = await apiFetch('http://localhost:8082/api/student-categories');
             if (response.ok) {
                 setCategories(await response.json());
             } else {
@@ -49,7 +49,7 @@ export default function CategoryManagement() {
         }
         setLoading(true);
         try {
-            const response = await apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/student-categories', {
+            const response = await apiFetch('http://localhost:8082/api/student-categories', {
                 method: 'POST',
                 body: JSON.stringify({ name: newCategoryName.trim() }),
             });
@@ -72,7 +72,7 @@ export default function CategoryManagement() {
         if (!window.confirm("Are you sure you want to delete this category? This action cannot be undone.")) return;
         setLoading(true);
         try {
-            const response = await apiFetch(`http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/student-categories/${id}`, { method: 'DELETE' });
+            const response = await apiFetch(`http://localhost:8082/api/student-categories/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success("Category deleted successfully.");
                 fetchCategories(); // Refresh the list

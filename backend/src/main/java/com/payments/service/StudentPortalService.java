@@ -98,13 +98,20 @@ public class StudentPortalService {
     }
 
     public Page<Notification> getMyNotifications(Pageable pageable) {
+        // Get the UserDetails from the security context
         Optional<UserDetails> userDetailsOpt = getAuthenticatedUserDetails();
         if (userDetailsOpt.isEmpty()) {
             return Page.empty();
         }
 
-        return userRepository.findByUsername(userDetailsOpt.get().getUsername())
-                .map(user -> notificationRepository.findByRecipientOrderByCreatedAtDesc(user, pageable))
-                .orElse(Page.empty());
+        // --- THIS IS THE FIX ---
+        // Find the User entity from the database using the username
+        Optional<User> userOpt = userRepository.findByUsername(userDetailsOpt.get().getUsername());
+        if (userOpt.isEmpty()) {
+            return Page.empty();
+        }
+
+        // Now call the repository method with the correct User object
+        return notificationRepository.findByRecipientOrderByCreatedAtDesc(userOpt.get(), pageable);
     }
 }

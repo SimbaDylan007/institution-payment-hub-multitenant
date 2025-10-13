@@ -13,7 +13,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/enrollments")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN','SUPER_ADMIN')")
 public class EnrollmentController {
     
     @Autowired

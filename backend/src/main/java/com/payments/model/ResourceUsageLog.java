@@ -18,6 +18,11 @@ public class ResourceUsageLog {
     @JoinColumn(name = "student_id") // Optional, but good for tracking who used it
     private Student student;
 
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
+
     @Column(nullable = false)
     private LocalDateTime usageTimestamp;
 
@@ -41,4 +46,6 @@ public class ResourceUsageLog {
     public void setStudent(Student student) { this.student = student; }
     public LocalDateTime getUsageTimestamp() { return usageTimestamp; }
     public void setUsageTimestamp(LocalDateTime usageTimestamp) { this.usageTimestamp = usageTimestamp; }
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

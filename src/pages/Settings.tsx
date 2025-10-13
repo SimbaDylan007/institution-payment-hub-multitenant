@@ -1,5 +1,3 @@
-// src/pages/Settings.tsx
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, Navigate } from "react-router-dom";
@@ -15,15 +13,17 @@ import { apiFetch } from "@/utils/apiClient";
 import { AddUserModal } from "@/components/forms/AddUserModal";
 import { ManageRolesModal } from "@/components/forms/ManageRolesModal";
 import { AssignRolesModal } from "@/components/forms/AssignRolesModal";
+import InstitutionManagement from "@/components/InstitutionManagement";
+
 
 // --- Interfaces ---
 interface Role { id: number; name: string; }
 interface User { id: number; username: string; email: string; enabled: boolean; roles: Role[]; }
 interface UserStats { totalUsers: number; activeUsers: number; administrators: number; teachers: number; }
-// --- NEW: Interface for Student Category ---
 interface Category { id: number; name: string; }
 
-// --- NEW: Category Management Component ---
+
+// --- Category Management Component (with corrected relative URLs) ---
 const CategoryManagement = () => {
     const [categories, setCategories] = useState<Category[]>([]);
     const [newCategoryName, setNewCategoryName] = useState("");
@@ -32,7 +32,7 @@ const CategoryManagement = () => {
     const fetchCategories = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/student-categories');
+            const response = await apiFetch('/api/student-categories'); // FIX: Relative URL
             if (response.ok) {
                 setCategories(await response.json());
             } else {
@@ -53,29 +53,32 @@ const CategoryManagement = () => {
             return;
         }
         try {
-            const response = await apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/student-categories', {
+            const response = await apiFetch('/api/student-categories', { // FIX: Relative URL
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: newCategoryName }),
             });
             if (response.ok) {
                 toast.success(`Category "${newCategoryName}" added successfully.`);
                 setNewCategoryName("");
-                fetchCategories(); // Refresh the list
+                fetchCategories();
             } else {
-                toast.error("Failed to add category. It may already exist.");
+                const errorData = await response.json().catch(() => ({ message: "Failed to add category" }));
+                toast.error(errorData.message || "Failed to add category. It may already exist.");
             }
         } catch (error) { /* Handled by apiFetch */ }
     };
 
     const handleDeleteCategory = async (id: number) => {
-        if (!window.confirm("Are you sure you want to delete this category? This cannot be undone if students are assigned to it.")) return;
+        if (!window.confirm("Are you sure?")) return;
         try {
-            const response = await apiFetch(`http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/student-categories/${id}`, { method: 'DELETE' });
+            const response = await apiFetch(`/api/student-categories/${id}`, { method: 'DELETE' }); // FIX: Relative URL
             if (response.ok) {
                 toast.success("Category deleted successfully.");
-                fetchCategories(); // Refresh the list
+                fetchCategories();
             } else {
-                toast.error("Failed to delete category. It might be in use by students.");
+                const errorData = await response.json().catch(() => ({ message: "Failed to delete category" }));
+                toast.error(errorData.message || "Failed to delete category. It might be in use.");
             }
         } catch (error) { /* Handled by apiFetch */ }
     };
@@ -99,7 +102,7 @@ const CategoryManagement = () => {
                     <Table>
                         <TableHeader><TableRow className="border-gray-700 hover:bg-transparent"><TableHead>Category Name</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                         <TableBody>
-                            {loading && <TableRow><TableCell colSpan={2} className="text-center py-4">Loading...</TableCell></TableRow>}
+                            {loading && <TableRow><TableCell colSpan={2} className="text-center py-4 text-gray-400">Loading...</TableCell></TableRow>}
                             {!loading && categories.map(cat => (
                                 <TableRow key={cat.id} className="border-gray-800">
                                     <TableCell className="font-medium">{cat.name}</TableCell>
@@ -118,36 +121,51 @@ const CategoryManagement = () => {
 
 
 export default function Settings() {
-    const { user } = useAuth();
+    // --- 2. GET isSuperAdmin FROM THE AUTH CONTEXT ---
+    const { user, isSuperAdmin,selectedInstitution } = useAuth();
     const [stats, setStats] = useState<UserStats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-    const [isManageRolesModalOpen, setIsManageRolesModalOpen] = useState(false);
     const [isAssignRolesModalOpen, setIsAssignRolesModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
+
+        const institutionId = (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all')
+            ? selectedInstitution.id
+            : null;
+
+        // Build URLs with the institutionId query parameter for BOTH endpoints
+        const usersUrl = institutionId ? `/api/users?institutionId=${institutionId}` : '/api/users';
+        const statsUrl = institutionId ? `/api/users/statistics?institutionId=${institutionId}` : '/api/users/statistics';
+
         try {
             const [statsRes, usersRes] = await Promise.all([
-                apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users/statistics'),
-                apiFetch('http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users')
+                apiFetch(statsUrl), // Use the new tenant-aware URL
+                apiFetch(usersUrl)
             ]);
             if (statsRes.ok) setStats(await statsRes.json());
             if (usersRes.ok) setUsers(await usersRes.json());
             if (!statsRes.ok || !usersRes.ok) toast.error("Failed to load user management data.");
         } catch (error) { /* Handled by apiFetch */ } finally { setLoading(false); }
-    }, []);
+    }, [isSuperAdmin, selectedInstitution]);
+
+    const canViewPage = user?.role?.includes('ROLE_ADMIN') || user?.role?.includes('ROLE_SUPER_ADMIN');
 
     useEffect(() => {
-        if (user?.role === 'ADMIN') fetchData();
-    }, [user, fetchData]);
+        if (canViewPage) {
+            fetchData();
+        } else {
+            setLoading(false);
+        }
+    }, [canViewPage, fetchData, selectedInstitution]);
 
     const handleDeleteUser = async (userId: number) => {
         if (!window.confirm("Are you sure?")) return;
         try {
-            const response = await apiFetch(`http://pachedujuniorschool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/users/${userId}`, { method: 'DELETE' });
+            const response = await apiFetch(`/api/users/${userId}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success("User deleted.");
                 fetchData();
@@ -158,7 +176,8 @@ export default function Settings() {
     };
 
     if (!user) return <Navigate to="/" replace />;
-    if (user.role !== 'ADMIN') {
+
+    if (!canViewPage) {
         return (
             <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center">
                 <h1 className="text-3xl font-bold text-red-500">Access Denied</h1>
@@ -181,7 +200,6 @@ export default function Settings() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Left Column for User Management */}
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                             <StatCard title="Total Users" value={stats?.totalUsers} />
@@ -194,8 +212,8 @@ export default function Settings() {
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="flex items-center gap-2"><Users/>System Users</CardTitle>
                                     <div className="flex gap-2">
-                                        <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsAddUserModalOpen(true)}><UserPlus className="h-4 w-4 mr-2"/>Add User</Button>
-                                        <Button variant="outline" onClick={() => setIsManageRolesModalOpen(true)}><ShieldPlus className="h-4 w-4 mr-2"/>Manage Roles</Button>
+                                        <Button className="bg-green-600 hover:bg-green-700" onClick={() => { setSelectedUser(null); setIsAddUserModalOpen(true); }}><UserPlus className="h-4 w-4 mr-2"/>Add User</Button>
+                                        <ManageRolesModal />
                                     </div>
                                 </div>
                             </CardHeader>
@@ -204,7 +222,7 @@ export default function Settings() {
                                     <Table>
                                         <TableHeader><TableRow className="border-gray-700 hover:bg-transparent"><TableHead>Username</TableHead><TableHead>Email</TableHead><TableHead>Roles</TableHead><TableHead>Status</TableHead><TableHead className="text-center">Actions</TableHead></TableRow></TableHeader>
                                         <TableBody>
-                                            {loading ? <TableRow><TableCell colSpan={5} className="text-center py-8">Loading users...</TableCell></TableRow> : users.map(u => (
+                                            {loading ? <TableRow><TableCell colSpan={5} className="text-center py-8 text-gray-400">Loading users...</TableCell></TableRow> : users.map(u => (
                                                 <TableRow key={u.id} className="border-gray-800">
                                                     <TableCell className="font-medium">{u.username}</TableCell>
                                                     <TableCell>{u.email}</TableCell>
@@ -224,17 +242,15 @@ export default function Settings() {
                         </Card>
                     </div>
 
-                    {/* Right Column for New Management Panels */}
                     <div className="space-y-6">
+                        {/* --- 3. RENDER THE COMPONENT CONDITIONALLY --- */}
+                        {isSuperAdmin && <InstitutionManagement />}
                         <CategoryManagement />
-                        {/* You can add more management cards here in the future */}
                     </div>
                 </div>
             </main>
 
-            {/* Modals */}
             <AddUserModal isOpen={isAddUserModalOpen} onClose={() => { setIsAddUserModalOpen(false); setSelectedUser(null); }} onSuccess={fetchData} userToEdit={selectedUser} />
-            <ManageRolesModal isOpen={isManageRolesModalOpen} onClose={() => setIsManageRolesModalOpen(false)} />
             {selectedUser && ( <AssignRolesModal isOpen={isAssignRolesModalOpen} onClose={() => { setIsAssignRolesModalOpen(false); setSelectedUser(null); }} onSuccess={fetchData} user={selectedUser} /> )}
         </div>
     );

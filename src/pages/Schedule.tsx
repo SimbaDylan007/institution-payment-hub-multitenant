@@ -57,7 +57,7 @@ export default function Schedule() {
 
     try {
       // 2. Use apiFetch
-      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/schedule/events?year=${year}&month=${month}`);
+      const response = await apiFetch(`http://localhost:8082/api/schedule/events?year=${year}&month=${month}`);
       if (response.ok) {
         const data = await response.json();
         const formattedEvents = data.map((event: any) => ({
@@ -110,7 +110,7 @@ export default function Schedule() {
     setLoading(true);
     const apiEvent = { id: selectedEvent ? parseInt(selectedEvent.id!) : null, title: formData.title, startDate: formData.start?.split('T')[0], endDate: formData.end?.split('T')[0] || formData.start?.split('T')[0], startTime: formData.allDay ? null : formData.start?.split('T')[1]?.substring(0, 8), endTime: formData.allDay ? null : formData.end?.split('T')[1]?.substring(0, 8), eventType: formData.extendedProps?.eventType, grade: formData.extendedProps?.grade, teacherName: formData.extendedProps?.teacherName, description: formData.extendedProps?.description, room: formData.extendedProps?.room, section: formData.extendedProps?.section, subjectCode: formData.extendedProps?.subjectCode, };
     try {
-      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/schedule/events', { method: 'POST', body: JSON.stringify(apiEvent) });
+      const response = await apiFetch('http://localhost:8082/api/schedule/events', { method: 'POST', body: JSON.stringify(apiEvent) });
       if (response.ok) {
         toast.success("Event saved successfully!");
         setIsFormOpen(false);
@@ -125,7 +125,7 @@ export default function Schedule() {
     if (!window.confirm(`Are you sure you want to delete the event '${selectedEvent.title}'?`)) return;
     setLoading(true);
     try {
-      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/schedule/events/${selectedEvent.id}`, { method: 'DELETE' });
+      const response = await apiFetch(`http://localhost:8082/api/schedule/events/${selectedEvent.id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success("Event deleted successfully!");
         setIsFormOpen(false);
@@ -142,7 +142,7 @@ export default function Schedule() {
     formData.append("file", importFile);
     formData.append("academicYear", "2024-2025");
     try {
-      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/schedule/timetables/bulk-upload', { method: 'POST', body: formData });
+      const response = await apiFetch('http://localhost:8082/api/schedule/timetables/bulk-upload', { method: 'POST', body: formData });
       if (response.ok) {
         toast.success("Timetable imported successfully!");
         setIsImportOpen(false); setImportFile(null); fetchEvents();

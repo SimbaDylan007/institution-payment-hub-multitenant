@@ -36,7 +36,7 @@ const ImportDialog = ({ isOpen, onOpenChange, onImport, onDownloadTemplate, setI
 );
 
 export default function Academics() {
-  const { user } = useAuth();
+    const { user, isSuperAdmin, selectedInstitution } = useAuth();
   const [subjectPage, setSubjectPage] = useState<Page<Subject> | null>(null);
   const [subjectSearch, setSubjectSearch] = useState("");
   const [subjectGradeFilter, setSubjectGradeFilter] = useState("All");
@@ -57,17 +57,41 @@ export default function Academics() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const fetchSubjects = useCallback((page = 0, grade = "All", search = "") => {
-    setLoading(true);
-    const url = `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/subjects?page=${page}&size=10&sort=name,asc&grade=${grade}&searchTerm=${search}`;
-    apiFetch(url).then(res => res.json()).then(setSubjectPage).catch(() => toast.error("Failed to fetch subjects")).finally(() => setLoading(false));
-  }, []);
+    const fetchSubjects = useCallback((page = 0, grade = "All", search = "") => {
+        setLoading(true);
+        const params = new URLSearchParams({ page: page.toString(), size: '10', sort: 'name,asc', grade, searchTerm: search });
 
-  const fetchGrades = useCallback((page = 0, year = "All", semester = "All", search = "") => {
-    setLoading(true);
-    const url = `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/grades?page=${page}&size=10&sort=recordedDate,desc&year=${year}&semester=${semester}&searchTerm=${search}`;
-    apiFetch(url).then(res => res.json()).then(setGradePage).catch(() => toast.error("Failed to fetch grades")).finally(() => setLoading(false));
-  }, []);
+        // --- TENANCY LOGIC ---
+        if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+            params.append('institutionId', selectedInstitution.id.toString());
+        }
+
+        const url = `http://localhost:8082/api/academic/subjects?${params.toString()}`;
+        apiFetch(url).then(res => res.json()).then(setSubjectPage).catch(() => toast.error("Failed to fetch subjects")).finally(() => setLoading(false));
+    }, [isSuperAdmin, selectedInstitution]); // <-- Add dependencies
+
+    const fetchGrades = useCallback((page = 0, year = "All", semester = "All", search = "") => {
+        setLoading(true);
+        const params = new URLSearchParams({ page: page.toString(), size: '10', sort: 'recordedDate,desc', year, semester, searchTerm: search });
+
+        // --- TENANCY LOGIC ---
+        if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+            params.append('institutionId', selectedInstitution.id.toString());
+        }
+
+        const url = `http://localhost:8082/api/academic/grades?${params.toString()}`;
+        apiFetch(url).then(res => res.json()).then(setGradePage).catch(() => toast.error("Failed to fetch grades")).finally(() => setLoading(false));
+    }, [isSuperAdmin, selectedInstitution]); // <-- Add dependencies
+
+    useEffect(() => {
+        const timer = setTimeout(() => fetchSubjects(subjectPageNum, subjectGradeFilter, subjectSearch), 300);
+        return () => clearTimeout(timer);
+    }, [subjectPageNum, subjectGradeFilter, subjectSearch, fetchSubjects]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => fetchGrades(gradePageNum, gradeYearFilter, gradeSemesterFilter, gradeSearch), 300);
+        return () => clearTimeout(timer);
+    }, [gradePageNum, gradeYearFilter, gradeSemesterFilter, gradeSearch, fetchGrades]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchSubjects(subjectPageNum, subjectGradeFilter, subjectSearch), 300);
@@ -83,7 +107,7 @@ export default function Academics() {
     e.preventDefault(); setLoading(true);
     const formData = new FormData(e.currentTarget);
     const subjectData = { name: formData.get('name'), code: formData.get('code'), grade: formData.get('grade'), credits: parseInt(formData.get('credits') as string), description: formData.get('description') };
-    const url = selectedSubject ? `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/subjects/${selectedSubject.id}` : 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/subjects';
+    const url = selectedSubject ? `http://localhost:8082/api/academic/subjects/${selectedSubject.id}` : 'http://localhost:8082/api/academic/subjects';
     const method = selectedSubject ? 'PUT' : 'POST';
     try {
       const response = await apiFetch(url, { method, body: JSON.stringify(subjectData) });
@@ -100,7 +124,7 @@ export default function Academics() {
     e.preventDefault(); setLoading(true);
     const formData = new FormData(e.currentTarget);
     const gradeData = { studentId: formData.get('studentId') as string, subjectId: formData.get('subjectId') as string, assessmentType: formData.get('assessmentType') as string, marksObtained: parseInt(formData.get('marksObtained') as string), maxMarks: parseInt(formData.get('maxMarks') as string), letterGrade: formData.get('letterGrade'), academicYear: formData.get('academicYear'), semester: formData.get('semester') as string };
-    const url = selectedGrade ? `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/grades/${selectedGrade.id}` : 'http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/grades';
+    const url = selectedGrade ? `http://localhost:8082/api/academic/grades/${selectedGrade.id}` : 'http://localhost:8082/api/academic/grades';
     const method = selectedGrade ? 'PUT' : 'POST';
     try {
       const response = await apiFetch(url, { method, body: JSON.stringify(gradeData) });
@@ -116,7 +140,7 @@ export default function Academics() {
   const handleDeleteSubject = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this subject?')) return;
     try {
-      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/subjects/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`http://localhost:8082/api/academic/subjects/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success('Subject deleted successfully');
         fetchSubjects(subjectPageNum, subjectGradeFilter, subjectSearch);
@@ -127,7 +151,7 @@ export default function Academics() {
   const handleDeleteGrade = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this grade?')) return;
     try {
-      const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/grades/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`http://localhost:8082/api/academic/grades/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success('Grade deleted successfully');
         fetchGrades(gradePageNum, gradeYearFilter, gradeSemesterFilter, gradeSearch);
@@ -140,7 +164,7 @@ export default function Academics() {
     setLoading(true);
     const formData = new FormData();
     formData.append("file", importFile);
-    const url = `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/academic/${type}/bulk-upload`;
+    const url = `http://localhost:8082/api/academic/${type}/bulk-upload`;
     try {
       const response = await apiFetch(url, { method: 'POST', body: formData }); // Use apiFetch for multipart
       if (response.ok) {

@@ -15,7 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/billpay")
 @CrossOrigin
-@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'IT_ADMIN','SUPER_ADMIN')")
 public class StudentController {
 
     @Autowired

@@ -15,6 +15,11 @@ public class StaffAttendance {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "staff_id", nullable = false)
     private Staff staff;
+
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
     
     @Column(nullable = false)
     private LocalDate attendanceDate;
@@ -62,4 +67,7 @@ public class StaffAttendance {
     
     public Double getOvertimeHours() { return overtimeHours; }
     public void setOvertimeHours(Double overtimeHours) { this.overtimeHours = overtimeHours; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

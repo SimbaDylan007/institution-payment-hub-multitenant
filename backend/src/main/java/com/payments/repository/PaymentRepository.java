@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import java.util.List;
+import com.payments.model.Institution;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<PaymentAlert, String> {
@@ -37,4 +38,8 @@ public interface PaymentRepository extends JpaRepository<PaymentAlert, String> {
      * @return The total count of records with that status.
      */
     long countByStatus(String status);
+
+    // --- ADD THIS NEW METHOD ---
+    // Find unallocated payments for a specific institution
+    List<PaymentAlert> findByStatusAndInstitution(String status, Institution institution);
 }

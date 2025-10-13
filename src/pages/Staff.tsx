@@ -36,8 +36,8 @@ interface Page<T> {
 }
 
 export default function Staff() {
-  const { user } = useAuth();
-  const [staffPage, setStaffPage] = useState<Page<Staff> | null>(null);
+    const { user, isSuperAdmin, selectedInstitution } = useAuth();
+    const [staffPage, setStaffPage] = useState<Page<Staff> | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
@@ -46,20 +46,28 @@ export default function Staff() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
 
-  const fetchStaff = useCallback((page = 0, search = "") => {
-    setLoading(true);
-    const url = `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/staff?page=${page}&size=10&sort=firstName,asc&searchTerm=${encodeURIComponent(search)}`;
-    apiFetch(url)
-        .then(res => {
-          if (res.ok) {
-            return res.json();
-          }
-          throw new Error("Failed to fetch staff");
-        })
-        .then(data => setStaffPage(data))
-        .catch(() => toast.error('Failed to fetch staff data.'))
-        .finally(() => setLoading(false));
-  }, []);
+    const fetchStaff = useCallback((page = 0, search = "") => {
+        setLoading(true);
+        const params = new URLSearchParams({
+            page: page.toString(),
+            size: '10',
+            sort: 'firstName,asc',
+            searchTerm: search
+        });
+
+        // --- TENANCY LOGIC ---
+        if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+            params.append('institutionId', selectedInstitution.id.toString());
+        }
+
+        const url = `http://localhost:8082/api/staff?${params.toString()}`;
+
+        apiFetch(url)
+            .then(res => res.json())
+            .then(data => setStaffPage(data))
+            .catch(() => toast.error('Failed to fetch staff data.'))
+            .finally(() => setLoading(false));
+    }, [isSuperAdmin, selectedInstitution]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -83,7 +91,7 @@ export default function Staff() {
   const handleDeleteStaff = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this staff member?')) {
       try {
-        const response = await apiFetch(`http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/staff/${id}`, { method: 'DELETE' });
+        const response = await apiFetch(`http://localhost:8082/api/staff/${id}`, { method: 'DELETE' });
         if (response.ok) {
           toast.success('Staff member deleted successfully');
           fetchStaff(currentPage, searchTerm);
@@ -110,7 +118,7 @@ export default function Staff() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/staff/bulk-upload', {
+      const response = await apiFetch('http://localhost:8082/api/staff/bulk-upload', {
         method: 'POST',
         body: formData,
         // No 'Content-Type' header needed, the browser will set it correctly for FormData

@@ -21,6 +21,11 @@ public class FeeType {
     @Enumerated(EnumType.STRING)
     private Currency currency;
 
+    // A student MUST belong to an institution.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id",  nullable = false)
+    private Institution institution;
+
     private String description;
     private boolean isRecurring;
 
@@ -37,4 +42,6 @@ public class FeeType {
     public void setDescription(String description) { this.description = description; }
     public boolean isRecurring() { return isRecurring; }
     public void setRecurring(boolean recurring) { isRecurring = recurring; }
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

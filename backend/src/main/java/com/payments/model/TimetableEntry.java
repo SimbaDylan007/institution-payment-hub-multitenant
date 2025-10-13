@@ -1,8 +1,9 @@
-package com.example.schoolschedule.model;
+package com.payments.model;
 
 import javax.persistence.*;
 import java.time.LocalTime;
 import java.time.DayOfWeek;
+import java.util.List;
 
 @Entity
 @Table(name = "timetable_entries") // Optional: Specify the table name
@@ -15,6 +16,10 @@ public class TimetableEntry {
     @Enumerated(EnumType.STRING) // Store DayOfWeek as a string in the database
     @Column(nullable = false)
     private DayOfWeek dayOfWeek;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
+    private Institution institution;
 
     @Column(nullable = false)
     private LocalTime startTime;
@@ -107,4 +112,7 @@ public class TimetableEntry {
     public void setNotes(String notes) {
         this.notes = notes;
     }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }

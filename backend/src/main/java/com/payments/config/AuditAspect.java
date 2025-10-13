@@ -2,7 +2,8 @@ package com.payments.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.payments.model.AuditLog;
+import com.payments.model.*;
+import com.payments.repository.*;
 import com.payments.service.AuditLogService;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -31,6 +32,9 @@ public class AuditAspect {
     @Autowired
     private AuditLogService auditLogService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     // Define a thread-safe ObjectMapper bean
     @Bean
     public ObjectMapper objectMapper() {
@@ -51,6 +55,11 @@ public class AuditAspect {
         log.setUsername(getUsername());
         log.setAction(joinPoint.getSignature().toShortString());
         log.setIpAddress(getIpAddress());
+
+        Institution institution = getInstitutionFromCurrentUser();
+        if (institution != null) {
+            log.setInstitution(institution);
+        }
 
         try {
             Object[] args = joinPoint.getArgs();
@@ -81,6 +90,17 @@ public class AuditAspect {
         } finally {
             auditLogService.log(log);
         }
+    }
+
+    private Institution getInstitutionFromCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() && !"anonymous".equals(authentication.getName())) {
+            String username = authentication.getName();
+            return userRepository.findByUsername(username)
+                    .map(User::getInstitution)
+                    .orElse(null);
+        }
+        return null; // Return null for anonymous users or system tasks
     }
 
     private String getUsername() {

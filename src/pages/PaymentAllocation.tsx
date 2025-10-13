@@ -75,7 +75,7 @@ export default function PaymentAllocation() {
 
     const fetchPayments = useCallback((status: string, page: number, searchTerm: string) => {
         setLoading(true);
-        const url = `http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/payments/status?status=${status}&page=${page}&size=10&searchTerm=${encodeURIComponent(searchTerm)}`;
+        const url = `http://localhost:8082/api/financials/payments/status?status=${status}&page=${page}&size=10&searchTerm=${encodeURIComponent(searchTerm)}`;
         apiFetch(url).then(res => res.json()).then(data => setPaymentPage(data))
             .catch(() => toast.error(`Failed to fetch ${status.toLowerCase()} payments.`))
             .finally(() => setLoading(false));
@@ -94,7 +94,7 @@ export default function PaymentAllocation() {
 
     const fetchAllStudents = async () => {
         try {
-            const res = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/students/balances');
+            const res = await apiFetch('http://localhost:8082/api/financials/students/balances');
             if (res.ok) setAllStudents(await res.json());
         } catch (e) { console.error("Could not fetch students for search"); }
     };
@@ -111,7 +111,7 @@ export default function PaymentAllocation() {
         if (!selectedPayment || !selectedStudent) return toast.warning("You must select a payment and a student.");
         setLoading(true);
         try {
-            const response = await apiFetch('http://PacheduJuniorSchool-env-1.eba-avekqyut.eu-north-1.elasticbeanstalk.com/api/financials/payments/allocate', {
+            const response = await apiFetch('http://localhost:8082/api/financials/payments/allocate', {
                 method: 'POST',
                 body: JSON.stringify({
                     paymentAlertId: selectedPayment.id,

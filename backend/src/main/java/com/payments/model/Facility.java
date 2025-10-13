@@ -25,6 +25,10 @@ public class Facility {
     private String status; // AVAILABLE, OCCUPIED, MAINTENANCE
     
     private String equipment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id",  referencedColumnName = "id", nullable = false)
+    private Institution institution;
     
     // Constructors
     public Facility() {}
@@ -53,4 +57,7 @@ public class Facility {
     
     public String getEquipment() { return equipment; }
     public void setEquipment(String equipment) { this.equipment = equipment; }
+
+    public Institution getInstitution() { return institution; }
+    public void setInstitution(Institution institution) { this.institution = institution; }
 }
