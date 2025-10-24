@@ -9,7 +9,6 @@ import com.payments.model.PaymentAlert;
 import com.payments.model.PickPaymentRequest;
 import com.payments.repository.InstitutionAccountRepository;
 import com.payments.repository.PaymentRepository;
-import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -53,10 +52,6 @@ public class ZbApiService {
     @Autowired
     private Environment env;
 
-    /**
-     * Fetches payments from the bank, saves them, and returns them as DTOs.
-     * This is the primary entry point for fetching remote payments.
-     */
     @Transactional
     public List<PaymentAlertDto> pickPaymentsForMultipleAccounts(List<String> institutionAccountIds, String type) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -91,7 +86,6 @@ public class ZbApiService {
             }
         }
 
-        // De-duplicate the list of saved entities
         List<PaymentAlert> uniquePayments = allSavedPayments.stream()
                 .filter(p -> p.getId() != null)
                 .collect(Collectors.collectingAndThen(
@@ -99,14 +93,12 @@ public class ZbApiService {
                         map -> new ArrayList<>(map.values())
                 ));
 
-        // ✅ Safely convert entities to DTOs with lazy Institution initialized
-        return convertToDtos(uniquePayments);
+        return uniquePayments.stream()
+                .map(this::convertToPaymentAlertDto)
+                .collect(Collectors.toList());
     }
 
-    /**
-     * Fetches payments from the local database and returns them as DTOs.
-     */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PaymentAlertDto> getPaymentsByStatus(String status) {
         List<PaymentAlert> payments;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -123,11 +115,46 @@ public class ZbApiService {
             payments = paymentRepository.findByStatusAndInstitution(status, userInstitution);
         }
 
-        return convertToDtos(payments);
+        return payments.stream()
+                .map(this::convertToPaymentAlertDto)
+                .collect(Collectors.toList());
     }
+
+    @Transactional
+    public Optional<PaymentAlertDto> getPaymentByIdForCurrentUser(String paymentId) {
+        Optional<PaymentAlert> paymentOpt = paymentRepository.findById(paymentId);
+        if (paymentOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        PaymentAlert payment = paymentOpt.get();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isSuperAdmin = authentication.getAuthorities().stream()
+                .anyMatch(ga -> ga.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+        if (isSuperAdmin) {
+            // Super admin can see any payment.
+            return Optional.of(convertToPaymentAlertDto(payment));
+        } else {
+            // Regular admin needs to be checked.
+            Institution userInstitution = getInstitutionForUser(authentication);
+            Institution paymentInstitution = payment.getInstitution();
+
+            // The crucial tenancy check
+            if (userInstitution != null && paymentInstitution != null && userInstitution.getId().equals(paymentInstitution.getId())) {
+                // Authorized: The payment belongs to the user's institution.
+                return Optional.of(convertToPaymentAlertDto(payment));
+            } else {
+                // Unauthorized: Return empty to hide the payment's existence.
+                return Optional.empty();
+            }
+        }
+    }
+
 
     /**
      * Helper method to convert a PaymentAlert entity to a PaymentAlertDto.
+     * This is private and has no @Transactional annotation itself.
      */
     private PaymentAlertDto convertToPaymentAlertDto(PaymentAlert payment) {
         PaymentAlertDto dto = new PaymentAlertDto();
@@ -143,6 +170,7 @@ public class ZbApiService {
         dto.setStudentSurname(payment.getStudentSurname());
         dto.setRegNumber(payment.getRegNumber());
 
+        // This is where lazy loading is safely triggered by the calling public method's transaction
         if (payment.getInstitution() != null) {
             InstitutionDto instDto = new InstitutionDto();
             instDto.setId(payment.getInstitution().getId());
@@ -150,22 +178,6 @@ public class ZbApiService {
             dto.setInstitution(instDto);
         }
         return dto;
-    }
-
-    /**
-     * ✅ Safely converts a list of PaymentAlerts to DTOs,
-     * ensuring lazy Institution proxies are initialized.
-     */
-    @Transactional
-    private List<PaymentAlertDto> convertToDtos(List<PaymentAlert> payments) {
-        return payments.stream()
-                .peek(p -> {
-                    if (p.getInstitution() != null) {
-                        Hibernate.initialize(p.getInstitution());
-                    }
-                })
-                .map(this::convertToPaymentAlertDto)
-                .collect(Collectors.toList());
     }
 
     /**

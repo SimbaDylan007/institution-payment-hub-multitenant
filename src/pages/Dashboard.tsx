@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
-import { PaymentAlert, SearchFiltersType, InstitutionAccount } from "@/types";
+import { PaymentAlert, SearchFiltersType, Institution, InstitutionAccount } from "@/types";
 import { apiFetch } from "@/utils/apiClient";
 
 // UI Components & Services
@@ -33,6 +33,7 @@ import { motion, AnimatePresence } from "framer-motion";
 // --- API Endpoints ---
 const ACCOUNTS_API_BASE_URL = 'http://194.163.141.113:8082/api/accounts';
 const PAYMENTS_API_BASE_URL = 'http://194.163.141.113:8082/api/payments';
+
 
 // --- Helper Components ---
 const PaymentTableSkeleton = () => ( <div className="space-y-4 p-6">{[...Array(5)].map((_, i) => (<Skeleton key={i} className="h-10 w-full rounded-md bg-gray-200/70 dark:bg-gray-700/50" />))}</div> );
@@ -98,9 +99,16 @@ const CredentialsManager = ({ accounts, fetchAccounts }: { accounts: Institution
 const PaymentPicker = ({ accounts, onFetchPayments }: { accounts: InstitutionAccount[], onFetchPayments: (selectedIds: string[], action: 'pending' | 'all') => void }) => {
     const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(new Set());
     const [actionType, setActionType] = useState<'pending' | 'all'>('pending');
+
+    // Reset selection when the list of available accounts changes
+    useEffect(() => {
+        setSelectedAccountIds(new Set());
+    }, [accounts]);
+
     const handleSelectAccount = (id: string, isChecked: boolean) => { const newSet = new Set(selectedAccountIds); if (isChecked) newSet.add(id); else newSet.delete(id); setSelectedAccountIds(newSet); };
     const handleFetch = () => { if (selectedAccountIds.size === 0) return toast.warning("Please select at least one account."); onFetchPayments(Array.from(selectedAccountIds), actionType); };
-    return (<Card className="dark:bg-[#1A1F2C] dark:border-gray-800"><CardHeader className="pb-4"><CardTitle className="text-md flex items-center gap-2"><Banknote/>Institution Connection</CardTitle></CardHeader><CardContent><div className="space-y-3"><div><Label>Action Type</Label><Select value={actionType} onValueChange={(value: 'pending' | 'all') => setActionType(value)}><SelectTrigger className="w-full dark:bg-gray-800 dark:border-gray-700"><SelectValue /></SelectTrigger><SelectContent className="dark:bg-gray-800 dark:border-gray-700"><SelectItem value="pending">Pick Pending Payments</SelectItem><SelectItem value="all">Get All Payments (History)</SelectItem></SelectContent></Select></div><Label>Select accounts to fetch from:</Label><div className="space-y-2 p-2 border dark:border-gray-700 rounded-md max-h-32 overflow-y-auto">{accounts.length === 0 ? <p className="text-xs text-gray-400 text-center">No accounts configured.</p> : accounts.map(acc => (<div key={acc.id} className="flex items-center space-x-2"><Checkbox id={`acc-${acc.id}`} onCheckedChange={(checked) => handleSelectAccount(acc.institutionId, !!checked)} /><Label htmlFor={`acc-${acc.id}`} className="text-sm font-medium leading-none">{acc.accountName}</Label></div>))}</div><Button onClick={handleFetch} className="w-full bg-red-600 hover:bg-red-700 dark:text-white">Fetch New Payments</Button></div></CardContent></Card>);
+
+    return (<Card className="dark:bg-[#1A1F2C] dark:border-gray-800"><CardHeader className="pb-4"><CardTitle className="text-md flex items-center gap-2"><Banknote/>Institution Connection</CardTitle></CardHeader><CardContent><div className="space-y-3"><div><Label>Action Type</Label><Select value={actionType} onValueChange={(value: 'pending' | 'all') => setActionType(value)}><SelectTrigger className="w-full dark:bg-gray-800 dark:border-gray-700"><SelectValue /></SelectTrigger><SelectContent className="dark:bg-gray-800 dark:border-gray-700"><SelectItem value="pending">Pick Pending Payments</SelectItem><SelectItem value="all">Get All Payments (History)</SelectItem></SelectContent></Select></div><Label>Select accounts to fetch from:</Label><div className="space-y-2 p-2 border dark:border-gray-700 rounded-md max-h-32 overflow-y-auto">{accounts.length === 0 ? <p className="text-xs text-gray-400 text-center">No accounts configured.</p> : accounts.map(acc => (<div key={acc.id} className="flex items-center space-x-2"><Checkbox id={`acc-${acc.id}`} checked={selectedAccountIds.has(acc.institutionId)} onCheckedChange={(checked) => handleSelectAccount(acc.institutionId, !!checked)} /><Label htmlFor={`acc-${acc.id}`} className="text-sm font-medium leading-none">{acc.accountName}</Label></div>))}</div><Button onClick={handleFetch} className="w-full bg-red-600 hover:bg-red-700 dark:text-white">Fetch New Payments</Button></div></CardContent></Card>);
 };
 
 export default function Dashboard() {
@@ -134,7 +142,7 @@ export default function Dashboard() {
 
     const fetchLocalPayments = useCallback(async () => {
         try {
-            const response = await apiFetch(`${PAYMENTS_API_BASE_URL}/status/pending`);
+            const response = await apiFetch(`${PAYMENTS_API_BASE_URL}/local`);
             if (response.ok) {
                 return await response.json() as PaymentAlert[];
             }
@@ -208,20 +216,26 @@ export default function Dashboard() {
         return Array.from(
             new Map(
                 institutionAccounts
-                    .filter(acc => acc.institution) // Safety filter
+                    .filter(acc => acc.institution)
                     .map(acc => [acc.institution.id, acc.institution])
             ).values()
         );
     }, [institutionAccounts]);
 
-    // --- FIX #1: Create a filtered list of accounts based on user role ---
+    // --- THIS IS THE FINAL FIX ---
+    // The logic is now aware of BOTH the user's role AND the dropdown selection.
     const visibleAccounts = useMemo(() => {
         if (isSuperAdmin) {
-            return institutionAccounts; // Super admins see all accounts
+            // If super admin has not selected a specific institution, show all accounts
+            if (selectedInstitutionId === "all") {
+                return institutionAccounts;
+            }
+            // Otherwise, filter accounts to match the selected institution
+            return institutionAccounts.filter(acc => acc.institution?.id === Number(selectedInstitutionId));
         }
-        // Regular admins see ONLY accounts for their institution
+        // For a regular admin, ONLY show accounts that belong to their institution
         return institutionAccounts.filter(acc => acc.institution?.id === user?.institutionId);
-    }, [institutionAccounts, isSuperAdmin, user?.institutionId]);
+    }, [institutionAccounts, isSuperAdmin, user?.institutionId, selectedInstitutionId]);
 
     if (!user) return <Navigate to="/" replace />;
 
@@ -274,7 +288,6 @@ export default function Dashboard() {
                                 <CardContent className="p-0">
                                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                                         <div className="lg:col-span-3"><SearchFilters onSearch={handleBackendSearch} /></div>
-                                        {/* --- FIX #2: Correctly show panel for ALL allowed users & pass filtered accounts --- */}
                                         {canManagePayments && (
                                             <div className="lg:col-span-1">
                                                 <PaymentPicker

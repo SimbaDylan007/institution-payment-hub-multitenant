@@ -1,14 +1,14 @@
 package com.payments.model;
 
-import javax.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
+import javax.persistence.*;
 
 @Entity
 @Table(name = "system_settings")
 public class SystemSettings {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -21,8 +21,6 @@ public class SystemSettings {
 
     @Column(nullable = false)
     private String currentSemester;
-
-    // You can add more settings here in the future, e.g., school name, address, etc.
 
     // Getters and Setters
     public Long getId() { return id; }

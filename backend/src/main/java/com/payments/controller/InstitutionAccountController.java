@@ -1,13 +1,19 @@
 package com.payments.controller;
 
+import com.payments.config.CustomUserDetails;
 import com.payments.dto.InstitutionAccountDto;
+import com.payments.model.Institution;
 import com.payments.model.InstitutionAccount;
+import com.payments.repository.InstitutionRepository;
 import com.payments.service.InstitutionAccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +27,8 @@ public class InstitutionAccountController {
     @Autowired
     private InstitutionAccountService accountService;
 
+    @Autowired
+    private InstitutionRepository institutionRepository;
 
     @GetMapping
     public ResponseEntity<List<InstitutionAccountDto>> getAllAccounts() {
@@ -30,14 +38,36 @@ public class InstitutionAccountController {
 
     @PostMapping
     public ResponseEntity<InstitutionAccount> addOrUpdateAccount(@RequestBody InstitutionAccount account) {
+        // First, check if an account with this institutionId already exists
         Optional<InstitutionAccount> existingAccount = accountService.getAccountByInstitutionId(account.getInstitutionId());
 
         if (existingAccount.isPresent()) {
+            // If it exists, we just update its name.
             InstitutionAccount accountToUpdate = existingAccount.get();
             accountToUpdate.setAccountName(account.getAccountName());
             InstitutionAccount updated = accountService.updateAccount(accountToUpdate);
             return new ResponseEntity<>(updated, HttpStatus.OK);
         } else {
+            // If it's a NEW account, we must find and set its parent Institution.
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Object principal = authentication.getPrincipal();
+
+            if (!(principal instanceof CustomUserDetails)) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not determine user's institution.");
+            }
+
+            Institution currentUserInstitution = ((CustomUserDetails) principal).getInstitution();
+
+            if (currentUserInstitution == null) {
+                // This would be a super admin trying to create an account without specifying which school
+                // or a regular user who is not linked to any institution.
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create an account without a parent institution.");
+            }
+
+            // Set the parent institution on the new account object
+            account.setInstitution(currentUserInstitution);
+
+            // Now, save the complete account object
             InstitutionAccount newAccount = accountService.addAccount(account);
             return new ResponseEntity<>(newAccount, HttpStatus.CREATED);
         }

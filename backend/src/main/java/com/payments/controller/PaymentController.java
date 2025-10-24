@@ -2,8 +2,6 @@ package com.payments.controller;
 
 import com.payments.dto.MultiPickPaymentRequest;
 import com.payments.dto.PaymentAlertDto;
-import com.payments.model.PaymentAlert;
-import com.payments.repository.PaymentRepository;
 import com.payments.service.ZbApiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,8 +19,9 @@ public class PaymentController {
     @Autowired
     private ZbApiService zbApiService;
 
-    @Autowired
-    private PaymentRepository paymentRepository;
+    // No longer need direct repository access, which is a good practice.
+    // @Autowired
+    // private PaymentRepository paymentRepository;
 
     @PostMapping("/pick-multiple-pending")
     public ResponseEntity<List<PaymentAlertDto>> pickMultiplePending(@RequestBody MultiPickPaymentRequest request) {
@@ -41,23 +40,24 @@ public class PaymentController {
         return ResponseEntity.ok(zbApiService.getPaymentsByStatus(status));
     }
 
+    @GetMapping("/local")
+    public ResponseEntity<List<PaymentAlertDto>> getLocalPayments() {
+        // This is now secure and multitenant
+        return ResponseEntity.ok(zbApiService.getPaymentsByStatus("PENDING"));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<PaymentAlertDto> getPaymentById(@PathVariable String id) {
+        // Call the new secure service method
+        return zbApiService.getPaymentByIdForCurrentUser(id)
+                .map(ResponseEntity::ok) // If found and authorized, return 200 OK with the DTO
+                .orElseGet(() -> ResponseEntity.notFound().build()); // Otherwise, return 404 Not Found
+    }
 
     @GetMapping("/reset/{id}")
     public ResponseEntity<Boolean> resetPayment(@PathVariable String id) {
         boolean success = zbApiService.resetPayment(id);
         return success ? ResponseEntity.ok(true) : ResponseEntity.badRequest().body(false);
-    }
-
-    @GetMapping("/local")
-    public ResponseEntity<List<PaymentAlert>> getLocalPayments() {
-        return ResponseEntity.ok(paymentRepository.findAll());
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<PaymentAlert> getPaymentById(@PathVariable String id) {
-        return paymentRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/reset-all")
