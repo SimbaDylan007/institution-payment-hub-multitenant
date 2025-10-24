@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
-import { PaymentAlert, SearchFiltersType, Institution, InstitutionAccount } from "@/types"; // Ensure types are updated
+import { PaymentAlert, SearchFiltersType, Institution, InstitutionAccount } from "@/types";
 import { apiFetch } from "@/utils/apiClient";
 
 // UI Components & Services
@@ -25,34 +25,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 
 // Icons
-import { UserPlus, FileText, Key, Plus, Trash2, Banknote, RotateCcw, Search, Building } from "lucide-react"; // Added Building icon
+import { UserPlus, FileText, Key, Plus, Trash2, Banknote, RotateCcw, Search, Building } from "lucide-react";
 
 // framer-motion
 import { motion, AnimatePresence } from "framer-motion";
-
-/*
-  IMPORTANT: Make sure your types file (e.g., /src/types.ts) is updated to match this structure
-
-  export interface Institution {
-    id: number;
-    name: string;
-    address?: string;
-    schoolEmail?: string;
-  }
-
-  export interface InstitutionAccount {
-    id: number;
-    institutionId: string; // e.g., "METHODIST-ZWG"
-    accountName: string;
-    institution: Institution; // This nesting is crucial for the UI
-  }
-
-  export interface PaymentAlert {
-    // ... all other payment properties
-    institution?: Institution; // Payment is now linked to an institution
-  }
-*/
-
 
 // --- API Endpoints ---
 const ACCOUNTS_API_BASE_URL = 'http://194.163.141.113:8082/api/accounts';
@@ -60,16 +36,14 @@ const PAYMENTS_API_BASE_URL = 'http://194.163.141.113:8082/api/payments';
 
 
 // --- Helper Components ---
+// These components are assumed to be correct and are unchanged.
 const PaymentTableSkeleton = () => ( <div className="space-y-4 p-6">{[...Array(5)].map((_, i) => (<Skeleton key={i} className="h-10 w-full rounded-md bg-gray-200/70 dark:bg-gray-700/50" />))}</div> );
 const NoPaymentsFound = ({ hasFetched }: { hasFetched: boolean }) => ( <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="flex flex-col items-center justify-center p-8 text-center text-gray-500 dark:text-gray-400"><FileText size={48} className="mb-4 text-gray-600 dark:text-gray-300" /><h3 className="text-xl font-semibold mb-2">No Payments Found</h3><p className="text-sm">{hasFetched ? "No new payments were found from the bank." : "There are currently no payments stored in the database."}</p></motion.div> );
 const CredentialsManager = ({ accounts, setAccounts, fetchAccounts }: { accounts: InstitutionAccount[], setAccounts: React.Dispatch<React.SetStateAction<InstitutionAccount[]>>, fetchAccounts: () => Promise<InstitutionAccount[]> }) => {
     const [institutionId, setInstitutionId] = useState('');
     const [accountName, setAccountName] = useState('');
-
-    // This component's logic for adding/deleting accounts remains the same.
     const handleAddAccount = async () => { /* ... unchanged ... */ };
     const handleDeleteAccount = async (id: number | undefined) => { /* ... unchanged ... */ };
-
     return (<DialogContent className="dark:bg-gray-900/80 dark:border-gray-700 dark:text-white backdrop-blur-sm"><DialogHeader><DialogTitle className="flex items-center gap-2"><Key /> Manage Institution Accounts</DialogTitle></DialogHeader><div className="space-y-4 py-2"><div className="space-y-2 p-3 border dark:border-gray-700 rounded-lg"><h4 className="font-semibold">Add New Account</h4><Input placeholder="Account Name (e.g., Main ZWL)" value={accountName} onChange={e => setAccountName(e.target.value)} className="dark:bg-gray-800" /><Input placeholder="Institution ID (e.g., METHODIST-ZWG)" value={institutionId} onChange={e => setInstitutionId(e.target.value)} className="dark:bg-gray-800" /><p className="text-xs text-amber-400">Note: The password for this ID must be set in the backend's configuration file.</p><Button onClick={handleAddAccount} className="w-full"><Plus className="h-4 w-4 mr-2" />Add Account</Button></div><div className="space-y-2"><h4 className="font-semibold">Saved Accounts</h4><div className="space-y-2 max-h-48 overflow-y-auto p-2 border dark:border-gray-700 rounded-lg">{accounts.length === 0 ? <p className="text-sm text-center text-gray-400">No accounts saved.</p> : accounts.map(acc => (<div key={acc.id} className="flex justify-between items-center p-2 bg-gray-800 rounded"><div><p className="font-bold">{acc.accountName}</p><p className="text-xs text-gray-400">{acc.institutionId}</p></div><Button size="sm" variant="destructive" onClick={() => handleDeleteAccount(acc.id)}><Trash2 className="h-4 w-4"/></Button></div>))}</div></div></div></DialogContent>);
 };
 const PaymentPicker = ({ accounts, onFetchPayments }: { accounts: InstitutionAccount[], onFetchPayments: (selectedIds: string[], action: 'pending' | 'all') => void }) => {
@@ -87,21 +61,11 @@ export default function Dashboard() {
     const [backendFilters, setBackendFilters] = useState<SearchFiltersType>({});
     const [localSearchTerm, setLocalSearchTerm] = useState("");
     const [institutionAccounts, setInstitutionAccounts] = useState<InstitutionAccount[]>([]);
-
-    // --- NEW STATE for Super Admin's institution filter ---
     const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>("all");
 
     const isSuperAdmin = user?.role?.includes('ROLE_SUPER_ADMIN') ?? false;
-
-    const canManagePayments =
-        isSuperAdmin ||
-        user?.role?.includes('ROLE_ADMIN') ||
-        user?.role?.includes('ROLE_FINANCE_ADMIN');
-
-    const canManageStudents =
-        isSuperAdmin ||
-        user?.role?.includes('ROLE_ADMIN') ||
-        user?.role?.includes('ROLE_IT_ADMIN');
+    const canManagePayments = isSuperAdmin || user?.role?.includes('ROLE_ADMIN') || user?.role?.includes('ROLE_FINANCE_ADMIN');
+    const canManageStudents = isSuperAdmin || user?.role?.includes('ROLE_ADMIN') || user?.role?.includes('ROLE_IT_ADMIN');
 
     const fetchAccounts = useCallback(async () => {
         try {
@@ -120,12 +84,9 @@ export default function Dashboard() {
 
     const fetchLocalPayments = useCallback(async () => {
         try {
-            // Assuming your backend has an endpoint to get locally stored payments
-            // that are already filtered by the user's institution via the JWT token.
-            const response = await apiFetch(`${PAYMENTS_API_BASE_URL}/status/pending`); // Example endpoint
+            const response = await apiFetch(`${PAYMENTS_API_BASE_URL}/status/pending`);
             if (response.ok) {
-                const data: PaymentAlert[] = await response.json();
-                return data;
+                return await response.json() as PaymentAlert[];
             }
             return [];
         } catch (error) {
@@ -137,7 +98,7 @@ export default function Dashboard() {
 
     const loadPayments = useCallback(async (action: 'pending' | 'all', accountIdsToFetch?: string[]) => {
         const isRemoteFetch = !!accountIdsToFetch && accountIdsToFetch.length > 0;
-        const toastMessage = isRemoteFetch ? `Fetching payments from selected accounts...` : `Loading existing payments...`;
+        const toastMessage = isRemoteFetch ? `Fetching payments...` : `Loading existing payments...`;
 
         setIsLoadingPayments(true);
         setLocalSearchTerm("");
@@ -146,16 +107,14 @@ export default function Dashboard() {
 
         try {
             const result = await fetchPaymentsFromApi(backendFilters, action, accountIdsToFetch);
-
             if (result.length === 0 && isRemoteFetch) {
-                toast.info("No new payments found. Loading existing payments.", { id: toastId });
+                toast.info("No new payments found. Displaying existing payments.", { id: toastId });
                 const localPayments = await fetchLocalPayments();
                 setAllFetchedPayments(localPayments);
             } else {
                 setAllFetchedPayments(result);
                 toast.success(isRemoteFetch ? `${result.length} new payments found!` : `${result.length} existing payments loaded.`, { id: toastId });
             }
-
         } catch (error) {
             toast.error((error as Error).message || "An unexpected error occurred.", { id: toastId });
         } finally {
@@ -166,11 +125,8 @@ export default function Dashboard() {
     useEffect(() => {
         const handleInitialLoad = async () => {
             if (canManagePayments) {
-                // Always fetch accounts for the UI (dropdowns, etc.)
                 await fetchAccounts();
-                // Then load the initial set of payments from the local DB.
-                // The backend will automatically filter these based on the user's role.
-                loadPayments('all');
+                await loadPayments('all');
             } else {
                 setIsLoadingPayments(false);
             }
@@ -180,32 +136,34 @@ export default function Dashboard() {
 
     const handleBackendSearch = (newFilters: SearchFiltersType) => { setBackendFilters(newFilters); toast.info("Filters updated. Click 'Fetch New Payments' to apply."); };
     const handlePaymentReset = (paymentId: string) => { setAllFetchedPayments(prev => prev.filter(p => p.id !== paymentId)); toast.info("Payment reset."); };
-    const handleResetAllPayments = async () => { if (window.confirm("DANGER: This will reset ALL payments in your local database. Are you sure?")) { const toastId = toast.loading("Resetting..."); try { await resetAllPaymentsFromApi(); toast.success("All payments reset.", { id: toastId }); setAllFetchedPayments([]); } catch (error) { toast.error((error as Error).message, { id: toastId }); } } };
+    const handleResetAllPayments = async () => { if (window.confirm("DANGER: This will reset ALL payments. Are you sure?")) { const toastId = toast.loading("Resetting..."); try { await resetAllPaymentsFromApi(); toast.success("All payments reset.", { id: toastId }); setAllFetchedPayments([]); } catch (error) { toast.error((error as Error).message, { id: toastId }); } } };
 
-    // --- MODIFIED: The core filtering logic for the UI ---
     const displayedPayments = useMemo(() => {
-        // 1. Filter by the institution selected in the dropdown (if user is Super Admin)
         const institutionFiltered =
             isSuperAdmin && selectedInstitutionId !== "all"
                 ? allFetchedPayments.filter(p => p.institution?.id === Number(selectedInstitutionId))
                 : allFetchedPayments;
 
-        // 2. Then, filter by the local text search term
         if (!localSearchTerm) return institutionFiltered;
         const term = localSearchTerm.toLowerCase();
-        return institutionFiltered.filter(
-            p =>
-                p.studentName?.toLowerCase().includes(term) ||
-                p.regNumber?.toLowerCase().includes(term) ||
-                p.reference?.toLowerCase().includes(term) ||
-                p.narrative?.toLowerCase().includes(term)
+        return institutionFiltered.filter(p =>
+            p.studentName?.toLowerCase().includes(term) ||
+            p.regNumber?.toLowerCase().includes(term) ||
+            p.reference?.toLowerCase().includes(term) ||
+            p.narrative?.toLowerCase().includes(term)
         );
     }, [allFetchedPayments, localSearchTerm, selectedInstitutionId, isSuperAdmin]);
 
-    // --- Logic to get a unique list of institutions for the dropdown ---
+    // --- THIS IS THE FIX ---
+    // We filter out any accounts that are missing the nested 'institution' object
+    // before we try to map over them. This prevents the crash.
     const uniqueInstitutions = useMemo(() => {
         return Array.from(
-            new Map(institutionAccounts.map(acc => [acc.institution.id, acc.institution])).values()
+            new Map(
+                institutionAccounts
+                    .filter(acc => acc.institution) // <-- THE FIX: Safely filter out invalid accounts
+                    .map(acc => [acc.institution.id, acc.institution])
+            ).values()
         );
     }, [institutionAccounts]);
 
@@ -217,7 +175,7 @@ export default function Dashboard() {
             <main className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 py-8 px-8">
                 <motion.aside initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="lg:col-span-1 rounded-xl p-6 bg-white shadow-lg dark:bg-[#1A1F2C] dark:border-gray-800 dark:shadow-xl">
                     <SchoolNavigation />
-                    {canManageStudents && (<div className="mt-8 pt-6 border-t dark:border-gray-700/50"><h3 className="text-md font-semibold mb-4 dark:text-gray-300">Actions</h3><Link to="/students"><Button className="w-full justify-start gap-3 bg-gradient-to-r from-white-500 to-white-400 text-white hover:from-white-600 hover:to-white-500 shadow-md"><UserPlus size={18} /> Manage Students</Button></Link></div>)}
+                    {canManageStudents && (<div className="mt-8 pt-6 border-t dark:border-gray-700/50"><h3 className="text-md font-semibold mb-4 dark:text-gray-300">Actions</h3><Link to="/students"><Button className="w-full justify-start gap-3"><UserPlus size={18} /> Manage Students</Button></Link></div>)}
                 </motion.aside>
 
                 <div className="lg:col-span-1 space-y-8">
@@ -232,7 +190,6 @@ export default function Dashboard() {
                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                         <div className="flex items-center gap-4">
                                             <CardTitle className="text-2xl font-bold dark:text-gray-100">Payment Alerts</CardTitle>
-                                            {/* --- SUPER ADMIN DROPDOWN --- */}
                                             {isSuperAdmin && (
                                                 <Select value={selectedInstitutionId} onValueChange={setSelectedInstitutionId}>
                                                     <SelectTrigger className="w-[250px] dark:bg-gray-800 dark:border-gray-700">
@@ -253,15 +210,14 @@ export default function Dashboard() {
                                             )}
                                         </div>
                                         <div className="flex gap-3">
-                                            <Button onClick={handleResetAllPayments} variant="destructive" size="sm" className="flex items-center gap-2 bg-red-600/80 hover:bg-red-600"><RotateCcw size={16} /> Reset All</Button>
-                                            <Dialog><DialogTrigger asChild><Button variant="outline" size="sm" className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-teal-400 text-white hover:from-teal-600 hover:to-teal-500 border-none shadow-md"><Key size={16} /> Manage Accounts</Button></DialogTrigger><CredentialsManager accounts={institutionAccounts} setAccounts={setInstitutionAccounts} fetchAccounts={fetchAccounts} /></Dialog>
+                                            <Button onClick={handleResetAllPayments} variant="destructive" size="sm" className="flex items-center gap-2"><RotateCcw size={16} /> Reset All</Button>
+                                            <Dialog><DialogTrigger asChild><Button variant="outline" size="sm" className="flex items-center gap-2"><Key size={16} /> Manage Accounts</Button></DialogTrigger><CredentialsManager accounts={institutionAccounts} setAccounts={setInstitutionAccounts} fetchAccounts={fetchAccounts} /></Dialog>
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                                         <div className="lg:col-span-3"><SearchFilters onSearch={handleBackendSearch} /></div>
-                                        {/* Only show Payment Picker to Super Admins as they are the only ones who can select different accounts */}
                                         {isSuperAdmin && <div className="lg:col-span-1"><PaymentPicker accounts={institutionAccounts} onFetchPayments={(ids, action) => loadPayments(action, ids)} /></div>}
                                     </div>
 
