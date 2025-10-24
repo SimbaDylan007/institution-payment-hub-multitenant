@@ -17,6 +17,7 @@ com\payments\dto\StudentBalanceDto.class
 com\payments\service\ZbApiService.class
 com\payments\controller\SubjectController.class
 com\payments\model\Book.class
+com\payments\dto\InstitutionAccountDto.class
 com\payments\dto\SystemPreferencesDto.class
 com\payments\repository\TimetableRepository.class
 com\payments\service\DashboardService.class
