@@ -20,7 +20,7 @@ public class PaymentAlert implements Serializable {
     @Column(length = 10)
     private String currency;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "institution_id", referencedColumnName = "id")
     private Institution institution;
 

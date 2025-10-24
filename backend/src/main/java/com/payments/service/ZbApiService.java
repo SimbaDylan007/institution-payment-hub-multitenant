@@ -9,6 +9,7 @@ import com.payments.model.PaymentAlert;
 import com.payments.model.PickPaymentRequest;
 import com.payments.repository.InstitutionAccountRepository;
 import com.payments.repository.PaymentRepository;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -24,9 +25,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class ZbApiService {
@@ -98,10 +99,8 @@ public class ZbApiService {
                         map -> new ArrayList<>(map.values())
                 ));
 
-        // Convert the final list of entities to DTOs before returning
-        return uniquePayments.stream()
-                .map(this::convertToPaymentAlertDto)
-                .collect(Collectors.toList());
+        // ✅ Safely convert entities to DTOs with lazy Institution initialized
+        return convertToDtos(uniquePayments);
     }
 
     /**
@@ -123,15 +122,12 @@ public class ZbApiService {
             }
             payments = paymentRepository.findByStatusAndInstitution(status, userInstitution);
         }
-        // Convert the fetched entities to DTOs
-        return payments.stream()
-                .map(this::convertToPaymentAlertDto)
-                .collect(Collectors.toList());
+
+        return convertToDtos(payments);
     }
 
     /**
      * Helper method to convert a PaymentAlert entity to a PaymentAlertDto.
-     * This safely handles the lazy-loaded Institution.
      */
     private PaymentAlertDto convertToPaymentAlertDto(PaymentAlert payment) {
         PaymentAlertDto dto = new PaymentAlertDto();
@@ -147,7 +143,6 @@ public class ZbApiService {
         dto.setStudentSurname(payment.getStudentSurname());
         dto.setRegNumber(payment.getRegNumber());
 
-        // This is where the lazy loading is safely triggered inside the transaction
         if (payment.getInstitution() != null) {
             InstitutionDto instDto = new InstitutionDto();
             instDto.setId(payment.getInstitution().getId());
@@ -155,6 +150,22 @@ public class ZbApiService {
             dto.setInstitution(instDto);
         }
         return dto;
+    }
+
+    /**
+     * ✅ Safely converts a list of PaymentAlerts to DTOs,
+     * ensuring lazy Institution proxies are initialized.
+     */
+    @Transactional
+    private List<PaymentAlertDto> convertToDtos(List<PaymentAlert> payments) {
+        return payments.stream()
+                .peek(p -> {
+                    if (p.getInstitution() != null) {
+                        Hibernate.initialize(p.getInstitution());
+                    }
+                })
+                .map(this::convertToPaymentAlertDto)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -228,7 +239,7 @@ public class ZbApiService {
                     payment.setStudentName(nameParts.length > 1 ? String.join(" ", Arrays.copyOfRange(nameParts, 0, nameParts.length - 1)) : nameParts[0]);
                 }
 
-                if (matcher.find()){
+                if (matcher.find()) {
                     payment.setRegNumber(matcher.group().replaceAll("\\s", ""));
                 } else if (parts.length > 4) {
                     payment.setRegNumber(parts[4].trim());
@@ -269,7 +280,6 @@ public class ZbApiService {
             return false;
         }
     }
-
 
     private List<String> getCurrentUserAllowedInstitutionAccountIds(Authentication authentication) {
         Institution institution = getInstitutionForUser(authentication);

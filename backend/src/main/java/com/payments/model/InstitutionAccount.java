@@ -18,8 +18,7 @@ public class InstitutionAccount {
     private String accountName;
 
 
-    @ManyToOne(fetch = FetchType.LAZY)
-
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "institution_fk", nullable = false)
     @JsonIgnore
     private Institution institution;
