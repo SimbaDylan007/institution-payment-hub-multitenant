@@ -85,6 +85,7 @@ com\payments\controller\AnalyticsController.class
 com\payments\dto\UserStatisticsDto.class
 com\payments\repository\NotificationPreferencesRepository.class
 com\payments\service\StaffService$1.class
+com\payments\dto\PaymentAlertDto.class
 com\payments\repository\PaymentRepository.class
 com\payments\controller\StudentPortalController.class
 com\payments\model\Staff.class

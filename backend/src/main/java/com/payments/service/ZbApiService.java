@@ -1,6 +1,8 @@
 package com.payments.service;
 
 import com.payments.config.CustomUserDetails;
+import com.payments.dto.InstitutionDto;
+import com.payments.dto.PaymentAlertDto;
 import com.payments.model.Institution;
 import com.payments.model.InstitutionAccount;
 import com.payments.model.PaymentAlert;
@@ -51,13 +53,11 @@ public class ZbApiService {
     private Environment env;
 
     /**
-     * Fetches payments for multiple institution accounts from the bank API,
-     * enforces security rules, and associates payments with the correct institution.
+     * Fetches payments from the bank, saves them, and returns them as DTOs.
      * This is the primary entry point for fetching remote payments.
      */
-
     @Transactional
-    public List<PaymentAlert> pickPaymentsForMultipleAccounts(List<String> institutionAccountIds, String type) {
+    public List<PaymentAlertDto> pickPaymentsForMultipleAccounts(List<String> institutionAccountIds, String type) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         boolean isSuperAdmin = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -70,7 +70,7 @@ public class ZbApiService {
             }
         }
 
-        List<PaymentAlert> allPayments = new ArrayList<>();
+        List<PaymentAlert> allSavedPayments = new ArrayList<>();
         for (String accId : institutionAccountIds) {
             String password = env.getProperty("zb.api.credentials." + accId);
             if (password == null) {
@@ -84,38 +84,77 @@ public class ZbApiService {
             try {
                 String apiUrl = "all".equals(type) ? apiBaseUrl + allPaymentsPath : apiBaseUrl + pickPendingPath;
                 List<PaymentAlert> rawPayments = fetchPaymentsFromApi(request, apiUrl);
-                allPayments.addAll(this.processAndSavePayments(rawPayments, accId));
+                allSavedPayments.addAll(this.processAndSavePayments(rawPayments, accId));
             } catch (Exception e) {
                 System.err.println("Failed to fetch payments for account " + accId + ". Error: " + e.getMessage());
             }
         }
 
-        return allPayments.stream()
+        // De-duplicate the list of saved entities
+        List<PaymentAlert> uniquePayments = allSavedPayments.stream()
                 .filter(p -> p.getId() != null)
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(PaymentAlert::getId, p -> p, (p1, p2) -> p1),
                         map -> new ArrayList<>(map.values())
                 ));
+
+        // Convert the final list of entities to DTOs before returning
+        return uniquePayments.stream()
+                .map(this::convertToPaymentAlertDto)
+                .collect(Collectors.toList());
     }
 
     /**
-     * Fetches payments from the local database based on the current user's role and institution.
+     * Fetches payments from the local database and returns them as DTOs.
      */
     @Transactional(readOnly = true)
-    public List<PaymentAlert> getPaymentsByStatus(String status) {
+    public List<PaymentAlertDto> getPaymentsByStatus(String status) {
+        List<PaymentAlert> payments;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         boolean isSuperAdmin = authentication.getAuthorities().stream()
                 .anyMatch(ga -> ga.getAuthority().equals("ROLE_SUPER_ADMIN"));
 
         if (isSuperAdmin) {
-            return paymentRepository.findByStatus(status);
+            payments = paymentRepository.findByStatus(status);
         } else {
             Institution userInstitution = getInstitutionForUser(authentication);
             if (userInstitution == null) {
                 return Collections.emptyList();
             }
-            return paymentRepository.findByStatusAndInstitution(status, userInstitution);
+            payments = paymentRepository.findByStatusAndInstitution(status, userInstitution);
         }
+        // Convert the fetched entities to DTOs
+        return payments.stream()
+                .map(this::convertToPaymentAlertDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method to convert a PaymentAlert entity to a PaymentAlertDto.
+     * This safely handles the lazy-loaded Institution.
+     */
+    private PaymentAlertDto convertToPaymentAlertDto(PaymentAlert payment) {
+        PaymentAlertDto dto = new PaymentAlertDto();
+        dto.setId(payment.getId());
+        dto.setAmount(payment.getAmount());
+        dto.setCurrency(payment.getCurrency());
+        dto.setNarrative(payment.getNarrative());
+        dto.setPicked(payment.getPicked());
+        dto.setReference(payment.getReference());
+        dto.setStatus(payment.getStatus());
+        dto.setTransactionDate(payment.getTransactionDate());
+        dto.setStudentName(payment.getStudentName());
+        dto.setStudentSurname(payment.getStudentSurname());
+        dto.setRegNumber(payment.getRegNumber());
+
+        // This is where the lazy loading is safely triggered inside the transaction
+        if (payment.getInstitution() != null) {
+            InstitutionDto instDto = new InstitutionDto();
+            instDto.setId(payment.getInstitution().getId());
+            instDto.setName(payment.getInstitution().getName());
+            dto.setInstitution(instDto);
+        }
+        return dto;
     }
 
     /**
@@ -204,7 +243,6 @@ public class ZbApiService {
     }
 
     public boolean resetPayment(String paymentId) {
-        // Future Enhancement: Add a security check to ensure user can access this payment before resetting.
         return paymentRepository.findById(paymentId).map(payment -> {
             payment.setPicked(0);
             payment.setStatus("pending");

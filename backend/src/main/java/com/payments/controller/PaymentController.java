@@ -1,6 +1,7 @@
 package com.payments.controller;
 
 import com.payments.dto.MultiPickPaymentRequest;
+import com.payments.dto.PaymentAlertDto;
 import com.payments.model.PaymentAlert;
 import com.payments.repository.PaymentRepository;
 import com.payments.service.ZbApiService;
@@ -10,7 +11,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -24,20 +24,24 @@ public class PaymentController {
     @Autowired
     private PaymentRepository paymentRepository;
 
-    // --- SECURE MULTI-ACCOUNT ENDPOINTS ---
     @PostMapping("/pick-multiple-pending")
-    public ResponseEntity<List<PaymentAlert>> pickMultiplePending(@RequestBody MultiPickPaymentRequest request) {
-        List<PaymentAlert> payments = zbApiService.pickPaymentsForMultipleAccounts(request.getInstitutionIds(), "pending");
+    public ResponseEntity<List<PaymentAlertDto>> pickMultiplePending(@RequestBody MultiPickPaymentRequest request) {
+        List<PaymentAlertDto> payments = zbApiService.pickPaymentsForMultipleAccounts(request.getInstitutionIds(), "pending");
         return ResponseEntity.ok(payments);
     }
 
     @PostMapping("/get-multiple-all")
-    public ResponseEntity<List<PaymentAlert>> getMultipleAll(@RequestBody MultiPickPaymentRequest request) {
-        List<PaymentAlert> payments = zbApiService.pickPaymentsForMultipleAccounts(request.getInstitutionIds(), "all");
+    public ResponseEntity<List<PaymentAlertDto>> getMultipleAll(@RequestBody MultiPickPaymentRequest request) {
+        List<PaymentAlertDto> payments = zbApiService.pickPaymentsForMultipleAccounts(request.getInstitutionIds(), "all");
         return ResponseEntity.ok(payments);
     }
 
-    // --- UTILITY AND DATA-ACCESS ENDPOINTS ---
+    @GetMapping("/status/{status}")
+    public ResponseEntity<List<PaymentAlertDto>> getPaymentsByStatus(@PathVariable String status) {
+        return ResponseEntity.ok(zbApiService.getPaymentsByStatus(status));
+    }
+
+
     @GetMapping("/reset/{id}")
     public ResponseEntity<Boolean> resetPayment(@PathVariable String id) {
         boolean success = zbApiService.resetPayment(id);
@@ -56,12 +60,6 @@ public class PaymentController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/status/{status}")
-    public ResponseEntity<List<PaymentAlert>> getPaymentsByStatus(@PathVariable String status) {
-        return ResponseEntity.ok(zbApiService.getPaymentsByStatus(status));
-    }
-
-    // --- NEW ENDPOINT FOR BULK RESET ---
     @PostMapping("/reset-all")
     public ResponseEntity<String> resetAllPayments() {
         boolean success = zbApiService.resetAllPayments();
