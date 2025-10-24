@@ -2,6 +2,8 @@ package com.payments.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @JsonIgnoreProperties({"hibernateLazyInitializer"})
 @Entity
@@ -13,11 +15,22 @@ public class Institution {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String name; // e.g., "Pachedu Junior Academy", "Sunnyside Primary"
+    private String name;
 
-    // Add other details about the school if you want, e.g., address, contact email
     private String address;
+
+    @Column(name = "school_email")
     private String schoolEmail;
+
+
+    @OneToMany(
+            mappedBy = "institution",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private List<InstitutionAccount> institutionAccounts = new ArrayList<>();
+
 
     public Institution() {}
 
@@ -30,4 +43,13 @@ public class Institution {
     public void setAddress(String address) { this.address = address; }
     public String getSchoolEmail() { return schoolEmail; }
     public void setSchoolEmail(String schoolEmail) { this.schoolEmail = schoolEmail; }
+
+    // --- GETTER AND SETTER FOR THE NEW LIST ---
+    public List<InstitutionAccount> getInstitutionAccounts() {
+        return institutionAccounts;
+    }
+
+    public void setInstitutionAccounts(List<InstitutionAccount> institutionAccounts) {
+        this.institutionAccounts = institutionAccounts;
+    }
 }

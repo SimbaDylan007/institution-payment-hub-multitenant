@@ -1,26 +1,31 @@
 package com.payments.model;
 
-
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import javax.persistence.*;
 
 @Entity
+@Table(name = "institution_account")
 public class InstitutionAccount {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Use Long for primary key, auto-incremented
-    private String institutionId; // This was 'id' in your frontend, but is a string identifier
+    private Long id;
+
+    @Column(name = "institution_id") // Maps to your 'institution_id' column (e.g., "METHODIST-ZWG")
+    private String institutionId;
+
+    @Column(name = "account_name") // Maps to your 'account_name' column
     private String accountName;
+
+
+    @ManyToOne(fetch = FetchType.LAZY)
+
+    @JoinColumn(name = "institution_fk", nullable = false)
+    @JsonIgnore
+    private Institution institution;
 
     // Constructors
     public InstitutionAccount() {
-    }
-
-    public InstitutionAccount(String institutionId, String accountName) {
-        this.institutionId = institutionId;
-        this.accountName = accountName;
     }
 
     // Getters and Setters
@@ -48,12 +53,11 @@ public class InstitutionAccount {
         this.accountName = accountName;
     }
 
-    @Override
-    public String toString() {
-        return "InstitutionAccount{" +
-                "id=" + id +
-                ", institutionId='" + institutionId + '\'' +
-                ", accountName='" + accountName + '\'' +
-                '}';
+    public Institution getInstitution() {
+        return institution;
+    }
+
+    public void setInstitution(Institution institution) {
+        this.institution = institution;
     }
 }

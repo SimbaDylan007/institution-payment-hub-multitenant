@@ -27,14 +27,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         final String requestURI = request.getRequestURI();
 
-        // --- THIS IS THE CORRECTED FIX ---
-        // The path must match what the frontend is calling and what SecurityConfig permits.
-        // It must start with "/api/auth/".
+
         if (requestURI.startsWith("/api/auth/")) {
             chain.doFilter(request, response);
             return;
         }
-        // --- END OF FIX ---
 
 
         final String requestTokenHeader = request.getHeader("Authorization");

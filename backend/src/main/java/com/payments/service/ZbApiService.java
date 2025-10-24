@@ -1,21 +1,27 @@
 package com.payments.service;
 
+import com.payments.config.CustomUserDetails;
+import com.payments.model.Institution;
+import com.payments.model.InstitutionAccount;
 import com.payments.model.PaymentAlert;
 import com.payments.model.PickPaymentRequest;
+import com.payments.repository.InstitutionAccountRepository;
 import com.payments.repository.PaymentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
-import java.time.LocalDate;
-import java.time.Year;
 import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,60 +45,58 @@ public class ZbApiService {
     private PaymentRepository paymentRepository;
 
     @Autowired
+    private InstitutionAccountRepository institutionAccountRepository;
+
+    @Autowired
     private Environment env;
 
-    public List<PaymentAlert> pickAllPendingPayments(PickPaymentRequest request) {
-        try {
-            HttpEntity<PickPaymentRequest> entity = createRequestEntity(request);
-            ResponseEntity<PaymentAlert[]> response = restTemplate.exchange(
-                    apiBaseUrl + pickPendingPath, HttpMethod.POST, entity, PaymentAlert[].class);
+    /**
+     * Fetches payments for multiple institution accounts from the bank API,
+     * enforces security rules, and associates payments with the correct institution.
+     * This is the primary entry point for fetching remote payments.
+     */
+    public List<PaymentAlert> pickPaymentsForMultipleAccounts(List<String> institutionAccountIds, String type) {
+        // --- MULTITENANCY SECURITY CHECK ---
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isSuperAdmin = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_SUPER_ADMIN"::equals);
 
-            List<PaymentAlert> payments = Optional.ofNullable(response.getBody())
-                    .map(Arrays::asList).orElse(Collections.emptyList());
-            return processAndSavePayments(payments);
-        } catch (Exception e) {
-            System.err.println("Error picking pending payments for " + request.getInstitutionId() + ": " + e.getMessage());
-            throw new RuntimeException("Error picking pending payments", e);
+        // If the user is a regular user, ensure they can only access their linked accounts.
+        if (!isSuperAdmin) {
+            List<String> allowedIds = getCurrentUserAllowedInstitutionAccountIds(authentication);
+            if (!new HashSet<>(allowedIds).containsAll(institutionAccountIds)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You are not authorized to pick payments for one or more selected institutions.");
+            }
         }
-    }
+        // --- END SECURITY CHECK ---
 
-    public List<PaymentAlert> getAllPayments(PickPaymentRequest request) {
-        try {
-            HttpEntity<PickPaymentRequest> entity = createRequestEntity(request);
-            ResponseEntity<PaymentAlert[]> response = restTemplate.exchange(
-                    apiBaseUrl + allPaymentsPath, HttpMethod.POST, entity, PaymentAlert[].class);
-
-            List<PaymentAlert> payments = Optional.ofNullable(response.getBody())
-                    .map(Arrays::asList).orElse(Collections.emptyList());
-            return processAndSavePayments(payments);
-        } catch (Exception e) {
-            System.err.println("Error getting all payments for " + request.getInstitutionId() + ": " + e.getMessage());
-            throw new RuntimeException("Error getting all payments", e);
-        }
-    }
-
-    public List<PaymentAlert> pickPaymentsForMultipleAccounts(List<String> institutionIds, String type) {
         List<PaymentAlert> allPayments = new ArrayList<>();
-        for (String id : institutionIds) {
-            String password = env.getProperty("zb.api.credentials." + id);
+        for (String accId : institutionAccountIds) {
+            String password = env.getProperty("zb.api.credentials." + accId);
             if (password == null) {
-                System.err.println("WARN: No password configured in application.properties for institution ID: " + id);
+                System.err.println("WARN: No password configured for institution account ID: " + accId);
                 continue;
             }
             PickPaymentRequest request = new PickPaymentRequest();
-            request.setInstitutionId(id);
+            request.setInstitutionId(accId);
             request.setPassword(password);
+
             try {
-                if ("all".equals(type)) {
-                    allPayments.addAll(this.getAllPayments(request));
-                } else {
-                    allPayments.addAll(this.pickAllPendingPayments(request));
-                }
+                // Determine which API endpoint to call
+                String apiUrl = "all".equals(type) ? apiBaseUrl + allPaymentsPath : apiBaseUrl + pickPendingPath;
+
+                // Fetch the raw payment data from the bank
+                List<PaymentAlert> rawPayments = fetchPaymentsFromApi(request, apiUrl);
+
+                // Process and save the payments, linking them to the correct institution
+                allPayments.addAll(this.processAndSavePayments(rawPayments, accId));
+
             } catch (Exception e) {
-                // Log the specific failure but continue with other accounts
-                System.err.println("Failed to fetch payments for account " + id + ". Error: " + e.getMessage());
+                System.err.println("Failed to fetch payments for account " + accId + ". Error: " + e.getMessage());
             }
         }
+
         // De-duplicate the combined list before returning
         return allPayments.stream()
                 .filter(p -> p.getId() != null)
@@ -102,10 +106,62 @@ public class ZbApiService {
                 ));
     }
 
-    private List<PaymentAlert> processAndSavePayments(List<PaymentAlert> payments) {
+    /**
+     * Fetches payments from the local database based on the current user's role and institution.
+     */
+    public List<PaymentAlert> getPaymentsByStatus(String status) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isSuperAdmin = authentication.getAuthorities().stream()
+                .anyMatch(ga -> ga.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+        if (isSuperAdmin) {
+            return paymentRepository.findByStatus(status);
+        } else {
+            // For a regular user, get their institution and filter by it
+            Institution userInstitution = getInstitutionForUser(authentication);
+            if (userInstitution == null) {
+                // Failsafe: A non-admin user with no institution should not see any data.
+                return Collections.emptyList();
+            }
+            return paymentRepository.findByStatusAndInstitution(status, userInstitution);
+        }
+    }
+
+    /**
+     * Executes the REST call to the bank API.
+     */
+    private List<PaymentAlert> fetchPaymentsFromApi(PickPaymentRequest request, String url) {
+        HttpEntity<PickPaymentRequest> entity = createRequestEntity(request);
+        ResponseEntity<PaymentAlert[]> response = restTemplate.exchange(url, HttpMethod.POST, entity, PaymentAlert[].class);
+        return Optional.ofNullable(response.getBody())
+                .map(Arrays::asList)
+                .orElse(Collections.emptyList());
+    }
+
+    /**
+     * Processes a list of raw payments, links them to an institution, and saves them.
+     */
+    private List<PaymentAlert> processAndSavePayments(List<PaymentAlert> payments, String institutionAccountId) {
+        if (payments.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        InstitutionAccount account = institutionAccountRepository.findByInstitutionId(institutionAccountId)
+                .orElseThrow(() -> new IllegalStateException("Configuration error: No InstitutionAccount found for ID: " + institutionAccountId));
+
+        Institution institution = account.getInstitution();
+        if (institution == null) {
+            throw new IllegalStateException("Configuration error: InstitutionAccount " + institutionAccountId + " is not linked to a parent Institution.");
+        }
+
         List<PaymentAlert> enhancedPayments = payments.stream()
-                .map(this::processApiPayment) // Use the new, enhanced processing method
+                .map(payment -> {
+                    PaymentAlert processedPayment = processApiPayment(payment);
+                    processedPayment.setInstitution(institution);
+                    return processedPayment;
+                })
                 .collect(Collectors.toList());
+
         return paymentRepository.saveAll(enhancedPayments);
     }
 
@@ -115,31 +171,16 @@ public class ZbApiService {
         return new HttpEntity<>(request, headers);
     }
 
-    /**
-     * Central processing hub for raw payment data from the bank API.
-     * This method converts the amount from cents, determines the currency,
-     * and extracts student information.
-     */
     private PaymentAlert processApiPayment(PaymentAlert payment) {
-        // --- THIS IS THE FIX ---
-        // 1. Check if the amount is not null (it's an object now, not a primitive)
         if (payment.getAmount() != null) {
-            // 2. Use BigDecimal's divide() method for precise calculation
             BigDecimal amountInDollars = payment.getAmount().divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-            // 3. Set the new BigDecimal value
             payment.setAmount(amountInDollars);
         }
 
         String source = payment.getSource();
         if (source != null && source.length() >= 3) {
             char currencyIndicator = source.charAt(source.length() - 3);
-            if (currencyIndicator == '4') {
-                payment.setCurrency("USD");
-            } else if (currencyIndicator == '0' || currencyIndicator == '2') {
-                payment.setCurrency("ZWG");
-            } else {
-                payment.setCurrency("UNKNOWN");
-            }
+            payment.setCurrency(currencyIndicator == '4' ? "USD" : "ZWG");
         } else {
             payment.setCurrency("UNKNOWN");
         }
@@ -172,6 +213,7 @@ public class ZbApiService {
     }
 
     public boolean resetPayment(String paymentId) {
+        // Future Enhancement: Add a security check to ensure user can access this payment before resetting.
         return paymentRepository.findById(paymentId).map(payment -> {
             payment.setPicked(0);
             payment.setStatus("pending");
@@ -180,26 +222,53 @@ public class ZbApiService {
         }).orElse(false);
     }
 
-    public List<PaymentAlert> getPaymentsByStatus(String status) {
-        return paymentRepository.findByStatus(status);
-    }
-
     @Transactional
     public boolean resetAllPayments() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isSuperAdmin = authentication.getAuthorities().stream()
+                .anyMatch(ga -> ga.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+        if (!isSuperAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Only a Super Admin can reset all payments.");
+        }
+
         try {
-            List<PaymentAlert> allPayments = paymentRepository.findAll();
-            if (allPayments.isEmpty()) {
-                return true;
-            }
-            for (PaymentAlert payment : allPayments) {
-                payment.setPicked(0);
-                payment.setStatus("pending");
-            }
-            paymentRepository.saveAll(allPayments);
+            paymentRepository.deleteAllInBatch();
             return true;
         } catch (Exception e) {
             System.err.println("Error during bulk reset of payments: " + e.getMessage());
             return false;
+        }
+    }
+
+    // --- SECURITY HELPER METHODS (ACTUAL IMPLEMENTATION) ---
+
+    private List<String> getCurrentUserAllowedInstitutionAccountIds(Authentication authentication) {
+        Institution institution = getInstitutionForUser(authentication);
+
+        if (institution == null) {
+            throw new IllegalStateException("Authenticated user '" + authentication.getName() + "' is not associated with any institution.");
+        }
+
+        List<InstitutionAccount> accounts = institution.getInstitutionAccounts();
+        if (accounts == null || accounts.isEmpty()) {
+            System.err.println("WARN: Institution '" + institution.getName() + "' has no institution bank accounts configured.");
+            return Collections.emptyList();
+        }
+
+        return accounts.stream()
+                .map(InstitutionAccount::getInstitutionId)
+                .collect(Collectors.toList());
+    }
+
+    private Institution getInstitutionForUser(Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof CustomUserDetails) {
+            return ((CustomUserDetails) principal).getInstitution();
+        } else {
+            System.err.println("ERROR: Security Principal is not an instance of CustomUserDetails. Could not retrieve institution. Principal type: " + principal.getClass().getName());
+            return null;
         }
     }
 }
