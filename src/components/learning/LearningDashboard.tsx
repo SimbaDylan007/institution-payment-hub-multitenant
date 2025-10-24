@@ -83,7 +83,7 @@ export default function LearningDashboard() {
       title: 'Speed Learner',
       description: 'Completed 5 lessons in one day',
       timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-      icon: <Zap className="h-4 w-4 text-blue-400" />
+      icon: <Zap className="h-4 w-4 text-white-400" />
     },
     {
       id: '3',
@@ -205,7 +205,7 @@ export default function LearningDashboard() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass rounded-2xl p-8 bg-gradient-to-r from-primary/10 via-accent/10 to-purple-600/10"
+        className="glass rounded-2xl p-8 bg-gradient-to-r from-primary/10 via-accent/10 to-red-600/10"
       >
         <div className="flex items-center justify-between">
           <div>
@@ -288,7 +288,7 @@ export default function LearningDashboard() {
           description="this year"
         />
         <StatCard
-          icon={<Brain className="h-5 w-5 text-purple-400" />}
+          icon={<Brain className="h-5 w-5 text-red-400" />}
           title="Skills Acquired"
           value={learningStats.skillsAcquired}
           change={12}

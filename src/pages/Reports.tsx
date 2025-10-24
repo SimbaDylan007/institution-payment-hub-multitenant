@@ -106,9 +106,9 @@ export default function Reports() {
   if (!user) return <Navigate to="/" replace />;
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
         <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
+        <main className="flex-1 px-4 py-8">
           <div className="mb-6 flex justify-between items-center">
             <div><h1 className="text-2xl font-bold">Report Generator</h1><p className="text-gray-300">Create and export dynamic system reports.</p></div>
             <Button asChild><Link to="/dashboard" className="flex items-center gap-2"><Home size={16}/>Dashboard</Link></Button>

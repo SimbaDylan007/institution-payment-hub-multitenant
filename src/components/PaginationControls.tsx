@@ -31,7 +31,7 @@ export function PaginationControls({ page, onPageChange }: PaginationControlsPro
                 size="sm"
                 onClick={() => onPageChange(0)}
                 disabled={currentPage === 0}
-                className="bg-transparent hover:bg-purple-700"
+                className="bg-transparent hover:bg-red-700"
             >
                 <ChevronsLeft className="h-4 w-4" />
             </Button>
@@ -40,7 +40,7 @@ export function PaginationControls({ page, onPageChange }: PaginationControlsPro
                 size="sm"
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 0}
-                className="bg-transparent hover:bg-purple-700"
+                className="bg-transparent hover:bg-red-700"
             >
                 <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -49,7 +49,7 @@ export function PaginationControls({ page, onPageChange }: PaginationControlsPro
                 size="sm"
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage >= totalPages - 1}
-                className="bg-transparent hover:bg-purple-700"
+                className="bg-transparent hover:bg-red-700"
             >
                 <ChevronRight className="h-4 w-4" />
             </Button>
@@ -58,7 +58,7 @@ export function PaginationControls({ page, onPageChange }: PaginationControlsPro
                 size="sm"
                 onClick={() => onPageChange(totalPages - 1)}
                 disabled={currentPage >= totalPages - 1}
-                className="bg-transparent hover:bg-purple-700"
+                className="bg-transparent hover:bg-red-700"
             >
                 <ChevronsRight className="h-4 w-4" />
             </Button>

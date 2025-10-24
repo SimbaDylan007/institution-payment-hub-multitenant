@@ -43,7 +43,7 @@ const Auth = () => {
         <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
           <div className="max-w-md mx-auto w-full">
             <div className="flex items-center mb-8">
-              <div className="bg-purple-600 p-3 rounded-lg mr-4">
+              <div className="bg-red-600 p-3 rounded-lg mr-4">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
                   <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
                   <line x1="8" x2="16" y1="21" y2="21"></line>
@@ -51,7 +51,7 @@ const Auth = () => {
                 </svg>
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Pachedu Junior School</h1>
+                <h1 className="text-2xl font-bold">Methodist Group of Schools</h1>
                 <p className="text-gray-400">Student Payment Management</p>
               </div>
             </div>
@@ -107,7 +107,7 @@ const Auth = () => {
 
               <Button
                   type="submit"
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                  className="w-full bg-red-600 hover:bg-red-700 text-white"
                   disabled={isLoading}
               >
                 {isLoading ? "Signing in..." : "Sign In"}
@@ -117,9 +117,9 @@ const Auth = () => {
         </div>
 
         {/* Right side - purple gradient */}
-        <div className="hidden md:block md:w-1/2 bg-gradient-to-br from-purple-600 to-purple-800 p-12 flex flex-col justify-center">
+        <div className="hidden md:block md:w-1/2 bg-gradient-to-br from-red-600 to-red-800 p-12 flex flex-col justify-center">
           <div className="max-w-lg">
-            <h2 className="text-4xl font-bold mb-6">Pachedu Junior School</h2>
+            <h2 className="text-4xl font-bold mb-6">Methodist Group of Schools</h2>
             <ul className="space-y-4">
               <li className="flex items-center"><div className="mr-4 text-xl">•</div><div>Track and manage student payments efficiently</div></li>
               <li className="flex items-center"><div className="mr-4 text-xl">•</div><div>Streamlined payment validation and processing</div></li>

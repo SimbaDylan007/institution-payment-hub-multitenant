@@ -31,7 +31,7 @@ export const AssignRolesModal: FC<Props> = ({ isOpen, onClose, onSuccess, user }
     useEffect(() => {
         const fetchAllRoles = async () => {
             try {
-                const response = await apiFetch('http://localhost:8082/api/users/roles');
+                const response = await apiFetch('http://194.163.141.113:8082/api/users/roles');
                 if (response.ok) {
                     let roles: Role[] = await response.json();
                     if (!isSuperAdmin) {
@@ -75,7 +75,7 @@ export const AssignRolesModal: FC<Props> = ({ isOpen, onClose, onSuccess, user }
         };
 
         try {
-            const response = await apiFetch('http://localhost:8082/api/users/assign-roles', {
+            const response = await apiFetch('http://194.163.141.113:8082/api/users/assign-roles', {
                 method: 'POST',
                 body: JSON.stringify(assignmentData)
             });

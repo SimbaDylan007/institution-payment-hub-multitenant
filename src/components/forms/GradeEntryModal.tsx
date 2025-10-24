@@ -42,7 +42,7 @@ export const GradeEntryModal: FC<GradeEntryModalProps> = ({ onGradeAdded }) => {
 
         try {
             // The formData object already matches the DTO, so we can send it directly
-            const response = await apiFetch('http://localhost:8082/api/academic/grades', {
+            const response = await apiFetch('http://194.163.141.113:8082/api/academic/grades', {
                 method: 'POST',
                 body: JSON.stringify(formData),
             });
@@ -66,7 +66,7 @@ export const GradeEntryModal: FC<GradeEntryModalProps> = ({ onGradeAdded }) => {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700">
+                <Button className="bg-white-600 hover:bg-white-700">
                     <Plus className="h-4 w-4 mr-2"/>
                     Enter Grades
                 </Button>

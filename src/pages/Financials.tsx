@@ -26,7 +26,7 @@ interface Category {
 
 // Helper Component for displaying multi-currency balances
 const BalanceDisplay = ({ title, balanceData, positiveColor, negativeColor }: { title: string, balanceData?: { [key: string]: number }, positiveColor: string, negativeColor: string }) => (
-    <Card className="bg-purple-800/30 border-purple-600 text-center">
+    <Card className="bg-red-800/30 border-red-600 text-center">
         <CardHeader className="p-4"><CardTitle className="text-lg text-gray-300">{title}</CardTitle></CardHeader>
         <CardContent className="text-xl font-bold space-y-2 p-4 pt-0">
             {balanceData && Object.keys(balanceData).length > 0 ? (
@@ -122,8 +122,8 @@ export default function Financials() {
         setCurrentStudent(student);
         try {
             const [ledgerRes, balanceRes] = await Promise.all([
-                apiFetch(`http://localhost:8082/api/financials/students/${student.studentId}/ledger`),
-                apiFetch(`http://localhost:8082/api/financials/students/${student.studentId}/balance`)
+                apiFetch(`http://194.163.141.113:8082/api/financials/students/${student.studentId}/ledger`),
+                apiFetch(`http://194.163.141.113:8082/api/financials/students/${student.studentId}/balance`)
             ]);
             if (ledgerRes.ok) setCurrentLedger(await ledgerRes.json());
             if (balanceRes.ok) setCurrentBalance(await balanceRes.json());
@@ -140,7 +140,7 @@ export default function Financials() {
         setLoading(true);
         const formData = new FormData(e.currentTarget);
         const feeTypeData = { name: formData.get('name'), defaultAmount: parseFloat(formData.get('defaultAmount') as string), description: formData.get('description'), currency: formData.get('currency') };
-        const url = selectedFeeType ? `http://localhost:8082/api/financials/fee-types/${selectedFeeType.id}` : 'http://localhost:8082/api/financials/fee-types';
+        const url = selectedFeeType ? `http://194.163.141.113:8082/api/financials/fee-types/${selectedFeeType.id}` : 'http://194.163.141.113:8082/api/financials/fee-types';
         const method = selectedFeeType ? 'PUT' : 'POST';
         try {
             const response = await apiFetch(url, { method, body: JSON.stringify(feeTypeData) });
@@ -164,7 +164,7 @@ export default function Financials() {
         if (!window.confirm('Are you sure you want to delete this fee type?')) return;
         setLoading(true);
         try {
-            const response = await apiFetch(`http://localhost:8082/api/financials/fee-types/${feeTypeId}`, { method: 'DELETE' });
+            const response = await apiFetch(`http://194.163.141.113:8082/api/financials/fee-types/${feeTypeId}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success('Fee type deleted successfully!');
                 fetchAllData();
@@ -191,7 +191,7 @@ export default function Financials() {
             academicYear: formData.get('academicYear') as string, semester: formData.get('semester') as string,
             currency: formData.get('currency') as string
         };
-        const url = transactionType === 'DEBIT' ? 'http://localhost:8082/api/financials/students/charges' : 'http://localhost:8082/api/financials/students/payments';
+        const url = transactionType === 'DEBIT' ? 'http://194.163.141.113:8082/api/financials/students/charges' : 'http://194.163.141.113:8082/api/financials/students/payments';
         try {
             const response = await apiFetch(url, { method: 'POST', body: JSON.stringify(requestData) });
             if (response.ok) {
@@ -222,7 +222,7 @@ export default function Financials() {
             academicYear: formData.get('academicYear') as string, semester: formData.get('semester') as string,
             currency: formData.get('currency') as string
         };
-        const url = `http://localhost:8082/api/financials/ledger/${selectedLedgerEntry.id}`;
+        const url = `http://194.163.141.113:8082/api/financials/ledger/${selectedLedgerEntry.id}`;
         try {
             const response = await apiFetch(url, { method: 'PUT', body: JSON.stringify(requestData) });
             if (response.ok) {
@@ -246,7 +246,7 @@ export default function Financials() {
         if (!window.confirm('Are you sure you want to permanently delete this transaction?')) return;
         setLoading(true);
         try {
-            const response = await apiFetch(`http://localhost:8082/api/financials/ledger/${ledgerId}`, { method: 'DELETE' });
+            const response = await apiFetch(`http://194.163.141.113:8082/api/financials/ledger/${ledgerId}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success('Transaction deleted successfully!');
                 if (currentStudent) { await handleViewLedger(currentStudent); }
@@ -278,7 +278,7 @@ export default function Financials() {
         try {
             const token = localStorage.getItem("jwt_token");
             if (!token) throw new Error("Authentication token not found.");
-            const response = await fetch('http://localhost:8082/api/financials/charges/bulk', {
+            const response = await fetch('http://194.163.141.113:8082/api/financials/charges/bulk', {
                 method: 'POST',
                 body: formData,
                 headers: { "Authorization": "Bearer " + token }
@@ -309,7 +309,7 @@ export default function Financials() {
             const filters = { studentId: currentStudent.studentId, academicYear: ledgerYearFilter, semester: ledgerSemesterFilter, currency: ledgerCurrencyFilter };
             const requestBody = { reportType: 'FINANCIAL_STATEMENT', format, filters };
             const token = localStorage.getItem("jwt_token");
-            const response = await fetch('http://localhost:8082/api/main-reports/export', {
+            const response = await fetch('http://194.163.141.113:8082/api/main-reports/export', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(requestBody),
@@ -362,17 +362,17 @@ export default function Financials() {
     if (!user) { return <Navigate to="/" replace />; }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+        <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
             <Header />
-            <main className="flex-1 container mx-auto px-4 py-8">
+            <main className="flex-1 px-4 py-8">
                 <Tabs defaultValue="student_financials" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-2 bg-purple-900/50 border-purple-700">
+                    <TabsList className="grid w-full grid-cols-2 bg-red-900/50 border-red-700">
                         <TabsTrigger value="student_financials">Student Financials</TabsTrigger>
                         <TabsTrigger value="fee_config">Fee Configuration</TabsTrigger>
                     </TabsList>
                     <TabsContent value="student_financials">
                         {view === 'overview' && (
-                            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+                            <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                                 <CardHeader>
                                     <div className="flex justify-between items-center"><CardTitle className="flex items-center gap-2"><UserSearch />Student Financial Overview</CardTitle>
                                         <div className="flex items-center gap-4">
@@ -384,11 +384,11 @@ export default function Financials() {
                                 <CardContent>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left">
-                                            <thead><tr className="border-b border-purple-600"><th className="p-2">Student ID</th><th className="p-2">Name</th><th className="p-2">Grade</th><th className="p-2 text-right">Balances</th><th className="p-2 text-center">Actions</th></tr></thead>
+                                            <thead><tr className="border-b border-red-600"><th className="p-2">Student ID</th><th className="p-2">Name</th><th className="p-2">Grade</th><th className="p-2 text-right">Balances</th><th className="p-2 text-center">Actions</th></tr></thead>
                                             <tbody>
                                             {loading ? (<tr><td colSpan={5} className="text-center p-4">Loading...</td></tr>) :
                                                 filteredStudents.map(student => (
-                                                    <tr key={student.id} className="border-b border-purple-800">
+                                                    <tr key={student.id} className="border-b border-red-800">
                                                         <td className="p-2">{student.studentId}</td>
                                                         <td className="p-2">{student.firstName} {student.lastName}</td>
                                                         <td className="p-2">{student.currentGrade}</td>
@@ -412,7 +412,7 @@ export default function Financials() {
                         )}
                         {view === 'ledger' && currentStudent && (
                             <div className="space-y-6">
-                                <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+                                <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                                     <CardHeader>
                                         <Button variant="outline" onClick={() => setView('overview')} className="mb-4 w-fit">&larr; Back to Overview</Button>
                                         <CardTitle className="flex items-center gap-2"><BookUser />Ledger for {currentStudent.firstName} {currentStudent.lastName}</CardTitle>
@@ -421,16 +421,16 @@ export default function Financials() {
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                                             <BalanceDisplay title="Total Charges" balanceData={ledgerTotals.charges} positiveColor="text-red-400" negativeColor="text-red-400" />
                                             <BalanceDisplay title="Total Payments" balanceData={ledgerTotals.payments} positiveColor="text-green-400" negativeColor="text-green-400" />
-                                            <BalanceDisplay title="Current Balances" balanceData={currentBalance?.balances} positiveColor="text-yellow-400" negativeColor="text-blue-400" />
+                                            <BalanceDisplay title="Current Balances" balanceData={currentBalance?.balances} positiveColor="text-yellow-400" negativeColor="text-white-400" />
                                         </div>
                                         <div className="flex gap-4 mb-4"><Button className="bg-red-600 hover:bg-red-700" onClick={() => { setTransactionType('DEBIT'); setIsTransactionDialogOpen(true); }}>Add Charge</Button><Button className="bg-green-600 hover:bg-green-700" onClick={() => { setTransactionType('CREDIT'); setIsTransactionDialogOpen(true); }}>Record Payment</Button></div>
                                         <table className="w-full text-left">
-                                            <thead><tr className="border-b border-purple-600"><th className="p-2">Date</th><th className="p-2">Description</th><th className="p-2 text-right">Charge</th><th className="p-2 text-right">Payment</th>{canManageLedgerEntries && <th className="p-2 text-center">Actions</th>}</tr></thead>
-                                            <tbody>{ledgerWithRunningBalance.map(entry => (<tr key={entry.id} className="border-b border-purple-800"><td className="p-2">{entry.transactionDate}</td><td className="p-2">{entry.description}</td><td className="p-2 text-right text-red-400">{entry.transactionType === 'DEBIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td><td className="p-2 text-right text-green-400">{entry.transactionType === 'CREDIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td>
+                                            <thead><tr className="border-b border-red-600"><th className="p-2">Date</th><th className="p-2">Description</th><th className="p-2 text-right">Charge</th><th className="p-2 text-right">Payment</th>{canManageLedgerEntries && <th className="p-2 text-center">Actions</th>}</tr></thead>
+                                            <tbody>{ledgerWithRunningBalance.map(entry => (<tr key={entry.id} className="border-b border-red-800"><td className="p-2">{entry.transactionDate}</td><td className="p-2">{entry.description}</td><td className="p-2 text-right text-red-400">{entry.transactionType === 'DEBIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td><td className="p-2 text-right text-green-400">{entry.transactionType === 'CREDIT' ? `${entry.currency} ${entry.amount.toFixed(2)}` : ''}</td>
                                                 {canManageLedgerEntries && (
                                                     <td className="p-2 text-center">
                                                         <div className="flex justify-center items-center gap-2">
-                                                            <Button size="sm" variant="outline" className="border-purple-600 text-white hover:bg-purple-700" onClick={() => { setSelectedLedgerEntry(entry); setIsEditTransactionDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                                                            <Button size="sm" variant="outline" className="border-red-600 text-white hover:bg-red-700" onClick={() => { setSelectedLedgerEntry(entry); setIsEditTransactionDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
                                                             <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white" onClick={() => handleDeleteTransaction(entry.id)}><Trash2 className="h-4 w-4" /></Button>
                                                         </div>
                                                     </td>
@@ -440,19 +440,19 @@ export default function Financials() {
                                     </CardContent>
                                 </Card>
 
-                                <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+                                <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                                     <CardHeader>
                                         <CardTitle>Export Statement</CardTitle>
                                         <p className="text-gray-300">Select filters and a format to print or download this student's financial statement.</p>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div><Label>Academic Year</Label><Select value={ledgerYearFilter} onValueChange={setLedgerYearFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800">{academicYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
-                                            <div><Label>Semester</Label><Select value={ledgerSemesterFilter} onValueChange={setLedgerSemesterFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800">{semesters.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select></div>
-                                            <div><Label>Currency</Label><Select value={ledgerCurrencyFilter} onValueChange={setLedgerCurrencyFilter}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div>
+                                            <div><Label>Academic Year</Label><Select value={ledgerYearFilter} onValueChange={setLedgerYearFilter}><SelectTrigger className="bg-red-800"><SelectValue/></SelectTrigger><SelectContent className="bg-red-800">{academicYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                                            <div><Label>Semester</Label><Select value={ledgerSemesterFilter} onValueChange={setLedgerSemesterFilter}><SelectTrigger className="bg-red-800"><SelectValue/></SelectTrigger><SelectContent className="bg-red-800">{semesters.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select></div>
+                                            <div><Label>Currency</Label><Select value={ledgerCurrencyFilter} onValueChange={setLedgerCurrencyFilter}><SelectTrigger className="bg-red-800"><SelectValue/></SelectTrigger><SelectContent className="bg-red-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div>
                                         </div>
                                         <div className="flex flex-col md:flex-row gap-4 pt-4">
-                                            <Button onClick={() => handleExportLedger('PDF')} disabled={isExporting} className="flex-1 bg-blue-600 hover:bg-blue-700"><Printer className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Print Statement (PDF)'}</Button>
+                                            <Button onClick={() => handleExportLedger('PDF')} disabled={isExporting} className="flex-1 bg-white-600 hover:bg-white-700"><Printer className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Print Statement (PDF)'}</Button>
                                             <Button onClick={() => handleExportLedger('XLSX')} disabled={isExporting} className="flex-1 bg-green-600 hover:bg-green-700"><FileSpreadsheet className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Export (Excel)'}</Button>
                                             <Button onClick={() => handleExportLedger('CSV')} disabled={isExporting} className="flex-1 bg-gray-500 hover:bg-gray-600"><FileJson className="h-4 w-4 mr-2" /> {isExporting ? 'Generating...' : 'Export (CSV)'}</Button>
                                         </div>
@@ -462,38 +462,38 @@ export default function Financials() {
                         )}
                     </TabsContent>
                     <TabsContent value="fee_config">
-                        <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+                        <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                             <CardHeader className="flex flex-row justify-between items-center">
                                 <CardTitle className="flex items-center gap-2 text-white"><DollarSign />Fee Types Configuration</CardTitle>
-                                <div className="flex gap-4"><Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setIsBulkChargeDialogOpen(true)}><Users className="h-4 w-4 mr-2" />Apply Fee to Students</Button><Button className="bg-green-600 hover:bg-green-700" onClick={() => { setSelectedFeeType(null); setIsFeeTypeDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add Fee Type</Button></div>
+                                <div className="flex gap-4"><Button className="bg-white-600 hover:bg-white-700" onClick={() => setIsBulkChargeDialogOpen(true)}><Users className="h-4 w-4 mr-2" />Apply Fee to Students</Button><Button className="bg-green-600 hover:bg-green-700" onClick={() => { setSelectedFeeType(null); setIsFeeTypeDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add Fee Type</Button></div>
                             </CardHeader>
-                            <CardContent><div className="space-y-4">{feeTypes?.map((fee) => (<div key={fee.id} className="flex justify-between items-center p-4 bg-purple-800/30 rounded-lg border border-purple-600"><div><h3 className="font-semibold text-white">{fee.name} ({fee.currency})</h3><p className="text-sm text-gray-300">{fee.description}</p></div><div className="flex items-center gap-4"><div className="font-bold text-lg text-blue-400">${fee.defaultAmount.toFixed(2)}</div><Button size="sm" variant="outline" className="border-purple-600 text-white hover:bg-purple-700" onClick={() => { setSelectedFeeType(fee); setIsFeeTypeDialogOpen(true); }}><Edit className="h-4 w-4" /></Button><Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white" onClick={() => handleDeleteFeeType(fee.id)}><Trash2 className="h-4 w-4" /></Button></div></div>))}</div></CardContent>
+                            <CardContent><div className="space-y-4">{feeTypes?.map((fee) => (<div key={fee.id} className="flex justify-between items-center p-4 bg-red-800/30 rounded-lg border border-red-600"><div><h3 className="font-semibold text-white">{fee.name} ({fee.currency})</h3><p className="text-sm text-gray-300">{fee.description}</p></div><div className="flex items-center gap-4"><div className="font-bold text-lg text-white-400">${fee.defaultAmount.toFixed(2)}</div><Button size="sm" variant="outline" className="border-red-600 text-white hover:bg-red-700" onClick={() => { setSelectedFeeType(fee); setIsFeeTypeDialogOpen(true); }}><Edit className="h-4 w-4" /></Button><Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white" onClick={() => handleDeleteFeeType(fee.id)}><Trash2 className="h-4 w-4" /></Button></div></div>))}</div></CardContent>
                         </Card>
                     </TabsContent>
                 </Tabs>
             </main>
 
             <Dialog open={isBulkChargeDialogOpen} onOpenChange={setIsBulkChargeDialogOpen}>
-                <DialogContent className="bg-purple-900 border-purple-700 text-white max-w-lg">
+                <DialogContent className="bg-red-900 border-red-700 text-white max-w-lg">
                     <DialogHeader><DialogTitle>Apply Fee to Multiple Students</DialogTitle></DialogHeader>
                     <form onSubmit={handleBulkChargeSubmit} className="space-y-4">
                         <div>
                             <Label>Select Fee Type to Apply</Label>
                             <Select name="feeTypeId" required value={bulkFeeTypeId} onValueChange={setBulkFeeTypeId}>
-                                <SelectTrigger className="bg-purple-800"><SelectValue placeholder="Choose a fee..." /></SelectTrigger>
-                                <DialogPortal><SelectContent className="bg-purple-800">{feeTypes?.map(ft => <SelectItem key={ft.id} value={ft.id.toString()}>{ft.name}</SelectItem>)}</SelectContent></DialogPortal>
+                                <SelectTrigger className="bg-red-800"><SelectValue placeholder="Choose a fee..." /></SelectTrigger>
+                                <DialogPortal><SelectContent className="bg-red-800">{feeTypes?.map(ft => <SelectItem key={ft.id} value={ft.id.toString()}>{ft.name}</SelectItem>)}</SelectContent></DialogPortal>
                             </Select>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div><Label>For Academic Year</Label><Select name="academicYear" required value={bulkAcademicYear} onValueChange={setBulkAcademicYear}><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{academicYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
-                            <div><Label>For Term / Semester</Label><Select name="semester" required value={bulkSemester} onValueChange={setBulkSemester}><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{semesters.map(term => <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
+                            <div><Label>For Academic Year</Label><Select name="academicYear" required value={bulkAcademicYear} onValueChange={setBulkAcademicYear}><SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-red-800">{academicYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
+                            <div><Label>For Term / Semester</Label><Select name="semester" required value={bulkSemester} onValueChange={setBulkSemester}><SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-red-800">{semesters.map(term => <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
                         </div>
 
                         <div>
                             <Label>Target Student Category</Label>
                             <Select value={bulkStudentCategoryId} onValueChange={setBulkStudentCategoryId}>
-                                <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
-                                <SelectContent className="bg-purple-800">
+                                <SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger>
+                                <SelectContent className="bg-red-800">
                                     <SelectItem value="0">All Students</SelectItem>
                                     {categories.map(cat => (
                                         <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
@@ -504,8 +504,8 @@ export default function Financials() {
                         </div>
 
                         <p className="text-sm text-center text-gray-400 font-bold">--- OPTIONAL: Choose Specific Students ---</p>
-                        <div><Label htmlFor="file">Method 1: Upload CSV or Excel File of Student IDs</Label><Input id="file" name="file" type="file" accept=".csv, .xlsx, .xls" className="bg-purple-800 file:text-white" onChange={(e) => setBulkFile(e.target.files ? e.target.files[0] : null)} /></div>
-                        <div><Label htmlFor="studentIds_manual">Method 2: Manually Enter Student IDs</Label><Textarea id="studentIds_manual" name="studentIds_manual" rows={3} placeholder="P2522029, S1234567" className="bg-purple-800" value={bulkManualIds} onChange={(e) => setBulkManualIds(e.target.value)} /></div>
+                        <div><Label htmlFor="file">Method 1: Upload CSV or Excel File of Student IDs</Label><Input id="file" name="file" type="file" accept=".csv, .xlsx, .xls" className="bg-red-800 file:text-white" onChange={(e) => setBulkFile(e.target.files ? e.target.files[0] : null)} /></div>
+                        <div><Label htmlFor="studentIds_manual">Method 2: Manually Enter Student IDs</Label><Textarea id="studentIds_manual" name="studentIds_manual" rows={3} placeholder="P2522029, S1234567" className="bg-red-800" value={bulkManualIds} onChange={(e) => setBulkManualIds(e.target.value)} /></div>
                         <div className="flex justify-end gap-2">
                             <Button type="button" variant="outline" onClick={() => setIsBulkChargeDialogOpen(false)}>Cancel</Button>
                             <Button type="submit" disabled={loading}>{loading ? 'Applying...' : 'Apply Charge'}</Button>
@@ -514,45 +514,45 @@ export default function Financials() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isFeeTypeDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setSelectedFeeType(null); setIsFeeTypeDialogOpen(isOpen); }}><DialogContent className="bg-purple-900 border-purple-700 text-white"><DialogHeader><DialogTitle>{selectedFeeType ? 'Edit Fee Type' : 'Add New Fee Type'}</DialogTitle></DialogHeader><form onSubmit={handleFeeTypeSubmit} className="space-y-4"><div><Label htmlFor="name">Fee Name</Label><Input id="name" name="name" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.name} required /></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="defaultAmount">Default Amount</Label><Input id="defaultAmount" name="defaultAmount" type="number" step="0.01" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.defaultAmount} required /></div><div><Label htmlFor="currency">Currency</Label><Select name="currency" defaultValue={selectedFeeType?.currency || 'USD'}><SelectTrigger className="bg-purple-800 border-purple-600"><SelectValue /></SelectTrigger><SelectContent className="bg-purple-800 border-purple-600"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div></div><div><Label htmlFor="description">Description</Label><Input id="description" name="description" className="bg-purple-800 border-purple-600" defaultValue={selectedFeeType?.description} /></div><div className="flex justify-end gap-2"><Button type="submit" disabled={loading}>{loading ? 'Saving...' : (selectedFeeType ? 'Update Fee' : 'Add Fee')}</Button></div></form></DialogContent></Dialog>
+            <Dialog open={isFeeTypeDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setSelectedFeeType(null); setIsFeeTypeDialogOpen(isOpen); }}><DialogContent className="bg-red-900 border-red-700 text-white"><DialogHeader><DialogTitle>{selectedFeeType ? 'Edit Fee Type' : 'Add New Fee Type'}</DialogTitle></DialogHeader><form onSubmit={handleFeeTypeSubmit} className="space-y-4"><div><Label htmlFor="name">Fee Name</Label><Input id="name" name="name" className="bg-red-800 border-red-600" defaultValue={selectedFeeType?.name} required /></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="defaultAmount">Default Amount</Label><Input id="defaultAmount" name="defaultAmount" type="number" step="0.01" className="bg-red-800 border-red-600" defaultValue={selectedFeeType?.defaultAmount} required /></div><div><Label htmlFor="currency">Currency</Label><Select name="currency" defaultValue={selectedFeeType?.currency || 'USD'}><SelectTrigger className="bg-red-800 border-red-600"><SelectValue /></SelectTrigger><SelectContent className="bg-red-800 border-red-600"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div></div><div><Label htmlFor="description">Description</Label><Input id="description" name="description" className="bg-red-800 border-red-600" defaultValue={selectedFeeType?.description} /></div><div className="flex justify-end gap-2"><Button type="submit" disabled={loading}>{loading ? 'Saving...' : (selectedFeeType ? 'Update Fee' : 'Add Fee')}</Button></div></form></DialogContent></Dialog>
             <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
-                <DialogContent className="bg-purple-900 border-purple-700 text-white">
+                <DialogContent className="bg-red-900 border-red-700 text-white">
                     <DialogHeader><DialogTitle>{transactionType === 'DEBIT' ? 'Add a Charge' : 'Record a Payment'}</DialogTitle></DialogHeader>
                     <form onSubmit={handleTransactionSubmit} className="space-y-4 py-4">
                         {transactionType === 'DEBIT' && (
                             <div>
                                 <Label htmlFor="feeTypeId">Fee Type (Optional)</Label>
-                                <Select name="feeTypeId"><SelectTrigger className="bg-purple-800"><SelectValue placeholder="Select a fee type..."/></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{feeTypes?.map(ft =><SelectItem key={ft.id} value={ft.id.toString()}>{ft.name}</SelectItem>)}</SelectContent></DialogPortal></Select>
+                                <Select name="feeTypeId"><SelectTrigger className="bg-red-800"><SelectValue placeholder="Select a fee type..."/></SelectTrigger><DialogPortal><SelectContent className="bg-red-800">{feeTypes?.map(ft =><SelectItem key={ft.id} value={ft.id.toString()}>{ft.name}</SelectItem>)}</SelectContent></DialogPortal></Select>
                             </div>
                         )}
                         <div className="grid grid-cols-2 gap-4">
-                            <div><Label htmlFor="amount">Amount *</Label><Input id="amount" name="amount" type="number" step="0.01" className="bg-purple-800" required /></div>
+                            <div><Label htmlFor="amount">Amount *</Label><Input id="amount" name="amount" type="number" step="0.01" className="bg-red-800" required /></div>
                             <div>
                                 <Label htmlFor="currency">Currency *</Label>
                                 <Select name="currency" defaultValue="USD" required>
-                                    <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
-                                    <DialogPortal><SelectContent className="bg-purple-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></DialogPortal>
+                                    <SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger>
+                                    <DialogPortal><SelectContent className="bg-red-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></DialogPortal>
                                 </Select>
                             </div>
                         </div>
-                        <div><Label htmlFor="description">Description *</Label><Input id="description" name="description" className="bg-purple-800" required /></div>
+                        <div><Label htmlFor="description">Description *</Label><Input id="description" name="description" className="bg-red-800" required /></div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label htmlFor="academicYear">Academic Year</Label>
-                                <Select name="academicYear" defaultValue={currentAcademicYear} required><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{academicYears.map(year => (<SelectItem key={year} value={year}>{year}</SelectItem>))}</SelectContent></DialogPortal></Select>
+                                <Select name="academicYear" defaultValue={currentAcademicYear} required><SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-red-800">{academicYears.map(year => (<SelectItem key={year} value={year}>{year}</SelectItem>))}</SelectContent></DialogPortal></Select>
                             </div>
                             <div>
                                 <Label htmlFor="semester">Term / Semester</Label>
-                                <Select name="semester" defaultValue={currentSemester} required><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{semesters.map(term => (<SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>))}</SelectContent></DialogPortal></Select>
+                                <Select name="semester" defaultValue={currentSemester} required><SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-red-800">{semesters.map(term => (<SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>))}</SelectContent></DialogPortal></Select>
                             </div>
                         </div>
-                        <div><Label htmlFor="transactionDate">Transaction Date *</Label><Input id="transactionDate" name="transactionDate" type="date" className="bg-purple-800" defaultValue={new Date().toISOString().split('T')[0]} required /></div>
+                        <div><Label htmlFor="transactionDate">Transaction Date *</Label><Input id="transactionDate" name="transactionDate" type="date" className="bg-red-800" defaultValue={new Date().toISOString().split('T')[0]} required /></div>
                         <div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={() => setIsTransactionDialogOpen(false)}>Cancel</Button><Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Submit Transaction'}</Button></div>
                     </form>
                 </DialogContent>
             </Dialog>
             <Dialog open={isEditTransactionDialogOpen} onOpenChange={setIsEditTransactionDialogOpen}>
-                <DialogContent className="bg-purple-900 border-purple-700 text-white">
+                <DialogContent className="bg-red-900 border-red-700 text-white">
                     <DialogHeader><DialogTitle>Edit Transaction</DialogTitle></DialogHeader>
                     {selectedLedgerEntry && (
                         <form onSubmit={handleEditTransactionSubmit} className="space-y-4 py-4">
@@ -560,33 +560,33 @@ export default function Financials() {
                                 <div>
                                     <Label htmlFor="feeTypeId">Fee Type (Optional)</Label>
                                     <Select name="feeTypeId" defaultValue={selectedLedgerEntry.feeType?.id?.toString()}>
-                                        <SelectTrigger className="bg-purple-800"><SelectValue placeholder="Select a fee type..." /></SelectTrigger>
-                                        <DialogPortal><SelectContent className="bg-purple-800">{feeTypes?.map(ft =><SelectItem key={ft.id} value={ft.id.toString()}>{ft.name}</SelectItem>)}</SelectContent></DialogPortal>
+                                        <SelectTrigger className="bg-red-800"><SelectValue placeholder="Select a fee type..." /></SelectTrigger>
+                                        <DialogPortal><SelectContent className="bg-red-800">{feeTypes?.map(ft =><SelectItem key={ft.id} value={ft.id.toString()}>{ft.name}</SelectItem>)}</SelectContent></DialogPortal>
                                     </Select>
                                 </div>
                             )}
                             <div className="grid grid-cols-2 gap-4">
-                                <div><Label htmlFor="amount">Amount *</Label><Input id="amount" name="amount" type="number" step="0.01" className="bg-purple-800" required defaultValue={selectedLedgerEntry.amount} /></div>
+                                <div><Label htmlFor="amount">Amount *</Label><Input id="amount" name="amount" type="number" step="0.01" className="bg-red-800" required defaultValue={selectedLedgerEntry.amount} /></div>
                                 <div>
                                     <Label htmlFor="currency">Currency *</Label>
                                     <Select name="currency" defaultValue={selectedLedgerEntry.currency} required>
-                                        <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger>
-                                        <DialogPortal><SelectContent className="bg-purple-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></DialogPortal>
+                                        <SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger>
+                                        <DialogPortal><SelectContent className="bg-red-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></DialogPortal>
                                     </Select>
                                 </div>
                             </div>
-                            <div><Label htmlFor="description">Description *</Label><Input id="description" name="description" className="bg-purple-800" required defaultValue={selectedLedgerEntry.description} /></div>
+                            <div><Label htmlFor="description">Description *</Label><Input id="description" name="description" className="bg-red-800" required defaultValue={selectedLedgerEntry.description} /></div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <Label htmlFor="academicYear">Academic Year</Label>
-                                    <Select name="academicYear" defaultValue={selectedLedgerEntry.academicYear} required><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{academicYears.map(year => (<SelectItem key={year} value={year}>{year}</SelectItem>))}</SelectContent></DialogPortal></Select>
+                                    <Select name="academicYear" defaultValue={selectedLedgerEntry.academicYear} required><SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-red-800">{academicYears.map(year => (<SelectItem key={year} value={year}>{year}</SelectItem>))}</SelectContent></DialogPortal></Select>
                                 </div>
                                 <div>
                                     <Label htmlFor="semester">Term / Semester</Label>
-                                    <Select name="semester" defaultValue={selectedLedgerEntry.semester} required><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{semesters.map(term => (<SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>))}</SelectContent></DialogPortal></Select>
+                                    <Select name="semester" defaultValue={selectedLedgerEntry.semester} required><SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-red-800">{semesters.map(term => (<SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>))}</SelectContent></DialogPortal></Select>
                                 </div>
                             </div>
-                            <div><Label htmlFor="transactionDate">Transaction Date *</Label><Input id="transactionDate" name="transactionDate" type="date" className="bg-purple-800" defaultValue={selectedLedgerEntry.transactionDate} required /></div>
+                            <div><Label htmlFor="transactionDate">Transaction Date *</Label><Input id="transactionDate" name="transactionDate" type="date" className="bg-red-800" defaultValue={selectedLedgerEntry.transactionDate} required /></div>
                             <div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={() => setIsEditTransactionDialogOpen(false)}>Cancel</Button><Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Update Transaction'}</Button></div>
                         </form>
                     )}

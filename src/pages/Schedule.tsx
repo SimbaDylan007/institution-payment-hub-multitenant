@@ -57,7 +57,7 @@ export default function Schedule() {
 
     try {
       // 2. Use apiFetch
-      const response = await apiFetch(`http://localhost:8082/api/schedule/events?year=${year}&month=${month}`);
+      const response = await apiFetch(`http://194.163.141.113:8082/api/schedule/events?year=${year}&month=${month}`);
       if (response.ok) {
         const data = await response.json();
         const formattedEvents = data.map((event: any) => ({
@@ -110,7 +110,7 @@ export default function Schedule() {
     setLoading(true);
     const apiEvent = { id: selectedEvent ? parseInt(selectedEvent.id!) : null, title: formData.title, startDate: formData.start?.split('T')[0], endDate: formData.end?.split('T')[0] || formData.start?.split('T')[0], startTime: formData.allDay ? null : formData.start?.split('T')[1]?.substring(0, 8), endTime: formData.allDay ? null : formData.end?.split('T')[1]?.substring(0, 8), eventType: formData.extendedProps?.eventType, grade: formData.extendedProps?.grade, teacherName: formData.extendedProps?.teacherName, description: formData.extendedProps?.description, room: formData.extendedProps?.room, section: formData.extendedProps?.section, subjectCode: formData.extendedProps?.subjectCode, };
     try {
-      const response = await apiFetch('http://localhost:8082/api/schedule/events', { method: 'POST', body: JSON.stringify(apiEvent) });
+      const response = await apiFetch('http://194.163.141.113:8082/api/schedule/events', { method: 'POST', body: JSON.stringify(apiEvent) });
       if (response.ok) {
         toast.success("Event saved successfully!");
         setIsFormOpen(false);
@@ -125,7 +125,7 @@ export default function Schedule() {
     if (!window.confirm(`Are you sure you want to delete the event '${selectedEvent.title}'?`)) return;
     setLoading(true);
     try {
-      const response = await apiFetch(`http://localhost:8082/api/schedule/events/${selectedEvent.id}`, { method: 'DELETE' });
+      const response = await apiFetch(`http://194.163.141.113:8082/api/schedule/events/${selectedEvent.id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success("Event deleted successfully!");
         setIsFormOpen(false);
@@ -142,7 +142,7 @@ export default function Schedule() {
     formData.append("file", importFile);
     formData.append("academicYear", "2024-2025");
     try {
-      const response = await apiFetch('http://localhost:8082/api/schedule/timetables/bulk-upload', { method: 'POST', body: formData });
+      const response = await apiFetch('http://194.163.141.113:8082/api/schedule/timetables/bulk-upload', { method: 'POST', body: formData });
       if (response.ok) {
         toast.success("Timetable imported successfully!");
         setIsImportOpen(false); setImportFile(null); fetchEvents();
@@ -165,16 +165,16 @@ export default function Schedule() {
   if (!user) { return <Navigate to="/" replace />; }
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
         <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
-          <div className="mb-6 flex justify-between items-center"><h1 className="text-2xl font-bold">School Calendar & Schedule</h1><Button asChild className="bg-purple-600 hover:bg-purple-700"><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4 mr-2"/>Dashboard</Link></Button></div>
-          <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+        <main className="flex-1 px-4 py-8">
+          <div className="mb-6 flex justify-between items-center"><h1 className="text-2xl font-bold">School Calendar & Schedule</h1><Button asChild className="bg-red-600 hover:bg-red-700"><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4 mr-2"/>Dashboard</Link></Button></div>
+          <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center gap-2"><CalendarIcon />Calendar</CardTitle>
                 <div className="flex gap-2">
-                  <Button onClick={() => setIsImportOpen(true)} className="bg-blue-600 hover:bg-blue-700"><UploadCloud size={16} className="mr-2"/> Import Timetable</Button>
+                  <Button onClick={() => setIsImportOpen(true)} className="bg-white-600 hover:bg-white-700"><UploadCloud size={16} className="mr-2"/> Import Timetable</Button>
                   <Button onClick={() => { setSelectedEvent(null); setFormData({ start: new Date().toISOString().split('T')[0], allDay: true, extendedProps: { eventType: 'EVENT' } }); setIsFormOpen(true); }} className="bg-green-600 hover:bg-green-700"><Plus size={16} className="mr-2"/> Add Event</Button>
                 </div>
               </div>
@@ -191,7 +191,7 @@ export default function Schedule() {
                   selectable={true}
                   eventClick={handleEventClick}
                   select={handleDateSelect}
-                  dayHeaderClassNames="text-white bg-purple-900/50"
+                  dayHeaderClassNames="text-white bg-red-900/50"
                   viewClassNames="text-white"
               />
             </CardContent>

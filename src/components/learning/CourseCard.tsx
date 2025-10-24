@@ -69,8 +69,8 @@ export default function CourseCard({
 
   const levelColors = {
     Beginner: 'bg-green-500/20 text-green-400 border-green-500/30',
-    Intermediate: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    Advanced: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    Intermediate: 'bg-white-500/20 text-white-400 border-white-500/30',
+    Advanced: 'bg-red-500/20 text-red-400 border-red-500/30',
   };
 
   if (variant === 'compact') {
@@ -139,7 +139,7 @@ export default function CourseCard({
       <Card className="course-card h-full overflow-hidden">
         <div className="relative">
           {/* Thumbnail */}
-          <div className="aspect-video bg-gradient-to-br from-primary/20 via-accent/20 to-purple-600/20 relative overflow-hidden">
+          <div className="aspect-video bg-gradient-to-br from-primary/20 via-accent/20 to-red-600/20 relative overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
               <BookOpen className="h-12 w-12 text-primary/80" />
             </div>

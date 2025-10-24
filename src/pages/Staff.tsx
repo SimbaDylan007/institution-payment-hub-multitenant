@@ -60,7 +60,7 @@ export default function Staff() {
             params.append('institutionId', selectedInstitution.id.toString());
         }
 
-        const url = `http://localhost:8082/api/staff?${params.toString()}`;
+        const url = `http://194.163.141.113:8082/api/staff?${params.toString()}`;
 
         apiFetch(url)
             .then(res => res.json())
@@ -91,7 +91,7 @@ export default function Staff() {
   const handleDeleteStaff = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this staff member?')) {
       try {
-        const response = await apiFetch(`http://localhost:8082/api/staff/${id}`, { method: 'DELETE' });
+        const response = await apiFetch(`http://194.163.141.113:8082/api/staff/${id}`, { method: 'DELETE' });
         if (response.ok) {
           toast.success('Staff member deleted successfully');
           fetchStaff(currentPage, searchTerm);
@@ -118,7 +118,7 @@ export default function Staff() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const response = await apiFetch('http://localhost:8082/api/staff/bulk-upload', {
+      const response = await apiFetch('http://194.163.141.113:8082/api/staff/bulk-upload', {
         method: 'POST',
         body: formData,
         // No 'Content-Type' header needed, the browser will set it correctly for FormData
@@ -158,27 +158,27 @@ export default function Staff() {
   }
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
         <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
+        <main className="flex-1 px-4 py-8">
           <div className="mb-6 flex justify-between items-center">
             <div><h1 className="text-2xl font-bold">Staff Management</h1><p className="text-gray-300">Manage staff members and their information</p></div>
             <div className="flex gap-2">
-              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}><DialogTrigger asChild><Button className="bg-blue-600 hover:bg-blue-700"><UploadCloud className="h-4 w-4 mr-2"/>Import Staff</Button></DialogTrigger><DialogContent className="bg-gray-900 text-white border-gray-700"><DialogHeader><DialogTitle>Bulk Import Staff</DialogTitle></DialogHeader><div className="space-y-4 py-4"><p className="text-sm text-gray-400">Upload a CSV or Excel file with staff data.</p><Button variant="outline" onClick={handleDownloadTemplate} className="w-full gap-2"><Download size={16}/>Download CSV Template</Button><div><Label htmlFor="staffFile">Upload File</Label><Input id="staffFile" type="file" onChange={handleFileChange} accept=".csv, .xlsx" /></div><div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Cancel</Button><Button onClick={handleImportSubmit} disabled={loading || !importFile}>{loading ? "Importing..." : "Start Import"}</Button></div></div></DialogContent></Dialog>
+              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}><DialogTrigger asChild><Button className="bg-white-600 hover:bg-white-700"><UploadCloud className="h-4 w-4 mr-2"/>Import Staff</Button></DialogTrigger><DialogContent className="bg-gray-900 text-white border-gray-700"><DialogHeader><DialogTitle>Bulk Import Staff</DialogTitle></DialogHeader><div className="space-y-4 py-4"><p className="text-sm text-gray-400">Upload a CSV or Excel file with staff data.</p><Button variant="outline" onClick={handleDownloadTemplate} className="w-full gap-2"><Download size={16}/>Download CSV Template</Button><div><Label htmlFor="staffFile">Upload File</Label><Input id="staffFile" type="file" onChange={handleFileChange} accept=".csv, .xlsx" /></div><div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Cancel</Button><Button onClick={handleImportSubmit} disabled={loading || !importFile}>{loading ? "Importing..." : "Start Import"}</Button></div></div></DialogContent></Dialog>
               <Dialog open={isFormDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setSelectedStaff(null); setIsFormDialogOpen(isOpen); }}><DialogTrigger asChild><Button className="bg-green-600 hover:bg-green-700" onClick={() => setSelectedStaff(null)}><Plus className="h-4 w-4 mr-2"/>Add Staff</Button></DialogTrigger><DialogContent className="max-w-2xl bg-gray-900 text-white border-gray-700"><DialogHeader><DialogTitle>{selectedStaff ? 'Edit Staff' : 'Add New Staff'}</DialogTitle></DialogHeader><StaffForm staff={selectedStaff} onSuccess={handleStaffSaved} onCancel={() => setIsFormDialogOpen(false)} /></DialogContent></Dialog>
-              <Button asChild className="bg-purple-600 hover:bg-purple-700"><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4"/>Dashboard</Link></Button>
+              <Button asChild className="bg-red-600 hover:bg-red-700"><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4"/>Dashboard</Link></Button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><Users className="h-5 w-5" />Total Staff</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-blue-400">{staffPage?.totalElements || 0}</div></CardContent></Card>
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><UserCheck className="h-5 w-5" />Active Staff</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-green-400">{/* Requires separate API endpoint for accuracy */}</div></CardContent></Card>
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><UserX className="h-5 w-5" />Inactive Staff</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-400">{/* Requires separate API endpoint for accuracy */}</div></CardContent></Card>
+            <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><Users className="h-5 w-5" />Total Staff</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-white-400">{staffPage?.totalElements || 0}</div></CardContent></Card>
+            <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><UserCheck className="h-5 w-5" />Active Staff</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-green-400">{/* Requires separate API endpoint for accuracy */}</div></CardContent></Card>
+            <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><UserX className="h-5 w-5" />Inactive Staff</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-400">{/* Requires separate API endpoint for accuracy */}</div></CardContent></Card>
           </div>
 
-          <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700 mb-6"><CardContent className="p-6"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Search staff by name, email, department, or position..." className="pl-10 bg-gray-800 border-gray-600 text-white" value={searchTerm} onChange={(e) => {setSearchTerm(e.target.value); setCurrentPage(0);}} /></div></CardContent></Card>
+          <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700 mb-6"><CardContent className="p-6"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Search staff by name, email, department, or position..." className="pl-10 bg-gray-800 border-gray-600 text-white" value={searchTerm} onChange={(e) => {setSearchTerm(e.target.value); setCurrentPage(0);}} /></div></CardContent></Card>
 
-          <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+          <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
             <CardHeader><CardTitle className="text-white">Staff Members</CardTitle></CardHeader>
             <CardContent>
               <div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-gray-700"><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Department</TableHead><TableHead>Position</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader><TableBody>

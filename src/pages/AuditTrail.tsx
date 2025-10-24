@@ -22,7 +22,7 @@ interface AuditLog { id: number; timestamp: string; username: string; action: st
 interface Page<T> { content: T[]; totalPages: number; number: number; totalElements: number; }
 
 export default function AuditTrail() {
-    const { user } = useAuth();
+    const { user, isSuperAdmin, selectedInstitution } = useAuth();
     const [logPage, setLogPage] = useState<Page<AuditLog> | null>(null);
     const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({ username: '', action: '', startDate: undefined as Date | undefined, endDate: undefined as Date | undefined });
@@ -32,17 +32,22 @@ export default function AuditTrail() {
     const fetchLogs = useCallback((page = 0, currentFilters = filters) => {
         setLoading(true);
         const params = new URLSearchParams({ page: page.toString(), size: '15', sort: 'timestamp,desc' });
+
+        if (isSuperAdmin && selectedInstitution && selectedInstitution !== 'all') {
+            params.append('institutionId', selectedInstitution.id.toString());
+        }
+
         if (currentFilters.username) params.append('username', currentFilters.username);
         if (currentFilters.action) params.append('action', currentFilters.action);
         if (currentFilters.startDate) params.append('startDate', format(currentFilters.startDate, 'yyyy-MM-dd'));
         if (currentFilters.endDate) params.append('endDate', format(currentFilters.endDate, 'yyyy-MM-dd'));
 
-        apiFetch(`http://localhost:8082/api/audit-logs?${params.toString()}`)
+        apiFetch(`http://194.163.141.113:8082/api/audit-logs?${params.toString()}`)
             .then(res => res.json())
             .then(data => setLogPage(data))
             .catch(() => console.error("Failed to fetch audit logs"))
             .finally(() => setLoading(false));
-    }, [filters]);
+    }, [filters, selectedInstitution, isSuperAdmin]);
 
     useEffect(() => {
         if (user?.role === 'ADMIN') {
@@ -51,7 +56,7 @@ export default function AuditTrail() {
         } else {
             setLoading(false);
         }
-    }, [user, currentPage, filters, fetchLogs]);
+    }, [user, isSuperAdmin, currentPage, filters, fetchLogs, selectedInstitution]);
 
     const getLogDetails = (log: AuditLog | null) => {
         if (!log || !log.details) return { jsonDetails: {}, exception: null };
@@ -75,8 +80,11 @@ export default function AuditTrail() {
         details: log.details
     })) || [];
 
+
+    const adminRoles = ['ADMIN', 'SUPER_ADMIN'];
     if (!user) return <Navigate to="/" replace />;
-    if (user.role !== 'ADMIN') return (
+    if (!adminRoles.includes(user.role)) return (
+
         <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center">
             <h1 className="text-3xl font-bold text-red-500">Access Denied</h1><p className="mt-4">You do not have permission to view this page.</p><Button asChild className="mt-6"><Link to="/dashboard">Go to Dashboard</Link></Button>
         </div>

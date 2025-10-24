@@ -22,7 +22,7 @@ export default function ScheduleQuickStats() {
     setLoading(true);
     try {
 // Use the new, correct endpoint
-      const response = await apiFetch('http://localhost:8082/api/schedule/stats');
+      const response = await apiFetch('http://194.163.141.113:8082/api/schedule/stats');
 
       if (response.ok) {
         const data = await response.json();
@@ -38,21 +38,21 @@ export default function ScheduleQuickStats() {
   };
   return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+        <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
           <CardContent className="p-4 text-center">
-            <BookCopy className="mx-auto h-6 w-6 mb-2 text-blue-400" />
-            <div className="text-2xl font-bold text-blue-400">{loading ? '...' : stats.totalClasses}</div>
+            <BookCopy className="mx-auto h-6 w-6 mb-2 text-white-400" />
+            <div className="text-2xl font-bold text-white-400">{loading ? '...' : stats.totalClasses}</div>
             <p className="text-sm text-gray-300">Total Classes Scheduled</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+        <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
           <CardContent className="p-4 text-center">
             <CalendarCheck2 className="mx-auto h-6 w-6 mb-2 text-red-400" />
             <div className="text-2xl font-bold text-red-400">{loading ? '...' : stats.totalExams}</div>
             <p className="text-sm text-gray-300">Total Exams Scheduled</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+        <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
           <CardContent className="p-4 text-center">
             <Presentation className="mx-auto h-6 w-6 mb-2 text-green-400" />
             <div className="text-2xl font-bold text-green-400">{loading ? '...' : stats.totalEvents}</div>

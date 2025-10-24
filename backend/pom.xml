@@ -12,7 +12,7 @@
     <artifactId>payment-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>payment-service</name>
-    <description>Payment Service for Pachedu Junior School</description>
+    <description>Payment Service for MGOS</description>
     <properties>
         <java.version>11</java.version>
     </properties>

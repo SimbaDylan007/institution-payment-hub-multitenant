@@ -170,14 +170,14 @@ export default function Students() {
     if (!user) { return <Navigate to="/" replace />; }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+        <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
             <Header />
-            <main className="flex-1 container mx-auto px-4 py-8">
+            <main className="flex-1 px-4 py-8">
                 <div className="mb-6 flex justify-between items-center">
                     <div><h1 className="text-2xl font-bold">Student Management</h1><p className="text-gray-300">Manage student information and records</p></div>
                     <div className="flex gap-2">
                         <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                            <DialogTrigger asChild><Button className="bg-blue-600 text-white hover:bg-blue-700"><UploadCloud className="h-4 w-4 mr-2" />Import Students</Button></DialogTrigger>
+                            <DialogTrigger asChild><Button className="bg-white-600 text-white hover:bg-white-700"><UploadCloud className="h-4 w-4 mr-2" />Import Students</Button></DialogTrigger>
                             <DialogContent className="bg-gray-900 text-white border-gray-700">
                                 <DialogHeader><DialogTitle>Bulk Import Students</DialogTitle></DialogHeader>
                                 <div className="space-y-4 py-4">
@@ -195,19 +195,19 @@ export default function Students() {
                             <DialogTrigger asChild><Button className="bg-green-600 text-white hover:bg-green-700" onClick={() => setSelectedStudent(null)}><Plus className="h-4 w-4 mr-2" />Add Student</Button></DialogTrigger>
                             <DialogContent className="max-w-2xl bg-gray-900 text-white border-gray-700"><DialogHeader><DialogTitle>{selectedStudent ? 'Edit Student' : 'Add New Student'}</DialogTitle></DialogHeader><StudentForm student={selectedStudent} onSave={handleStudentSaved} onCancel={() => { setIsFormDialogOpen(false); setSelectedStudent(null); }} /></DialogContent>
                         </Dialog>
-                        <Button asChild className="bg-purple-600 text-white hover:bg-purple-700"><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4" />Dashboard</Link></Button>
+                        <Button asChild className="bg-red-600 text-white hover:bg-red-700"><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4" />Dashboard</Link></Button>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><Users className="h-5 w-5" />Total Students</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-blue-400">{studentPage?.totalElements || 0}</div></CardContent></Card>
-                    <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><UserCheck className="h-5 w-5" />Active Students</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-green-400">{/* ... */}</div></CardContent></Card>
-                    <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><UserX className="h-5 w-5" />Inactive Students</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-400">{/* ... */}</div></CardContent></Card>
+                    <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><Users className="h-5 w-5" />Total Students</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-white-400">{studentPage?.totalElements || 0}</div></CardContent></Card>
+                    <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><UserCheck className="h-5 w-5" />Active Students</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-green-400">{/* ... */}</div></CardContent></Card>
+                    <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-white"><UserX className="h-5 w-5" />Inactive Students</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-400">{/* ... */}</div></CardContent></Card>
                 </div>
 
-                <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700 mb-6"><CardContent className="p-6"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Search by name, ID, or email..." className="pl-10 bg-gray-800 border-gray-600 text-white" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0); }} /></div></CardContent></Card>
+                <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700 mb-6"><CardContent className="p-6"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Search by name, ID, or email..." className="pl-10 bg-gray-800 border-gray-600 text-white" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0); }} /></div></CardContent></Card>
 
-                <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+                <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                     <CardHeader><CardTitle className="text-white">Students List</CardTitle></CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
@@ -243,7 +243,7 @@ export default function Students() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-2">
-                                                        <Button size="sm" variant="outline" onClick={() => handleEditStudent(student)} className="border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white"><Edit className="h-4 w-4" /></Button>
+                                                        <Button size="sm" variant="outline" onClick={() => handleEditStudent(student)} className="border-white-600 text-white-400 hover:bg-white-600 hover:text-white"><Edit className="h-4 w-4" /></Button>
                                                         <Button size="sm" variant="outline" onClick={() => handleDeleteStudent(student.id)} className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
                                                 </TableCell>
@@ -265,7 +265,7 @@ export default function Students() {
                     </CardContent>
                 </Card>
             </main>
-            <footer className="bg-gradient-to-r from-purple-900 via-blue-900 to-black border-t border-purple-700 py-4"><div className="container mx-auto px-4 text-center text-sm text-gray-300">© {new Date().getFullYear()} School Management System</div></footer>
+            <footer className="bg-gradient-to-r from-red-900 via-white-900 to-black border-t border-red-700 py-4"><div className="container mx-auto px-4 text-center text-sm text-gray-300">© {new Date().getFullYear()} School Management System</div></footer>
         </div>
     );
 }

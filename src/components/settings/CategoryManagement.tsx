@@ -24,7 +24,7 @@ export default function CategoryManagement() {
     const fetchCategories = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await apiFetch('http://localhost:8082/api/student-categories');
+            const response = await apiFetch('http://194.163.141.113:8082/api/student-categories');
             if (response.ok) {
                 setCategories(await response.json());
             } else {
@@ -49,7 +49,7 @@ export default function CategoryManagement() {
         }
         setLoading(true);
         try {
-            const response = await apiFetch('http://localhost:8082/api/student-categories', {
+            const response = await apiFetch('http://194.163.141.113:8082/api/student-categories', {
                 method: 'POST',
                 body: JSON.stringify({ name: newCategoryName.trim() }),
             });
@@ -72,7 +72,7 @@ export default function CategoryManagement() {
         if (!window.confirm("Are you sure you want to delete this category? This action cannot be undone.")) return;
         setLoading(true);
         try {
-            const response = await apiFetch(`http://localhost:8082/api/student-categories/${id}`, { method: 'DELETE' });
+            const response = await apiFetch(`http://194.163.141.113:8082/api/student-categories/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success("Category deleted successfully.");
                 fetchCategories(); // Refresh the list
@@ -87,7 +87,7 @@ export default function CategoryManagement() {
     };
 
     return (
-        <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+        <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white"><BookCopy />Student Category Management</CardTitle>
                 <p className="text-gray-300 text-sm">Add or remove student categories like 'Day', 'Boarder', etc.</p>
@@ -101,16 +101,16 @@ export default function CategoryManagement() {
                         className="bg-gray-800 border-gray-600"
                         disabled={loading}
                     />
-                    <Button onClick={handleAddCategory} className="bg-blue-600 hover:bg-blue-700" disabled={loading}>
+                    <Button onClick={handleAddCategory} className="bg-white-600 hover:bg-white-700" disabled={loading}>
                         {loading ? 'Adding...' : 'Add Category'}
                     </Button>
                 </div>
-                <div className="overflow-x-auto max-h-60 border border-purple-800 rounded-md">
+                <div className="overflow-x-auto max-h-60 border border-red-800 rounded-md">
                     <Table>
                         <TableHeader>
-                            <TableRow className="border-b-purple-700 hover:bg-transparent">
-                                <TableHead className="text-purple-300">Category Name</TableHead>
-                                <TableHead className="text-right text-purple-300">Actions</TableHead>
+                            <TableRow className="border-b-red-700 hover:bg-transparent">
+                                <TableHead className="text-red-300">Category Name</TableHead>
+                                <TableHead className="text-right text-red-300">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>

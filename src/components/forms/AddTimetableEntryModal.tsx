@@ -62,7 +62,7 @@ const AddTimetableEntryModal: FC<AddTimetableEntryModalProps> = ({ onEntryAdded 
         }
 
         try {
-            const response = await apiFetch('http://localhost:8082/api/timetables', {
+            const response = await apiFetch('http://194.163.141.113:8082/api/timetables', {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
@@ -86,12 +86,12 @@ const AddTimetableEntryModal: FC<AddTimetableEntryModalProps> = ({ onEntryAdded 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+                <Button className="bg-gradient-to-r from-red-600 to-white-600 hover:from-red-700 hover:to-white-700">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Timetable Entry
                 </Button>
             </DialogTrigger>
-            <DialogContent className="bg-gradient-to-br from-purple-900/90 to-blue-900/90 border-purple-700 text-white backdrop-blur-sm">
+            <DialogContent className="bg-gradient-to-br from-red-900/90 to-white-900/90 border-red-700 text-white backdrop-blur-sm">
                 <DialogHeader>
                     <DialogTitle>Add Timetable Entry</DialogTitle>
                 </DialogHeader>
@@ -103,26 +103,26 @@ const AddTimetableEntryModal: FC<AddTimetableEntryModalProps> = ({ onEntryAdded 
                     />
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div><Label htmlFor="subject">Subject</Label><Input id="subject" value={formData.subject} onChange={(e) => setFormData({...formData, subject: e.target.value})} required className="bg-purple-800/50 border-purple-600"/></div>
-                        <div><Label htmlFor="teacher">Teacher</Label><Input id="teacher" value={formData.teacher} onChange={(e) => setFormData({...formData, teacher: e.target.value})} required className="bg-purple-800/50 border-purple-600"/></div>
+                        <div><Label htmlFor="subject">Subject</Label><Input id="subject" value={formData.subject} onChange={(e) => setFormData({...formData, subject: e.target.value})} required className="bg-red-800/50 border-red-600"/></div>
+                        <div><Label htmlFor="teacher">Teacher</Label><Input id="teacher" value={formData.teacher} onChange={(e) => setFormData({...formData, teacher: e.target.value})} required className="bg-red-800/50 border-red-600"/></div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div><Label htmlFor="grade">Grade</Label><Select value={formData.grade} onValueChange={(value) => setFormData({...formData, grade: value})}><SelectTrigger className="bg-purple-800/50 border-purple-600"><SelectValue placeholder="Select grade" /></SelectTrigger><SelectContent>{[...Array(7)].map((_, i) => (<SelectItem key={i+1} value={`GRADE ${i+1}`}>{`Grade ${i+1}`}</SelectItem>))}<SelectItem value="ECD A">ECD A</SelectItem><SelectItem value="ECD B">ECD B</SelectItem></SelectContent></Select></div>
-                        <div><Label htmlFor="section">Section</Label><Select value={formData.section} onValueChange={(value) => setFormData({...formData, section: value})}><SelectTrigger className="bg-purple-800/50 border-purple-600"><SelectValue placeholder="Select section" /></SelectTrigger><SelectContent>{['A', 'B', 'C', 'D'].map((section) => (<SelectItem key={section} value={section}>{section}</SelectItem>))}</SelectContent></Select></div>
+                        <div><Label htmlFor="grade">Grade</Label><Select value={formData.grade} onValueChange={(value) => setFormData({...formData, grade: value})}><SelectTrigger className="bg-red-800/50 border-red-600"><SelectValue placeholder="Select grade" /></SelectTrigger><SelectContent>{[...Array(7)].map((_, i) => (<SelectItem key={i+1} value={`GRADE ${i+1}`}>{`Grade ${i+1}`}</SelectItem>))}<SelectItem value="ECD A">ECD A</SelectItem><SelectItem value="ECD B">ECD B</SelectItem></SelectContent></Select></div>
+                        <div><Label htmlFor="section">Section</Label><Select value={formData.section} onValueChange={(value) => setFormData({...formData, section: value})}><SelectTrigger className="bg-red-800/50 border-red-600"><SelectValue placeholder="Select section" /></SelectTrigger><SelectContent>{['A', 'B', 'C', 'D'].map((section) => (<SelectItem key={section} value={section}>{section}</SelectItem>))}</SelectContent></Select></div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">
-                        <div><Label htmlFor="dayOfWeek">Day</Label><Select value={formData.dayOfWeek} onValueChange={(value) => setFormData({...formData, dayOfWeek: value})}><SelectTrigger className="bg-purple-800/50 border-purple-600"><SelectValue placeholder="Select day" /></SelectTrigger><SelectContent>{['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'].map((day) => (<SelectItem key={day} value={day}>{day.charAt(0) + day.slice(1).toLowerCase()}</SelectItem>))}</SelectContent></Select></div>
-                        <div><Label htmlFor="startTime">Start Time</Label><Input id="startTime" type="time" value={formData.startTime} onChange={(e) => setFormData({...formData, startTime: e.target.value})} required className="bg-purple-800/50 border-purple-600"/></div>
-                        <div><Label htmlFor="endTime">End Time</Label><Input id="endTime" type="time" value={formData.endTime} onChange={(e) => setFormData({...formData, endTime: e.target.value})} required className="bg-purple-800/50 border-purple-600"/></div>
+                        <div><Label htmlFor="dayOfWeek">Day</Label><Select value={formData.dayOfWeek} onValueChange={(value) => setFormData({...formData, dayOfWeek: value})}><SelectTrigger className="bg-red-800/50 border-red-600"><SelectValue placeholder="Select day" /></SelectTrigger><SelectContent>{['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'].map((day) => (<SelectItem key={day} value={day}>{day.charAt(0) + day.slice(1).toLowerCase()}</SelectItem>))}</SelectContent></Select></div>
+                        <div><Label htmlFor="startTime">Start Time</Label><Input id="startTime" type="time" value={formData.startTime} onChange={(e) => setFormData({...formData, startTime: e.target.value})} required className="bg-red-800/50 border-red-600"/></div>
+                        <div><Label htmlFor="endTime">End Time</Label><Input id="endTime" type="time" value={formData.endTime} onChange={(e) => setFormData({...formData, endTime: e.target.value})} required className="bg-red-800/50 border-red-600"/></div>
                     </div>
 
-                    <div><Label htmlFor="room">Room / Venue</Label><Input id="room" value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})} required className="bg-purple-800/50 border-purple-600"/></div>
+                    <div><Label htmlFor="room">Room / Venue</Label><Input id="room" value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})} required className="bg-red-800/50 border-red-600"/></div>
 
                     <div className="flex justify-end gap-2 pt-4">
-                        <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-purple-600 text-white hover:bg-purple-700">Cancel</Button>
-                        <Button type="submit" disabled={loading} className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">{loading ? 'Adding...' : 'Add'}</Button>
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-red-600 text-white hover:bg-red-700">Cancel</Button>
+                        <Button type="submit" disabled={loading} className="bg-gradient-to-r from-red-600 to-white-600 hover:from-red-700 hover:to-white-700">{loading ? 'Adding...' : 'Add'}</Button>
                     </div>
                 </form>
             </DialogContent>

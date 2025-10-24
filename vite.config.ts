@@ -11,9 +11,9 @@ export default defineConfig(({ mode }) => ({
     // FIX 2: Add the proxy to forward API calls to the backend
     proxy: {
       // Any request from the frontend that starts with "/api"
-      // will be sent to "http://localhost:8082/api"
+      // will be sent to "http://194.163.141.113:8082/api"
       '/api': {
-        target: 'http://localhost:8082', // Your Spring Boot backend address
+        target: 'http://194.163.141.113:8082', // Your Spring Boot backend address
         changeOrigin: true, // Recommended for avoiding CORS issues
       }
     }

@@ -9,9 +9,9 @@ const Header: FC = () => {
     const { user, isLoading, logout } = useAuth();
 
     return (
-        <header className="bg-gradient-to-r from-purple-900 via-blue-900 to-black border-b border-purple-700 p-4">
-            <div className="container mx-auto flex justify-between items-center">
-                <div className="text-xl font-bold">Pachedu E-Learning Portal</div>
+        <header className="bg-gradient-to-r from-red-900 via-white-900 to-red border-b border-red-700 p-4">
+            <div className="flex justify-between items-center">
+                <div className="text-xl font-bold">Methodist Group of Schools</div>
 
                 <div className="flex items-center gap-4">
                     {/* Institution Switcher will be displayed here */}

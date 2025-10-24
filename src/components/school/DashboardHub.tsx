@@ -19,7 +19,7 @@ export default function DashboardHub() {
         const fetchHubData = async () => {
             setLoading(true); // Ensure loading state is true at the start
             try {
-                const response = await apiFetch('http://localhost:8082/api/dashboard/hub'); // This should be the new endpoint
+                const response = await apiFetch('http://194.163.141.113:8082/api/dashboard/hub'); // This should be the new endpoint
                 if (response.ok) {
                     setHubData(await response.json());
                 } else {
@@ -50,7 +50,7 @@ export default function DashboardHub() {
     };
 
     return (
-        <div className="p-6 bg-gradient-to-br from-purple-900/50 to-blue-900/50 border border-gray-700 rounded-xl space-y-6">
+        <div className="p-6 bg-gradient-to-br from-red-900/50 to-white-900/50 border border-gray-700 rounded-xl space-y-6">
             <h2 className="text-2xl font-bold text-white">{hubData.greeting}</h2>
 
             {/* Alerts Section - Defensive check added */}

@@ -62,11 +62,11 @@ const InstitutionManagement: FC = () => {
 
     return (
         <>
-            <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+            <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <CardTitle className="flex items-center gap-2"><Building />Institution Management</CardTitle>
-                        <Button onClick={handleOpenCreateModal} className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Institution</Button>
+                        <Button onClick={handleOpenCreateModal} className="bg-white-600 hover:bg-white-700"><Plus className="h-4 w-4 mr-2" />Add Institution</Button>
                     </div>
                 </CardHeader>
                 <CardContent>

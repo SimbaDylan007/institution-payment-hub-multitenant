@@ -45,7 +45,7 @@ export default function AddGuardianModal({ studentId, onGuardianAdded }: AddGuar
     setLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:8082/api/students/${studentId}/guardians`, {
+      const response = await fetch(`http://194.163.141.113:8082/api/students/${studentId}/guardians`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -230,7 +230,7 @@ export default function AddGuardianModal({ studentId, onGuardianAdded }: AddGuar
             <Button
               type="submit"
               disabled={loading}
-              className="bg-blue-500 hover:bg-blue-600"
+              className="bg-white-500 hover:bg-white-600"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Add Guardian

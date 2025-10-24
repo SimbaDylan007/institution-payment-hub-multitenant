@@ -58,7 +58,7 @@ const formatOptions = [ { value: 'PDF', label: 'PDF' }, { value: 'XLSX', label: 
 const grades = ["GRADE 1", "GRADE 2", "GRADE 3", "GRADE 4", "GRADE 5", "GRADE 6", "GRADE 7", "ECD"];
 const departments = ["Academics", "Administration", "Finance", "Support Staff", "IT"];
 const staffStatuses = ["ACTIVE", "ON_LEAVE", "TERMINATED", "INACTIVE"];
-const API_BASE_URL = 'http://localhost:8082';
+const API_BASE_URL = 'http://194.163.141.113:8082';
 
 
 export default function MainReports() {
@@ -249,12 +249,12 @@ export default function MainReports() {
                             <Label>Select Student *</Label>
                             <Popover open={openStudentSearch} onOpenChange={setOpenStudentSearch}>
                                 <PopoverTrigger asChild>
-                                    <Button variant="outline" role="combobox" aria-expanded={openStudentSearch} className="w-full justify-between bg-purple-800 hover:bg-purple-700">
+                                    <Button variant="outline" role="combobox" aria-expanded={openStudentSearch} className="w-full justify-between bg-red-800 hover:bg-red-700">
                                         {selectedStudentId ? allStudents.find(s => s.studentId === selectedStudentId)?.firstName + ' ' + allStudents.find(s => s.studentId === selectedStudentId)?.lastName : "Select a student..."}
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-purple-900 border-purple-700 text-white">
+                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-red-900 border-red-700 text-white">
                                     <Command>
                                         <CommandInput placeholder="Search student by name or ID..." />
                                         <CommandList>
@@ -277,9 +277,9 @@ export default function MainReports() {
                             </Popover>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div><Label>Academic Year</Label><Select value={academicYear} onValueChange={setAcademicYear}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800">{academicYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
-                            <div><Label>Semester</Label><Select value={semester} onValueChange={setSemester}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800">{semesters.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select></div>
-                            <div><Label>Currency</Label><Select value={currency} onValueChange={setCurrency}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div>
+                            <div><Label>Academic Year</Label><Select value={academicYear} onValueChange={setAcademicYear}><SelectTrigger className="bg-red-800"><SelectValue/></SelectTrigger><SelectContent className="bg-red-800">{academicYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                            <div><Label>Semester</Label><Select value={semester} onValueChange={setSemester}><SelectTrigger className="bg-red-800"><SelectValue/></SelectTrigger><SelectContent className="bg-red-800">{semesters.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select></div>
+                            <div><Label>Currency</Label><Select value={currency} onValueChange={setCurrency}><SelectTrigger className="bg-red-800"><SelectValue/></SelectTrigger><SelectContent className="bg-red-800"><SelectItem value="USD">USD</SelectItem><SelectItem value="ZWG">ZWG</SelectItem></SelectContent></Select></div>
                         </div>
                     </div>
                 );
@@ -290,16 +290,16 @@ export default function MainReports() {
                 return (
                     <div className="space-y-4 animate-in fade-in-0 duration-300">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><Label>Start Date</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-purple-800" /></div>
-                            <div><Label>End Date</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-purple-800" /></div>
+                            <div><Label>Start Date</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-red-800" /></div>
+                            <div><Label>End Date</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-red-800" /></div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><Label>Filter by Grade</Label><Select value={filterGrade} onValueChange={setFilterGrade}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800"><SelectItem value="All">All Grades</SelectItem>{grades.map(g=><SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select></div>
+                            <div><Label>Filter by Grade</Label><Select value={filterGrade} onValueChange={setFilterGrade}><SelectTrigger className="bg-red-800"><SelectValue/></SelectTrigger><SelectContent className="bg-red-800"><SelectItem value="All">All Grades</SelectItem>{grades.map(g=><SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select></div>
                             <div>
                                 <Label>Filter by Fee Type</Label>
                                 <Select value={filterFeeTypeId} onValueChange={setFilterFeeTypeId}>
-                                    <SelectTrigger className="bg-purple-800"><SelectValue placeholder="All Fee Types"/></SelectTrigger>
-                                    <SelectContent className="bg-purple-800">
+                                    <SelectTrigger className="bg-red-800"><SelectValue placeholder="All Fee Types"/></SelectTrigger>
+                                    <SelectContent className="bg-red-800">
                                         <SelectItem value="all">All Fee Types</SelectItem>
                                         {feeTypes.map(ft=><SelectItem key={ft.id} value={String(ft.id)}>{ft.name}</SelectItem>)}
                                     </SelectContent>
@@ -309,9 +309,9 @@ export default function MainReports() {
                     </div>
                 );
             case 'ALL_STUDENTS':
-                return ( <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in-0 duration-300"> <div><Label>Filter by Grade</Label><Select value={filterGrade} onValueChange={setFilterGrade}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800"><SelectItem value="All">All Grades</SelectItem>{grades.map(g=><SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select></div> <div><Label>Filter by Section</Label><Input placeholder="e.g., A, B, or leave empty for all" value={filterSection} onChange={e=>setFilterSection(e.target.value)} className="bg-purple-800" /></div> </div> );
+                return ( <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in-0 duration-300"> <div><Label>Filter by Grade</Label><Select value={filterGrade} onValueChange={setFilterGrade}><SelectTrigger className="bg-red-800"><SelectValue/></SelectTrigger><SelectContent className="bg-red-800"><SelectItem value="All">All Grades</SelectItem>{grades.map(g=><SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select></div> <div><Label>Filter by Section</Label><Input placeholder="e.g., A, B, or leave empty for all" value={filterSection} onChange={e=>setFilterSection(e.target.value)} className="bg-red-800" /></div> </div> );
             case 'ALL_STAFF':
-                return ( <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in-0 duration-300"> <div><Label>Filter by Department</Label><Select value={filterDepartment} onValueChange={setFilterDepartment}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800"><SelectItem value="All">All Departments</SelectItem>{departments.map(d=><SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select></div> <div><Label>Filter by Status</Label><Select value={filterStaffStatus} onValueChange={setFilterStaffStatus}><SelectTrigger className="bg-purple-800"><SelectValue/></SelectTrigger><SelectContent className="bg-purple-800"><SelectItem value="All">All Statuses</SelectItem>{staffStatuses.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div> </div> );
+                return ( <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in-0 duration-300"> <div><Label>Filter by Department</Label><Select value={filterDepartment} onValueChange={setFilterDepartment}><SelectTrigger className="bg-red-800"><SelectValue/></SelectTrigger><SelectContent className="bg-red-800"><SelectItem value="All">All Departments</SelectItem>{departments.map(d=><SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select></div> <div><Label>Filter by Status</Label><Select value={filterStaffStatus} onValueChange={setFilterStaffStatus}><SelectTrigger className="bg-red-800"><SelectValue/></SelectTrigger><SelectContent className="bg-red-800"><SelectItem value="All">All Statuses</SelectItem>{staffStatuses.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div> </div> );
             default:
                 return <p className="text-gray-400 text-center">Ready to generate a full system data extract.</p>;
         }
@@ -325,10 +325,10 @@ export default function MainReports() {
 
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+        <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
             <Header />
-            <main className="flex-1 container mx-auto px-4 py-8">
-                <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+            <main className="flex-1 px-4 py-8">
+                <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                     <CardHeader>
                         <div className="flex justify-between items-center">
                             <CardTitle className="text-2xl">System Data Extraction & Reports</CardTitle>
@@ -342,15 +342,15 @@ export default function MainReports() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div> <Label>1. Select Report Type</Label> <Select value={reportType} onValueChange={setReportType}> <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger> <SelectContent className="bg-purple-800"> {reportOptions.map(group => ( <SelectGroup key={group.label}> <SelectLabel className="text-purple-300">{group.label}</SelectLabel> {group.options.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)} </SelectGroup> ))} </SelectContent> </Select> </div>
-                            <div> <Label>2. Select Export Format</Label> <Select value={format} onValueChange={setFormat}> <SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger> <SelectContent className="bg-purple-800">{formatOptions.filter(f => availableFormats.includes(f.value)).map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent> </Select> </div>
+                            <div> <Label>1. Select Report Type</Label> <Select value={reportType} onValueChange={setReportType}> <SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger> <SelectContent className="bg-red-800"> {reportOptions.map(group => ( <SelectGroup key={group.label}> <SelectLabel className="text-red-300">{group.label}</SelectLabel> {group.options.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)} </SelectGroup> ))} </SelectContent> </Select> </div>
+                            <div> <Label>2. Select Export Format</Label> <Select value={format} onValueChange={setFormat}> <SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger> <SelectContent className="bg-red-800">{formatOptions.filter(f => availableFormats.includes(f.value)).map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent> </Select> </div>
                         </div>
-                        <div className="border-t border-purple-600 pt-6">
+                        <div className="border-t border-red-600 pt-6">
                             <h3 className="text-lg font-semibold mb-4">3. Apply Filters (if applicable)</h3>
                             <div className="space-y-4">{renderFilters()}</div>
                         </div>
                         <div className="flex justify-end pt-4 gap-4">
-                            <Button onClick={handlePreviewReport} disabled={loading || isPreviewLoading} variant="outline" className="text-white border-purple-400 hover:bg-purple-800 hover:text-white">
+                            <Button onClick={handlePreviewReport} disabled={loading || isPreviewLoading} variant="outline" className="text-white border-red-400 hover:bg-red-800 hover:text-white">
                                 <Eye className="h-5 w-5 mr-2" />
                                 {isPreviewLoading ? 'Loading Preview...' : 'Preview Report'}
                             </Button>
@@ -363,7 +363,7 @@ export default function MainReports() {
                 </Card>
 
                 <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-                    <DialogContent className="max-w-4xl bg-purple-950 border-purple-700 text-white">
+                    <DialogContent className="max-w-4xl bg-red-950 border-red-700 text-white">
                         <DialogHeader>
                             <DialogTitle>Report Preview (First 10 Rows)</DialogTitle>
                         </DialogHeader>
@@ -373,15 +373,15 @@ export default function MainReports() {
                             ) : previewData.rows && previewData.rows.length > 0 ? (
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="hover:bg-purple-900">
+                                        <TableRow className="hover:bg-red-900">
                                             {previewData.headers.map((header, index) => (
-                                                <TableHead key={index} className="text-purple-300">{header}</TableHead>
+                                                <TableHead key={index} className="text-red-300">{header}</TableHead>
                                             ))}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {previewData.rows.map((row, rowIndex) => (
-                                            <TableRow key={rowIndex} className="border-purple-800 hover:bg-purple-900">
+                                            <TableRow key={rowIndex} className="border-red-800 hover:bg-red-900">
                                                 {row.map((cell, cellIndex) => (
                                                     <TableCell key={cellIndex}>{cell}</TableCell>
                                                 ))}

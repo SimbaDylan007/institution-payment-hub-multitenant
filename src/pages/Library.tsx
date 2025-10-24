@@ -46,7 +46,7 @@ export default function Library() {
             params.append('institutionId', selectedInstitution.id.toString());
         }
 
-        const url = `http://localhost:8082/api/library/books?${params.toString()}`;
+        const url = `http://194.163.141.113:8082/api/library/books?${params.toString()}`;
         apiFetch(url).then(res => res.json()).then(setBookPage).catch(() => toast.error('Failed to fetch books.')).finally(() => setLoading(false));
     }, [isSuperAdmin, selectedInstitution]);
 
@@ -59,7 +59,7 @@ export default function Library() {
             params.append('institutionId', selectedInstitution.id.toString());
         }
 
-        const url = `http://localhost:8082/api/library/transactions?${params.toString()}`;
+        const url = `http://194.163.141.113:8082/api/library/transactions?${params.toString()}`;
         apiFetch(url).then(res => res.json()).then(setLoanPage).catch(err => toast.error(err.message)).finally(() => setLoading(false));
     }, [isSuperAdmin, selectedInstitution]); // <-- Add dependencies
 
@@ -87,7 +87,7 @@ export default function Library() {
     e.preventDefault(); setLoading(true);
     const formData = new FormData(e.currentTarget);
     const bookData = { title: formData.get('title'), author: formData.get('author'), isbn: formData.get('isbn'), publisher: formData.get('publisher'), publishedDate: formData.get('publishedDate'), category: formData.get('category'), totalCopies: parseInt(formData.get('totalCopies') as string), location: formData.get('location') };
-    const url = selectedBook ? `http://localhost:8082/api/library/books/${selectedBook.id}` : 'http://localhost:8082/api/library/books';
+    const url = selectedBook ? `http://194.163.141.113:8082/api/library/books/${selectedBook.id}` : 'http://194.163.141.113:8082/api/library/books';
     const method = selectedBook ? 'PUT' : 'POST';
     try {
       const response = await apiFetch(url, { method, body: JSON.stringify(bookData) });
@@ -102,7 +102,7 @@ export default function Library() {
   const handleDeleteBook = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this book?')) return;
     try {
-      const response = await apiFetch(`http://localhost:8082/api/library/books/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`http://194.163.141.113:8082/api/library/books/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success('Book deleted successfully');
         fetchBooks(bookPageNum, bookSearch);
@@ -116,7 +116,7 @@ export default function Library() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const response = await apiFetch('http://localhost:8082/api/library/books/bulk-upload', { method: 'POST', body: formData });
+      const response = await apiFetch('http://194.163.141.113:8082/api/library/books/bulk-upload', { method: 'POST', body: formData });
       if (response.ok) {
         const newBooks = await response.json();
         toast.success(`${newBooks.length} books imported/updated successfully!`);
@@ -142,7 +142,7 @@ export default function Library() {
     e.preventDefault();
     if (!selectedBook || !studentId) return toast.error("Book and Student ID are required.");
     setLoading(true);
-    const url = `http://localhost:8082/api/library/books/${transactionType}?bookId=${selectedBook.id}&studentId=${studentId}`;
+    const url = `http://194.163.141.113:8082/api/library/books/${transactionType}?bookId=${selectedBook.id}&studentId=${studentId}`;
     try {
       const response = await apiFetch(url, { method: 'POST' });
       if (response.ok) {
@@ -158,27 +158,27 @@ export default function Library() {
   if (!user) { return <Navigate to="/" replace />; }
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
         <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
+        <main className="flex-1 px-4 py-8">
           <div className="mb-6 flex justify-between items-center"><h1 className="text-2xl font-bold">Library Management</h1><Button asChild><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4 mr-2"/>Dashboard</Link></Button></div>
           <Tabs defaultValue="inventory" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 bg-purple-900/50 border-purple-700">
+            <TabsList className="grid w-full grid-cols-2 bg-red-900/50 border-red-700">
               <TabsTrigger value="inventory">Book Inventory</TabsTrigger>
               <TabsTrigger value="history">Loan History</TabsTrigger>
             </TabsList>
 
             <TabsContent value="inventory">
-              <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+              <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                 <CardHeader>
-                  <div className="flex justify-between items-center"><CardTitle className="flex items-center gap-2"><LibraryIcon/>Book Inventory</CardTitle><div className="flex gap-2"><Button onClick={() => setIsImportOpen(true)} className="bg-blue-600 hover:bg-blue-700"><UploadCloud size={16} className="mr-2"/> Import Books</Button><Button className="bg-green-600 hover:bg-green-700" onClick={() => {setSelectedBook(null); setIsFormOpen(true);}}><Plus size={16} className="mr-2"/> Add Book</Button></div></div>
-                  <div className="flex gap-4 pt-4"><Input placeholder="Search by title, author, or ISBN..." value={bookSearch} onChange={e => {setBookSearch(e.target.value); setBookPageNum(0);}} className="bg-purple-800 border-purple-600"/></div>
+                  <div className="flex justify-between items-center"><CardTitle className="flex items-center gap-2"><LibraryIcon/>Book Inventory</CardTitle><div className="flex gap-2"><Button onClick={() => setIsImportOpen(true)} className="bg-white-600 hover:bg-white-700"><UploadCloud size={16} className="mr-2"/> Import Books</Button><Button className="bg-green-600 hover:bg-green-700" onClick={() => {setSelectedBook(null); setIsFormOpen(true);}}><Plus size={16} className="mr-2"/> Add Book</Button></div></div>
+                  <div className="flex gap-4 pt-4"><Input placeholder="Search by title, author, or ISBN..." value={bookSearch} onChange={e => {setBookSearch(e.target.value); setBookPageNum(0);}} className="bg-red-800 border-red-600"/></div>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-purple-700"><th className="p-2">Title</th><th className="p-2">Author</th><th className="p-2">ISBN</th><th className="p-2">Copies (Avail/Total)</th><th className="p-2 text-center">Actions</th></tr></thead><tbody>
+                  <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-red-700"><th className="p-2">Title</th><th className="p-2">Author</th><th className="p-2">ISBN</th><th className="p-2">Copies (Avail/Total)</th><th className="p-2 text-center">Actions</th></tr></thead><tbody>
                   {loading && !bookPage?.content ? (<tr><td colSpan={5} className="text-center p-4">Loading...</td></tr>) :
                       bookPage?.content.map((book) => (
-                          <tr key={book.id} className="border-b border-purple-800/50">
+                          <tr key={book.id} className="border-b border-red-800/50">
                             <td className="p-2">{book.title}</td><td className="p-2">{book.author}</td>
                             <td className="p-2">{book.isbn}</td><td className="p-2 text-center">{`${book.availableCopies} / ${book.totalCopies}`}</td>
                             <td className="p-2 flex justify-center gap-2">
@@ -196,16 +196,16 @@ export default function Library() {
             </TabsContent>
 
             <TabsContent value="history">
-              <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+              <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><BookUser/>Loan History</CardTitle>
-                  <div className="flex gap-2 pt-4"><Input placeholder="Filter by Student ID..." value={loanSearch} onChange={e => {setLoanSearch(e.target.value); setLoanPageNum(0);}} className="bg-purple-800 border-purple-600"/></div>
+                  <div className="flex gap-2 pt-4"><Input placeholder="Filter by Student ID..." value={loanSearch} onChange={e => {setLoanSearch(e.target.value); setLoanPageNum(0);}} className="bg-red-800 border-red-600"/></div>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-purple-700"><th className="p-2">Book Title</th><th className="p-2">Student ID</th><th className="p-2">Issue Date</th><th className="p-2">Due Date</th><th className="p-2">Return Date</th><th className="p-2">Status</th></tr></thead><tbody>
+                  <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-red-700"><th className="p-2">Book Title</th><th className="p-2">Student ID</th><th className="p-2">Issue Date</th><th className="p-2">Due Date</th><th className="p-2">Return Date</th><th className="p-2">Status</th></tr></thead><tbody>
                   {loading && !loanPage?.content ? (<tr><td colSpan={6} className="text-center p-4">Loading history...</td></tr>) :
                       loanPage?.content.map(loan => (
-                          <tr key={loan.id} className="border-b border-purple-800/50">
+                          <tr key={loan.id} className="border-b border-red-800/50">
                             <td className="p-2">{loan.book.title}</td>
                             <td className="p-2">{loan.student.studentId}</td>
                             <td className="p-2">{loan.issueDate}</td>
@@ -223,7 +223,7 @@ export default function Library() {
         </main>
 
         <Dialog open={isTransactionOpen} onOpenChange={setIsTransactionOpen}><DialogContent className="bg-gray-900 text-white border-gray-700"><DialogHeader><DialogTitle>{transactionType === 'issue' ? `Issue Book: ${selectedBook?.title}` : `Return Book: ${selectedBook?.title}`}</DialogTitle></DialogHeader><form onSubmit={handleTransactionSubmit} className="space-y-4 py-4"><div><Label htmlFor="studentId">Student ID</Label><Input id="studentId" value={studentId} onChange={e => setStudentId(e.target.value)} required className="bg-gray-800"/></div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setIsTransactionOpen(false)}>Cancel</Button><Button type="submit">{transactionType === 'issue' ? 'Issue Book' : 'Return Book'}</Button></div></form></DialogContent></Dialog>
-        <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) setSelectedBook(null); setIsFormOpen(isOpen);}}><DialogContent className="bg-purple-900 border-purple-700 text-white max-w-2xl"><DialogHeader><DialogTitle>{selectedBook ? 'Edit Book' : 'Add New Book'}</DialogTitle></DialogHeader><form onSubmit={handleBookSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4"><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="title">Title</Label><Input id="title" name="title" defaultValue={selectedBook?.title} required className="bg-gray-800"/></div><div><Label htmlFor="author">Author</Label><Input id="author" name="author" defaultValue={selectedBook?.author} required className="bg-gray-800"/></div></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="isbn">ISBN</Label><Input id="isbn" name="isbn" defaultValue={selectedBook?.isbn} required className="bg-gray-800"/></div><div><Label htmlFor="publisher">Publisher</Label><Input id="publisher" name="publisher" defaultValue={selectedBook?.publisher} className="bg-gray-800"/></div></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="publishedDate">Published Date</Label><Input id="publishedDate" name="publishedDate" type="date" defaultValue={selectedBook?.publishedDate} className="bg-gray-800"/></div><div><Label htmlFor="category">Category</Label><Select name="category" defaultValue={selectedBook?.category}><SelectTrigger className="bg-gray-800"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent className="bg-gray-800"><SelectItem value="FICTION">Fiction</SelectItem><SelectItem value="NON_FICTION">Non-Fiction</SelectItem><SelectItem value="SCIENCE">Science</SelectItem><SelectItem value="HISTORY">History</SelectItem></SelectContent></Select></div></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="totalCopies">Total Copies</Label><Input id="totalCopies" name="totalCopies" type="number" defaultValue={selectedBook?.totalCopies} required className="bg-gray-800"/></div><div><Label htmlFor="location">Location</Label><Input id="location" name="location" defaultValue={selectedBook?.location} className="bg-gray-800"/></div></div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button><Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save'}</Button></div></form></DialogContent></Dialog>
+        <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) setSelectedBook(null); setIsFormOpen(isOpen);}}><DialogContent className="bg-red-900 border-red-700 text-white max-w-2xl"><DialogHeader><DialogTitle>{selectedBook ? 'Edit Book' : 'Add New Book'}</DialogTitle></DialogHeader><form onSubmit={handleBookSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4"><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="title">Title</Label><Input id="title" name="title" defaultValue={selectedBook?.title} required className="bg-gray-800"/></div><div><Label htmlFor="author">Author</Label><Input id="author" name="author" defaultValue={selectedBook?.author} required className="bg-gray-800"/></div></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="isbn">ISBN</Label><Input id="isbn" name="isbn" defaultValue={selectedBook?.isbn} required className="bg-gray-800"/></div><div><Label htmlFor="publisher">Publisher</Label><Input id="publisher" name="publisher" defaultValue={selectedBook?.publisher} className="bg-gray-800"/></div></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="publishedDate">Published Date</Label><Input id="publishedDate" name="publishedDate" type="date" defaultValue={selectedBook?.publishedDate} className="bg-gray-800"/></div><div><Label htmlFor="category">Category</Label><Select name="category" defaultValue={selectedBook?.category}><SelectTrigger className="bg-gray-800"><SelectValue placeholder="Select..."/></SelectTrigger><SelectContent className="bg-gray-800"><SelectItem value="FICTION">Fiction</SelectItem><SelectItem value="NON_FICTION">Non-Fiction</SelectItem><SelectItem value="SCIENCE">Science</SelectItem><SelectItem value="HISTORY">History</SelectItem></SelectContent></Select></div></div><div className="grid grid-cols-2 gap-4"><div><Label htmlFor="totalCopies">Total Copies</Label><Input id="totalCopies" name="totalCopies" type="number" defaultValue={selectedBook?.totalCopies} required className="bg-gray-800"/></div><div><Label htmlFor="location">Location</Label><Input id="location" name="location" defaultValue={selectedBook?.location} className="bg-gray-800"/></div></div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button><Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save'}</Button></div></form></DialogContent></Dialog>
         <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}><DialogContent className="bg-gray-900 text-white border-gray-700"><DialogHeader><DialogTitle>Bulk Import Books</DialogTitle></DialogHeader><div className="space-y-4 py-4"><p className="text-sm text-gray-400">Upload a CSV or Excel file.</p><Button variant="outline" onClick={handleDownloadTemplate} className="w-full gap-2"><Download size={16}/>Download CSV Template</Button><div><Label htmlFor="importFile">Upload File</Label><Input id="importFile" type="file" onChange={(e) => setImportFile(e.target.files?.[0] || null)} accept=".csv, .xlsx"/></div><div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button><Button onClick={handleImport} disabled={loading}>{loading ? "Importing..." : "Start Import"}</Button></div></div></DialogContent></Dialog>
       </div>
   );

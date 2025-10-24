@@ -36,7 +36,7 @@ export default function Communication() {
                 params.append('institutionId', selectedInstitution.id.toString());
             }
 
-            const response = await apiFetch(`http://localhost:8082/api/notifications?${params.toString()}`);
+            const response = await apiFetch(`http://194.163.141.113:8082/api/notifications?${params.toString()}`);
             if (response.ok) {
                 setNotificationsPage(await response.json());
             } else {
@@ -64,7 +64,7 @@ export default function Communication() {
     const formData = new FormData(e.currentTarget);
     const announcementData = { subject: formData.get('subject'), content: formData.get('content'), targetAudience: formData.get('targetAudience'), };
     try {
-      const res = await apiFetch('http://localhost:8082/api/notifications/announcements', {
+      const res = await apiFetch('http://194.163.141.113:8082/api/notifications/announcements', {
         method: 'POST',
         body: JSON.stringify(announcementData)
       });
@@ -85,7 +85,7 @@ export default function Communication() {
   // CORRECTED: This function now uses the apiFetch wrapper
   const handleMarkAsRead = async (id: number) => {
     try {
-      const response = await apiFetch(`http://localhost:8082/api/notifications/${id}/read`, { method: 'POST' });
+      const response = await apiFetch(`http://194.163.141.113:8082/api/notifications/${id}/read`, { method: 'POST' });
       if(response.ok) {
         setNotificationsPage(prev => {
           if (!prev) return null;
@@ -101,16 +101,16 @@ export default function Communication() {
   const notifications = notificationsPage?.content || [];
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
         <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
+        <main className="flex-1 px-4 py-8">
           <div className="mb-6 flex justify-between items-center">
             <h1 className="text-2xl font-bold">Communication Center</h1>
-            <Button asChild className="bg-purple-600 hover:bg-purple-700">
+            <Button asChild className="bg-red-600 hover:bg-red-700">
               <Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4"/>Dashboard</Link>
             </Button>
           </div>
-          <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+          <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center gap-2"><Inbox />Notification Feed</CardTitle>
@@ -144,8 +144,8 @@ export default function Communication() {
                 {loading && notifications.length === 0 && <p className="text-center p-8">Loading notifications...</p>}
                 {!loading && notifications.length === 0 && <p className="text-center p-8 text-gray-400">Your notification inbox is empty.</p>}
                 {notifications.map(notif => (
-                    <div key={notif.id} className={`p-4 rounded-lg border flex items-start gap-4 transition-colors ${notif.readAt ? 'bg-purple-800/20 border-purple-900' : 'bg-purple-700/40 border-purple-600'}`}>
-                      <div className={`mt-1.5 h-2.5 w-2.5 rounded-full flex-shrink-0 ${!notif.readAt ? 'bg-blue-400 animate-pulse' : 'bg-transparent'}`}></div>
+                    <div key={notif.id} className={`p-4 rounded-lg border flex items-start gap-4 transition-colors ${notif.readAt ? 'bg-red-800/20 border-red-900' : 'bg-red-700/40 border-red-600'}`}>
+                      <div className={`mt-1.5 h-2.5 w-2.5 rounded-full flex-shrink-0 ${!notif.readAt ? 'bg-white-400 animate-pulse' : 'bg-transparent'}`}></div>
                       <div className="flex-1">
                         <div className="flex justify-between items-center">
                           <p className="font-bold">{notif.subject}</p>

@@ -5,7 +5,7 @@ public class StatCardDto {
     private String value;
     private String change; // e.g., "+12%"
     private String icon;   // e.g., "Users"
-    private String color;  // e.g., "text-blue-400"
+    private String color;  // e.g., "text-white-400"
 
     public StatCardDto(String title, String value, String change, String icon, String color) {
         this.title = title;

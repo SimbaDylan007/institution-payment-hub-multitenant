@@ -84,7 +84,7 @@ const CategoryManagement = () => {
     };
 
     return (
-        <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+        <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><BookCopy />Student Category Management</CardTitle>
             </CardHeader>
@@ -96,7 +96,7 @@ const CategoryManagement = () => {
                         onChange={(e) => setNewCategoryName(e.target.value)}
                         className="bg-gray-800 border-gray-600"
                     />
-                    <Button onClick={handleAddCategory} className="bg-blue-600 hover:bg-blue-700">Add Category</Button>
+                    <Button onClick={handleAddCategory} className="bg-white-600 hover:bg-white-700">Add Category</Button>
                 </div>
                 <div className="overflow-x-auto max-h-60">
                     <Table>
@@ -188,15 +188,15 @@ export default function Settings() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+        <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
             <Header />
-            <main className="flex-1 container mx-auto px-4 py-8">
+            <main className="flex-1 px-4 py-8">
                 <div className="mb-6 flex justify-between items-center">
                     <div>
                         <h1 className="text-2xl font-bold">System Settings</h1>
                         <p className="text-gray-300">Manage users, roles, and global configurations.</p>
                     </div>
-                    <Button asChild className="bg-purple-600 hover:bg-purple-700"><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4"/>Dashboard</Link></Button>
+                    <Button asChild className="bg-red-600 hover:bg-red-700"><Link to="/dashboard" className="flex items-center gap-2"><Home className="h-4 w-4"/>Dashboard</Link></Button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -207,7 +207,7 @@ export default function Settings() {
                             <StatCard title="Administrators" value={stats?.administrators} />
                             <StatCard title="Teachers" value={stats?.teachers} />
                         </div>
-                        <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+                        <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                             <CardHeader>
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="flex items-center gap-2"><Users/>System Users</CardTitle>
@@ -257,7 +257,7 @@ export default function Settings() {
 }
 
 const StatCard = ({ title, value }: { title: string, value?: number }) => (
-    <Card className="bg-purple-800/30 border-purple-700 col-span-1">
+    <Card className="bg-red-800/30 border-red-700 col-span-1">
         <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-300">{title}</CardTitle></CardHeader>
         <CardContent><div className="text-2xl font-bold text-white">{value ?? <div className="h-8 w-12 bg-gray-600 rounded animate-pulse"/>}</div></CardContent>
     </Card>

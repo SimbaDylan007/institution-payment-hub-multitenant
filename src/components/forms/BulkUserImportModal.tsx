@@ -58,7 +58,7 @@ export const BulkUserImportModal: FC<BulkUserImportModalProps> = ({ onUsersImpor
                 payload.institutionId = parseInt(selectedInstitutionId);
             }
 
-            const response = await apiFetch('http://localhost:8082/api/users/bulk-import', {
+            const response = await apiFetch('http://194.163.141.113:8082/api/users/bulk-import', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });

@@ -120,22 +120,22 @@ export default function SchoolNavigation() {
                                 "flex flex-col items-center justify-center p-4 h-full border",
                                 "transition-all duration-200 group text-center",
                                 "bg-gray-100 border-gray-200 text-gray-700",
-                                "hover:bg-purple-100 hover:border-purple-300 hover:text-purple-800",
+                                "hover:bg-red-100 hover:border-red-300 hover:text-red-800",
                                 "dark:bg-[#212738] dark:border-gray-700 dark:text-gray-300",
-                                "dark:hover:bg-purple-700 dark:hover:border-purple-700 dark:hover:text-white",
-                                isActive && "bg-purple-600 border-purple-600 text-white shadow-lg"
+                                "dark:hover:bg-red-700 dark:hover:border-red-700 dark:hover:text-white",
+                                isActive && "bg-red-600 border-red-600 text-white shadow-lg"
                             )}
                         >
                             <Icon className={cn(
                                 "h-9 w-9 mb-3 transition-colors duration-200",
-                                "text-purple-600 group-hover:text-purple-800",
-                                "dark:text-purple-400 dark:group-hover:text-white",
+                                "text-red-600 group-hover:text-red-800",
+                                "dark:text-red-400 dark:group-hover:text-white",
                                 isActive && "text-white"
                             )} />
                             <span className="text-base font-semibold mb-1 line-clamp-1">
                     {item.name}
                   </span>
-                            <span className="text-xs line-clamp-2 transition-colors duration-200 text-gray-500 group-hover:text-purple-800 dark:text-gray-400 dark:group-hover:text-white">
+                            <span className="text-xs line-clamp-2 transition-colors duration-200 text-gray-500 group-hover:text-red-800 dark:text-gray-400 dark:group-hover:text-white">
                     {item.description}
                   </span>
                         </Link>

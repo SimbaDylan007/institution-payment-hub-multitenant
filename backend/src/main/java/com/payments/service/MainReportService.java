@@ -497,7 +497,7 @@ public class MainReportService {
                 /* Normal body content (no separate watermark div needed) */
                 .append("<div class='header'>")
                 .append("<img src='").append(logoBase64).append("' class='logo' alt='School Logo' />")
-                .append("<h1>Pachedu Junior Academy</h1>")
+                .append("<h1>MGOS</h1>")
                 .append("<h3>Student Financial Statement</h3>")
                 .append("<p>Date Printed: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))).append("</p>")
                 .append("</div>")
@@ -509,8 +509,8 @@ public class MainReportService {
                 .append("<div class='estamp-container'><img src='").append(estampBase64).append("' alt='Official Stamp' /></div>")
 
                 .append("<div class='footer'>")
-                .append("Pachedu Junior Academy | 508 Mupfure Heights, Mt Darwin, Zimbabwe")
-                .append("Phone: +263 717989858/771955399/714664391 | Email: 2019PJA@gmail.com | Website: https://www.pachedujunioracademy.com/")
+                .append("MGOS | Methodist Head Office, Harare, Zimbabwe")
+                .append("Phone: +263 771234567/781234567/712345678 | Email: 2025@methodist.com | Website: https://www.mgos.com/")
                 .append("</div>")
                 .append("</body></html>");
 

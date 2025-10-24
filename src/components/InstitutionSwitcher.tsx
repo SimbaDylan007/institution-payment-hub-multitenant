@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Institution } from "@/types";
 
 const fetchInstitutions = async (): Promise<Institution[]> => {
-    const response = await apiFetch('http://localhost:8082/api/institutions');
+    const response = await apiFetch('http://194.163.141.113:8082/api/institutions');
     if (!response.ok) throw new Error("Failed to fetch institutions");
     return response.json();
 };
@@ -23,7 +23,7 @@ const InstitutionSwitcher = () => {
     // If the user is NOT a super-admin, just display their assigned institution name
     if (!isSuperAdmin) {
         return (
-            <div className="font-semibold text-white px-3 py-1 bg-purple-600/50 rounded-md">
+            <div className="font-semibold text-white px-3 py-1 bg-red-600/50 rounded-md">
                 {user?.institutionName}
             </div>
         );
@@ -50,10 +50,10 @@ const InstitutionSwitcher = () => {
 
     return (
         <Select onValueChange={handleSelectionChange} value={currentValue}>
-            <SelectTrigger className="w-[220px] bg-purple-800/50 border-purple-600 text-white">
+            <SelectTrigger className="w-[220px] bg-red-800/50 border-red-600 text-white">
                 <SelectValue placeholder="Select Institution..." />
             </SelectTrigger>
-            <SelectContent className="bg-purple-900 border-purple-700 text-white">
+            <SelectContent className="bg-red-900 border-red-700 text-white">
                 <SelectItem value="all">All Institutions View</SelectItem>
                 {isLoading ? (
                     <div className="p-2 text-center text-gray-400">Loading...</div>

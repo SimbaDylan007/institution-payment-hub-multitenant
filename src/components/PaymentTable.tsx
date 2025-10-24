@@ -173,7 +173,7 @@ export default function PaymentTable({ payments, onPaymentReset }: PaymentTableP
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 {/* Button styling updated to be consistent */}
-                <Button variant="outline" className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-purple-400 text-white hover:from-purple-600 hover:to-purple-500 shadow-md dark:from-purple-600 dark:to-purple-500 dark:hover:from-purple-700 dark:hover:to-purple-600">
+                <Button variant="outline" className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-400 text-white hover:from-red-600 hover:to-red-500 shadow-md dark:from-red-600 dark:to-red-500 dark:hover:from-red-700 dark:hover:to-red-600">
                   <Download className="h-4 w-4" />
                   <span>Export</span>
                 </Button>
@@ -252,7 +252,7 @@ export default function PaymentTable({ payments, onPaymentReset }: PaymentTableP
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                    className="text-white-600 hover:text-white-800 dark:text-white-400 dark:hover:text-white-300"
                                     onClick={() => handleResetPayment(payment.id)}
                                 >
                                   Reset

@@ -26,12 +26,12 @@ import { PaymentAlert, StudentBalance, Page } from '@/types';
 const PaymentTable = ({ payments, loading, onAllocateClick }: { payments: PaymentAlert[], loading: boolean, onAllocateClick?: (p: PaymentAlert) => void }) => (
     <div className="overflow-x-auto">
         <table className="w-full text-left mt-4">
-            <thead><tr className="border-b border-purple-600"><th className="p-2">Date</th><th className="p-2">Amount</th><th className="p-2">Narrative / Student</th><th className="p-2 text-center">Action</th></tr></thead>
+            <thead><tr className="border-b border-red-600"><th className="p-2">Date</th><th className="p-2">Amount</th><th className="p-2">Narrative / Student</th><th className="p-2 text-center">Action</th></tr></thead>
             <tbody>
             {loading ? (<tr><td colSpan={4} className="text-center p-4">Loading...</td></tr>)
                 : !payments || payments.length === 0 ? (<tr><td colSpan={4} className="text-center p-4 text-gray-400">No payments found.</td></tr>)
                     : payments.map(p => (
-                        <tr key={p.id} className="border-b border-purple-800 hover:bg-purple-900/50">
+                        <tr key={p.id} className="border-b border-red-800 hover:bg-red-900/50">
                             <td className="p-2 whitespace-nowrap">{p.transactionDate ? p.transactionDate.split(' ')[0] : 'N/A'}</td>
                             <td className="p-2 font-bold text-green-400 whitespace-nowrap">{p.currency} ${(p.amount || 0).toFixed(2)}</td>
                             <td className="p-2 text-sm max-w-md truncate" title={p.narrative}>{p.narrative || `${p.studentName} (${p.regNumber})`}</td>
@@ -75,7 +75,7 @@ export default function PaymentAllocation() {
 
     const fetchPayments = useCallback((status: string, page: number, searchTerm: string) => {
         setLoading(true);
-        const url = `http://localhost:8082/api/financials/payments/status?status=${status}&page=${page}&size=10&searchTerm=${encodeURIComponent(searchTerm)}`;
+        const url = `http://194.163.141.113:8082/api/financials/payments/status?status=${status}&page=${page}&size=10&searchTerm=${encodeURIComponent(searchTerm)}`;
         apiFetch(url).then(res => res.json()).then(data => setPaymentPage(data))
             .catch(() => toast.error(`Failed to fetch ${status.toLowerCase()} payments.`))
             .finally(() => setLoading(false));
@@ -94,7 +94,7 @@ export default function PaymentAllocation() {
 
     const fetchAllStudents = async () => {
         try {
-            const res = await apiFetch('http://localhost:8082/api/financials/students/balances');
+            const res = await apiFetch('http://194.163.141.113:8082/api/financials/students/balances');
             if (res.ok) setAllStudents(await res.json());
         } catch (e) { console.error("Could not fetch students for search"); }
     };
@@ -111,7 +111,7 @@ export default function PaymentAllocation() {
         if (!selectedPayment || !selectedStudent) return toast.warning("You must select a payment and a student.");
         setLoading(true);
         try {
-            const response = await apiFetch('http://localhost:8082/api/financials/payments/allocate', {
+            const response = await apiFetch('http://194.163.141.113:8082/api/financials/payments/allocate', {
                 method: 'POST',
                 body: JSON.stringify({
                     paymentAlertId: selectedPayment.id,
@@ -171,28 +171,28 @@ export default function PaymentAllocation() {
     if (!user) return <Navigate to="/" replace />;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+        <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
             <Header />
-            <main className="flex-1 container mx-auto px-4 py-8">
-                <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+            <main className="flex-1 px-4 py-8">
+                <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
                     <CardHeader>
                         <div className="flex justify-between items-center">
                             <CardTitle className="flex items-center gap-2 text-white"><Banknote />Payments Reconciliation</CardTitle>
-                            <Button asChild className="bg-purple-600 hover:bg-purple-700"><Link to="/dashboard" className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" />Dashboard</Link></Button>
+                            <Button asChild className="bg-red-600 hover:bg-red-700"><Link to="/dashboard" className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" />Dashboard</Link></Button>
                         </div>
                         <p className="text-gray-400 pt-2">Review and allocate incoming bank payments.</p>
                     </CardHeader>
                     <CardContent>
                         <Tabs defaultValue="PENDING" onValueChange={handleTabChange} value={activeTab}>
-                            <TabsList className="grid w-full grid-cols-3 bg-purple-900/50 border-purple-700">
+                            <TabsList className="grid w-full grid-cols-3 bg-red-900/50 border-red-700">
                                 <TabsTrigger value="PENDING">Needs Manual Allocation</TabsTrigger>
                                 <TabsTrigger value="AUTO_ALLOCATED">Auto-Allocated</TabsTrigger>
                                 <TabsTrigger value="ALLOCATED">Manually Allocated</TabsTrigger>
                             </TabsList>
                             <div className="flex justify-between items-center mt-4">
-                                <Input placeholder="Filter by name, narrative, reference..." className="bg-purple-800/80 max-w-sm" value={paymentSearchTerm} onChange={(e) => { setPaymentSearchTerm(e.target.value); setCurrentPage(0); }}/>
+                                <Input placeholder="Filter by name, narrative, reference..." className="bg-red-800/80 max-w-sm" value={paymentSearchTerm} onChange={(e) => { setPaymentSearchTerm(e.target.value); setCurrentPage(0); }}/>
                                 <div className="flex gap-2">
-                                    <CSVLink data={paymentPage?.content || []} filename={`payments_${activeTab}.csv`} className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 py-2 bg-blue-600 hover:bg-blue-700"><Download size={16} /> Export CSV</CSVLink>
+                                    <CSVLink data={paymentPage?.content || []} filename={`payments_${activeTab}.csv`} className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 py-2 bg-white-600 hover:bg-white-700"><Download size={16} /> Export CSV</CSVLink>
                                     <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 flex items-center gap-2"><Download size={16} /> Export Excel</Button>
                                 </div>
                             </div>
@@ -204,13 +204,13 @@ export default function PaymentAllocation() {
             </main>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="bg-purple-900 border-purple-700 text-white">
+                <DialogContent className="bg-red-900 border-red-700 text-white">
                     <DialogHeader><DialogTitle>Allocate Payment</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-4">
-                        <p>Payment of <strong className="text-green-400">{selectedPayment?.currency} ${(selectedPayment?.amount || 0).toFixed(2)}</strong> from <strong className="text-blue-400">{selectedPayment?.narrative}</strong></p>
+                        <p>Payment of <strong className="text-green-400">{selectedPayment?.currency} ${(selectedPayment?.amount || 0).toFixed(2)}</strong> from <strong className="text-white-400">{selectedPayment?.narrative}</strong></p>
                         <div className="grid grid-cols-2 gap-4">
-                            <div><Label>For Academic Year</Label><Select value={allocationYear} onValueChange={setAllocationYear}><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{academicYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
-                            <div><Label>For Term / Semester</Label><Select value={allocationSemester} onValueChange={setAllocationSemester}><SelectTrigger className="bg-purple-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-purple-800">{semesters.map(term => <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
+                            <div><Label>For Academic Year</Label><Select value={allocationYear} onValueChange={setAllocationYear}><SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-red-800">{academicYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
+                            <div><Label>For Term / Semester</Label><Select value={allocationSemester} onValueChange={setAllocationSemester}><SelectTrigger className="bg-red-800"><SelectValue /></SelectTrigger><DialogPortal><SelectContent className="bg-red-800">{semesters.map(term => <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>)}</SelectContent></DialogPortal></Select></div>
                         </div>
                         <div>
                             <Label htmlFor="studentSearch">Search for Student to Allocate To</Label>
@@ -224,20 +224,20 @@ export default function PaymentAllocation() {
                                             onChange={e => setStudentSearchTerm(e.target.value)}
                                             onFocus={() => setIsSearchPopoverOpen(true)} // Open on focus
                                             placeholder="Search by name or ID..."
-                                            className="bg-purple-800"
+                                            className="bg-red-800"
                                             autoComplete="off"
                                         />
                                     </div>
                                 </PopoverTrigger>
                                 <PopoverContent
-                                    className="w-[var(--radix-popover-trigger-width)] p-1 border-purple-700 bg-purple-900 text-white"
+                                    className="w-[var(--radix-popover-trigger-width)] p-1 border-red-700 bg-red-900 text-white"
                                     onOpenAutoFocus={(e) => e.preventDefault()}
                                     align="start"
                                 >
                                     {filteredStudents.length > 0 ? (
                                         <div className="space-y-1">
                                             {filteredStudents.map(s => (
-                                                <div key={s.id} onMouseDown={() => handleStudentSelect(s)} className="p-2 rounded-md cursor-pointer hover:bg-purple-700/50">
+                                                <div key={s.id} onMouseDown={() => handleStudentSelect(s)} className="p-2 rounded-md cursor-pointer hover:bg-red-700/50">
                                                     <p className="font-semibold">{s.firstName} {s.lastName} ({s.studentId})</p>
                                                     <div className="text-sm text-gray-400">
                                                         {s.balances && Object.entries(s.balances).map(([currency, value]) => (

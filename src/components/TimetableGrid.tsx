@@ -37,7 +37,7 @@ export default function TimetableGrid({ grade, section, onEditEntry, onAddEntry 
     setLoading(true);
     try {
       // 2. Use the apiFetch wrapper for the request.
-      const response = await apiFetch(`http://localhost:8082/api/timetables/grade/${selectedGrade}/section/${selectedSection}`);
+      const response = await apiFetch(`http://194.163.141.113:8082/api/timetables/grade/${selectedGrade}/section/${selectedSection}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -56,7 +56,7 @@ export default function TimetableGrid({ grade, section, onEditEntry, onAddEntry 
   const deleteEntry = async (id: number) => {
     try {
       // 3. Use the apiFetch wrapper for the DELETE request.
-      const response = await apiFetch(`http://localhost:8082/api/timetables/${id}`, {
+      const response = await apiFetch(`http://194.163.141.113:8082/api/timetables/${id}`, {
         method: 'DELETE'
       });
       if (response.ok) {
@@ -80,26 +80,26 @@ export default function TimetableGrid({ grade, section, onEditEntry, onAddEntry 
   };
 
   return (
-      <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700">
+      <Card className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700">
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="text-white">Class Timetable</CardTitle>
             <div className="flex gap-4">
               <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                <SelectTrigger className="w-32 bg-purple-800 border-purple-600 text-white">
+                <SelectTrigger className="w-32 bg-red-800 border-red-600 text-white">
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
-                <SelectContent className="bg-purple-800 border-purple-600">
+                <SelectContent className="bg-red-800 border-red-600">
                   {Array.from({length: 12}, (_, i) => `Grade ${i + 1}`).map(g => (
                       <SelectItem key={g} value={g}>{g}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select value={selectedSection} onValueChange={setSelectedSection}>
-                <SelectTrigger className="w-32 bg-purple-800 border-purple-600 text-white">
+                <SelectTrigger className="w-32 bg-red-800 border-red-600 text-white">
                   <SelectValue placeholder="Section" />
                 </SelectTrigger>
-                <SelectContent className="bg-purple-800 border-purple-600">
+                <SelectContent className="bg-red-800 border-red-600">
                   {['A', 'B', 'C', 'D'].map(s => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
@@ -118,13 +118,13 @@ export default function TimetableGrid({ grade, section, onEditEntry, onAddEntry 
         <CardContent>
           {loading ? (
               <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-400"></div>
               </div>
           ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                  <tr className="border-b border-purple-600">
+                  <tr className="border-b border-red-600">
                     <th className="p-3 text-left text-gray-300">Time</th>
                     {days.map(day => (
                         <th key={day} className="p-3 text-left text-gray-300 capitalize">{day.toLowerCase()}</th>
@@ -133,21 +133,21 @@ export default function TimetableGrid({ grade, section, onEditEntry, onAddEntry 
                   </thead>
                   <tbody>
                   {timeSlots.map(timeSlot => (
-                      <tr key={timeSlot} className="border-b border-purple-700">
+                      <tr key={timeSlot} className="border-b border-red-700">
                         <td className="p-3 text-gray-300 font-medium">{timeSlot.split('-')[0]} - {timeSlot.split('-')[1]}</td>
                         {days.map(day => {
                           const entry = getEntryForSlot(day, timeSlot);
                           return (
                               <td key={`${day}-${timeSlot}`} className="p-2 align-top">
                                 {entry ? (
-                                    <div className="bg-purple-700/50 p-2 rounded border border-purple-600 group hover:bg-purple-600/50 transition-colors h-24 flex flex-col justify-between">
+                                    <div className="bg-red-700/50 p-2 rounded border border-red-600 group hover:bg-red-600/50 transition-colors h-24 flex flex-col justify-between">
                                       <div>
                                         <div className="text-white font-medium text-xs">{entry.subject}</div>
                                         <div className="text-gray-300 text-xs">{entry.teacher}</div>
                                         <div className="text-gray-400 text-xs">{entry.room}</div>
                                       </div>
                                       <div className="flex gap-1 self-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button size="icon" variant="ghost" className="h-6 w-6 p-0 text-blue-400 hover:text-blue-300" onClick={() => onEditEntry?.(entry)}><Edit className="h-3 w-3" /></Button>
+                                        <Button size="icon" variant="ghost" className="h-6 w-6 p-0 text-white-400 hover:text-white-300" onClick={() => onEditEntry?.(entry)}><Edit className="h-3 w-3" /></Button>
                                         <Button size="icon" variant="ghost" className="h-6 w-6 p-0 text-red-400 hover:text-red-300" onClick={() => entry.id && deleteEntry(entry.id)}><Trash2 className="h-3 w-3" /></Button>
                                       </div>
                                     </div>

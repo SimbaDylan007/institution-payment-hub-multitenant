@@ -60,7 +60,7 @@ export default function Facilities() {
     const handleDelete = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this facility?")) return;
     try {
-      const response = await apiFetch(`http://localhost:8082/api/facilities/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`http://194.163.141.113:8082/api/facilities/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success("Facility deleted successfully.");
         fetchFacilities(currentPage); // Refresh
@@ -72,18 +72,18 @@ export default function Facilities() {
     }
   };
 
-    const canViewPage = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_SUPER_ADMIN';
+    const canViewPage = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
 
 
     if (!user) return <Navigate to="/" replace />;
-    if (!canViewPage) {
-        return <Navigate to="/access-denied" replace />;
-    }
+    // if (!canViewPage) {
+    //     return <Navigate to="/access-denied" replace />;
+    // }
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-blue-900 text-white flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-white-900 text-white flex flex-col">
         <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
+        <main className="flex-1 px-4 py-8">
           <div className="mb-6 flex justify-between items-center">
             <div><h1 className="text-2xl font-bold">Facilities Management</h1><p className="text-gray-300">Manage school infrastructure and resources</p></div>
             <div className="flex gap-2"><AddFacilityModal onSuccess={() => fetchFacilities(currentPage)} /><Button asChild><Link to="/dashboard" className="flex items-center gap-2"><Home size={16}/>Dashboard</Link></Button></div>

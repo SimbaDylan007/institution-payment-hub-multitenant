@@ -62,7 +62,7 @@ public class DashboardService {
         User user = userRepository.findByUsername(username).orElseThrow();
 
         long unreadCount = notificationRepository.countByRecipientAndReadAtIsNull(user);
-        alerts.add(new HubAlertDto("Unread Messages", String.valueOf(unreadCount), "Mail", "text-blue-400"));
+        alerts.add(new HubAlertDto("Unread Messages", String.valueOf(unreadCount), "Mail", "text-white-400"));
 
         actions.add(new QuickActionDto("View My Grades", "/student-portal", "GraduationCap"));
         actions.add(new QuickActionDto("Check My Timetable", "/student-portal", "Calendar"));
@@ -78,7 +78,7 @@ public class DashboardService {
         User user = userRepository.findByUsername(username).orElseThrow();
 
         long unreadCount = notificationRepository.countByRecipientAndReadAtIsNull(user);
-        alerts.add(new HubAlertDto("Unread Messages", String.valueOf(unreadCount), "Mail", "text-blue-400"));
+        alerts.add(new HubAlertDto("Unread Messages", String.valueOf(unreadCount), "Mail", "text-white-400"));
 
         actions.add(new QuickActionDto("Manage Academics", "/academics", "GraduationCap"));
         actions.add(new QuickActionDto("View Schedule", "/schedule", "Calendar"));
@@ -110,7 +110,7 @@ public class DashboardService {
         List<QuickActionDto> actions = new ArrayList<>();
 
         long totalStudents = studentRepository.count();
-        alerts.add(new HubAlertDto("Total Students", String.valueOf(totalStudents), "Users", "text-blue-400"));
+        alerts.add(new HubAlertDto("Total Students", String.valueOf(totalStudents), "Users", "text-white-400"));
         long pendingPayments = paymentRepository.countByStatus("PENDING");
         alerts.add(new HubAlertDto("Payments to Reconcile", String.valueOf(pendingPayments), "Banknote", "text-emerald-400"));
 

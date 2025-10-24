@@ -138,7 +138,7 @@ export default function SearchFilters({ onSearch }: SearchFiltersProps) {
 
           <div className="flex justify-end space-x-2 mt-4">
             <Button variant="outline" onClick={handleReset}>Reset</Button>
-            <Button onClick={handleSearch} className="bg-purple-600 hover:bg-purple-700 text-white">Apply Filters</Button>
+            <Button onClick={handleSearch} className="bg-red-600 hover:bg-red-700 text-white">Apply Filters</Button>
           </div>
         </CardContent>
       </Card>

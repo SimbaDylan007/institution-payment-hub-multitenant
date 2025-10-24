@@ -45,7 +45,7 @@ export default function SchoolStats({ stats, loading }: SchoolStatsProps) {
           {Array.from({ length: 6 }).map((_, index) => (
               <Card
                   key={index}
-                  className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700 animate-pulse"
+                  className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-red-700 animate-pulse"
               >
                 <CardContent className="p-6">
                   <div className="h-4 w-2/3 bg-gray-700 rounded mb-2"></div>
@@ -65,7 +65,7 @@ export default function SchoolStats({ stats, loading }: SchoolStatsProps) {
           return (
               <Card
                   key={stat.title}
-                  className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-gray-700 hover:border-purple-500 transition-colors"
+                  className="bg-gradient-to-br from-red-900/50 to-white-900/50 border-gray-700 hover:border-red-500 transition-colors"
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-300">

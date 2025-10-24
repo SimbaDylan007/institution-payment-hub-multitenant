@@ -18,7 +18,7 @@ export default function Finance() {
     <div className="min-h-screen bg-[#121828] text-white dark:bg-gray-100 dark:text-gray-900 flex flex-col">
       <Header />
       
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 px-4 py-8">
         <div className="mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold">Finance Management</h1>
@@ -27,7 +27,7 @@ export default function Finance() {
             </p>
           </div>
           <Button
-            className="bg-purple-500 text-white hover:bg-purple-600"
+            className="bg-red-500 text-white hover:bg-red-600"
             asChild
           >
             <Link to="/dashboard" className="flex items-center gap-2">

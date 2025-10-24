@@ -73,7 +73,7 @@ export default function StudentPortal() {
   return (
       <div className="min-h-screen bg-gray-900 text-white flex flex-col">
         <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
+        <main className="flex-1 px-4 py-8">
           <div className="mb-6 flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold">Welcome, {profile?.firstName || user.name}</h1>

@@ -7,7 +7,7 @@ This is a Spring Boot backend service that connects to the ZB Bank API for payme
 
 1. Java 11 or higher
 2. Maven
-3. MySQL Server running on localhost:3306
+3. MySQL Server running on 194.163.141.113:3306
 
 ## Database Setup
 
@@ -17,7 +17,7 @@ This is a Spring Boot backend service that connects to the ZB Bank API for payme
 CREATE DATABASE payment_db;
 ```
 
-2. Make sure the MySQL server is running on localhost:3306 with the username "root" and no password (or update the application.properties file with your credentials).
+2. Make sure the MySQL server is running on 194.163.141.113:3306 with the username "root" and no password (or update the application.properties file with your credentials).
 
 ## Running the Application
 
@@ -34,7 +34,7 @@ mvn clean install
 mvn spring-boot:run
 ```
 
-The application will run on http://localhost:8082
+The application will run on http://194.163.141.113:8082
 
 ## API Endpoints
 
@@ -61,7 +61,7 @@ You can use tools like Postman or cURL to test the API endpoints.
 Example cURL command:
 
 ```bash
-curl -X POST "http://localhost:8082/api/payments/all-payments" \
+curl -X POST "http://194.163.141.113:8082/api/payments/all-payments" \
      -H "Content-Type: application/json" \
      -d '{"institutionId": "your_institution_id", "password": "your_password"}'
 ```
