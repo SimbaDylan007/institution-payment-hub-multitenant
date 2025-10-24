@@ -40,7 +40,7 @@ public class User {
     @OneToOne(mappedBy = "user")
     private Student student;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = false)
     private Institution institution;
 

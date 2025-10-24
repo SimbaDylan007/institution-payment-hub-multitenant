@@ -27,7 +27,7 @@ public class Institution {
             mappedBy = "institution",
             cascade = CascadeType.ALL,
             orphanRemoval = true,
-            fetch = FetchType.LAZY
+            fetch = FetchType.EAGER
     )
     private List<InstitutionAccount> institutionAccounts = new ArrayList<>();
 

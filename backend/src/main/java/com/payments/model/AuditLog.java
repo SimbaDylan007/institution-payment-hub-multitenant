@@ -17,7 +17,7 @@ public class AuditLog {
     private LocalDateTime timestamp;
 
     // A student MUST belong to an institution.
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "institution_id", referencedColumnName = "id", nullable = true)
     private Institution institution;
 
