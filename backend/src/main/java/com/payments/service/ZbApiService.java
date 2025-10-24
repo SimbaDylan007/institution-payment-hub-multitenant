@@ -55,21 +55,20 @@ public class ZbApiService {
      * enforces security rules, and associates payments with the correct institution.
      * This is the primary entry point for fetching remote payments.
      */
+
+    @Transactional
     public List<PaymentAlert> pickPaymentsForMultipleAccounts(List<String> institutionAccountIds, String type) {
-        // --- MULTITENANCY SECURITY CHECK ---
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         boolean isSuperAdmin = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch("ROLE_SUPER_ADMIN"::equals);
 
-        // If the user is a regular user, ensure they can only access their linked accounts.
         if (!isSuperAdmin) {
             List<String> allowedIds = getCurrentUserAllowedInstitutionAccountIds(authentication);
             if (!new HashSet<>(allowedIds).containsAll(institutionAccountIds)) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You are not authorized to pick payments for one or more selected institutions.");
             }
         }
-        // --- END SECURITY CHECK ---
 
         List<PaymentAlert> allPayments = new ArrayList<>();
         for (String accId : institutionAccountIds) {
@@ -83,21 +82,14 @@ public class ZbApiService {
             request.setPassword(password);
 
             try {
-                // Determine which API endpoint to call
                 String apiUrl = "all".equals(type) ? apiBaseUrl + allPaymentsPath : apiBaseUrl + pickPendingPath;
-
-                // Fetch the raw payment data from the bank
                 List<PaymentAlert> rawPayments = fetchPaymentsFromApi(request, apiUrl);
-
-                // Process and save the payments, linking them to the correct institution
                 allPayments.addAll(this.processAndSavePayments(rawPayments, accId));
-
             } catch (Exception e) {
                 System.err.println("Failed to fetch payments for account " + accId + ". Error: " + e.getMessage());
             }
         }
 
-        // De-duplicate the combined list before returning
         return allPayments.stream()
                 .filter(p -> p.getId() != null)
                 .collect(Collectors.collectingAndThen(
@@ -109,6 +101,7 @@ public class ZbApiService {
     /**
      * Fetches payments from the local database based on the current user's role and institution.
      */
+    @Transactional(readOnly = true)
     public List<PaymentAlert> getPaymentsByStatus(String status) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         boolean isSuperAdmin = authentication.getAuthorities().stream()
@@ -117,10 +110,8 @@ public class ZbApiService {
         if (isSuperAdmin) {
             return paymentRepository.findByStatus(status);
         } else {
-            // For a regular user, get their institution and filter by it
             Institution userInstitution = getInstitutionForUser(authentication);
             if (userInstitution == null) {
-                // Failsafe: A non-admin user with no institution should not see any data.
                 return Collections.emptyList();
             }
             return paymentRepository.findByStatusAndInstitution(status, userInstitution);
@@ -241,7 +232,6 @@ public class ZbApiService {
         }
     }
 
-    // --- SECURITY HELPER METHODS (ACTUAL IMPLEMENTATION) ---
 
     private List<String> getCurrentUserAllowedInstitutionAccountIds(Authentication authentication) {
         Institution institution = getInstitutionForUser(authentication);
