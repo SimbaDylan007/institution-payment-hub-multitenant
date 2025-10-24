@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
-import { PaymentAlert, SearchFiltersType, Institution, InstitutionAccount } from "@/types";
+import { PaymentAlert, SearchFiltersType, InstitutionAccount } from "@/types";
 import { apiFetch } from "@/utils/apiClient";
 
 // UI Components & Services
@@ -34,23 +34,73 @@ import { motion, AnimatePresence } from "framer-motion";
 const ACCOUNTS_API_BASE_URL = 'http://194.163.141.113:8082/api/accounts';
 const PAYMENTS_API_BASE_URL = 'http://194.163.141.113:8082/api/payments';
 
-
 // --- Helper Components ---
-// These components are assumed to be correct and are unchanged.
 const PaymentTableSkeleton = () => ( <div className="space-y-4 p-6">{[...Array(5)].map((_, i) => (<Skeleton key={i} className="h-10 w-full rounded-md bg-gray-200/70 dark:bg-gray-700/50" />))}</div> );
 const NoPaymentsFound = ({ hasFetched }: { hasFetched: boolean }) => ( <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="flex flex-col items-center justify-center p-8 text-center text-gray-500 dark:text-gray-400"><FileText size={48} className="mb-4 text-gray-600 dark:text-gray-300" /><h3 className="text-xl font-semibold mb-2">No Payments Found</h3><p className="text-sm">{hasFetched ? "No new payments were found from the bank." : "There are currently no payments stored in the database."}</p></motion.div> );
-const CredentialsManager = ({ accounts, setAccounts, fetchAccounts }: { accounts: InstitutionAccount[], setAccounts: React.Dispatch<React.SetStateAction<InstitutionAccount[]>>, fetchAccounts: () => Promise<InstitutionAccount[]> }) => {
+
+const CredentialsManager = ({ accounts, fetchAccounts }: { accounts: InstitutionAccount[], fetchAccounts: () => Promise<InstitutionAccount[]> }) => {
     const [institutionId, setInstitutionId] = useState('');
     const [accountName, setAccountName] = useState('');
-    const handleAddAccount = async () => { /* ... unchanged ... */ };
-    const handleDeleteAccount = async (id: number | undefined) => { /* ... unchanged ... */ };
+
+    const handleAddAccount = async () => {
+        if (!institutionId || !accountName) {
+            return toast.error("Account Name and Institution ID are required.");
+        }
+        try {
+            const newAccount = { institutionId, accountName };
+            const response = await apiFetch(ACCOUNTS_API_BASE_URL, {
+                method: 'POST',
+                body: JSON.stringify(newAccount),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || "Failed to add account.");
+            }
+
+            toast.success(`Account "${accountName}" added or updated.`);
+            await fetchAccounts();
+            setInstitutionId('');
+            setAccountName('');
+        } catch (error) {
+            toast.error((error as Error).message);
+            console.error("Error adding account:", error);
+        }
+    };
+
+    const handleDeleteAccount = async (id: number | undefined) => {
+        if (id === undefined) {
+            toast.error("Account ID is missing for deletion.");
+            return;
+        }
+        if (!window.confirm("Are you sure you want to delete this account?")) return;
+
+        try {
+            const response = await apiFetch(`${ACCOUNTS_API_BASE_URL}/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to delete account.");
+            }
+
+            toast.info("Account removed.");
+            await fetchAccounts();
+        } catch (error) {
+            toast.error((error as Error).message);
+            console.error("Error deleting account:", error);
+        }
+    };
+
     return (<DialogContent className="dark:bg-gray-900/80 dark:border-gray-700 dark:text-white backdrop-blur-sm"><DialogHeader><DialogTitle className="flex items-center gap-2"><Key /> Manage Institution Accounts</DialogTitle></DialogHeader><div className="space-y-4 py-2"><div className="space-y-2 p-3 border dark:border-gray-700 rounded-lg"><h4 className="font-semibold">Add New Account</h4><Input placeholder="Account Name (e.g., Main ZWL)" value={accountName} onChange={e => setAccountName(e.target.value)} className="dark:bg-gray-800" /><Input placeholder="Institution ID (e.g., METHODIST-ZWG)" value={institutionId} onChange={e => setInstitutionId(e.target.value)} className="dark:bg-gray-800" /><p className="text-xs text-amber-400">Note: The password for this ID must be set in the backend's configuration file.</p><Button onClick={handleAddAccount} className="w-full"><Plus className="h-4 w-4 mr-2" />Add Account</Button></div><div className="space-y-2"><h4 className="font-semibold">Saved Accounts</h4><div className="space-y-2 max-h-48 overflow-y-auto p-2 border dark:border-gray-700 rounded-lg">{accounts.length === 0 ? <p className="text-sm text-center text-gray-400">No accounts saved.</p> : accounts.map(acc => (<div key={acc.id} className="flex justify-between items-center p-2 bg-gray-800 rounded"><div><p className="font-bold">{acc.accountName}</p><p className="text-xs text-gray-400">{acc.institutionId}</p></div><Button size="sm" variant="destructive" onClick={() => handleDeleteAccount(acc.id)}><Trash2 className="h-4 w-4"/></Button></div>))}</div></div></div></DialogContent>);
 };
+
 const PaymentPicker = ({ accounts, onFetchPayments }: { accounts: InstitutionAccount[], onFetchPayments: (selectedIds: string[], action: 'pending' | 'all') => void }) => {
-    const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(new Set()); const [actionType, setActionType] = useState<'pending' | 'all'>('pending');
+    const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(new Set());
+    const [actionType, setActionType] = useState<'pending' | 'all'>('pending');
     const handleSelectAccount = (id: string, isChecked: boolean) => { const newSet = new Set(selectedAccountIds); if (isChecked) newSet.add(id); else newSet.delete(id); setSelectedAccountIds(newSet); };
     const handleFetch = () => { if (selectedAccountIds.size === 0) return toast.warning("Please select at least one account."); onFetchPayments(Array.from(selectedAccountIds), actionType); };
-    return (<Card className="dark:bg-[#1A1F2C] dark:border-gray-800"><CardHeader className="pb-4"><CardTitle className="text-md flex items-center gap-2"><Banknote/>Institution Connection</CardTitle></CardHeader><CardContent><div className="space-y-3"><div><Label>Action Type</Label><Select value={actionType} onValueChange={(value: 'pending' | 'all') => setActionType(value)}><SelectTrigger className="w-full dark:bg-gray-800 dark:border-gray-700"><SelectValue /></SelectTrigger><SelectContent className="dark:bg-gray-800 dark:border-gray-700"><SelectItem value="pending">Pick Pending Payments</SelectItem><SelectItem value="all">Get All Payments (History)</SelectItem></SelectContent></Select></div><Label>Select accounts to fetch from:</Label><div className="space-y-2 p-2 border dark:border-gray-700 rounded-md max-h-32 overflow-y-auto">{accounts.length === 0 ? <p className="text-xs text-gray-400 text-center">No accounts configured.</p> : accounts.map(acc => (<div key={acc.id} className="flex items-center space-x-2"><Checkbox id={acc.institutionId} onCheckedChange={(checked) => handleSelectAccount(acc.institutionId, !!checked)} /><Label htmlFor={acc.institutionId} className="text-sm font-medium leading-none">{acc.accountName}</Label></div>))}</div><Button onClick={handleFetch} className="w-full bg-red-600 hover:bg-red-700 dark:text-white">Fetch New Payments</Button></div></CardContent></Card>);
+    return (<Card className="dark:bg-[#1A1F2C] dark:border-gray-800"><CardHeader className="pb-4"><CardTitle className="text-md flex items-center gap-2"><Banknote/>Institution Connection</CardTitle></CardHeader><CardContent><div className="space-y-3"><div><Label>Action Type</Label><Select value={actionType} onValueChange={(value: 'pending' | 'all') => setActionType(value)}><SelectTrigger className="w-full dark:bg-gray-800 dark:border-gray-700"><SelectValue /></SelectTrigger><SelectContent className="dark:bg-gray-800 dark:border-gray-700"><SelectItem value="pending">Pick Pending Payments</SelectItem><SelectItem value="all">Get All Payments (History)</SelectItem></SelectContent></Select></div><Label>Select accounts to fetch from:</Label><div className="space-y-2 p-2 border dark:border-gray-700 rounded-md max-h-32 overflow-y-auto">{accounts.length === 0 ? <p className="text-xs text-gray-400 text-center">No accounts configured.</p> : accounts.map(acc => (<div key={acc.id} className="flex items-center space-x-2"><Checkbox id={`acc-${acc.id}`} onCheckedChange={(checked) => handleSelectAccount(acc.institutionId, !!checked)} /><Label htmlFor={`acc-${acc.id}`} className="text-sm font-medium leading-none">{acc.accountName}</Label></div>))}</div><Button onClick={handleFetch} className="w-full bg-red-600 hover:bg-red-700 dark:text-white">Fetch New Payments</Button></div></CardContent></Card>);
 };
 
 export default function Dashboard() {
@@ -154,18 +204,24 @@ export default function Dashboard() {
         );
     }, [allFetchedPayments, localSearchTerm, selectedInstitutionId, isSuperAdmin]);
 
-    // --- THIS IS THE FIX ---
-    // We filter out any accounts that are missing the nested 'institution' object
-    // before we try to map over them. This prevents the crash.
     const uniqueInstitutions = useMemo(() => {
         return Array.from(
             new Map(
                 institutionAccounts
-                    .filter(acc => acc.institution) // <-- THE FIX: Safely filter out invalid accounts
+                    .filter(acc => acc.institution) // Safety filter
                     .map(acc => [acc.institution.id, acc.institution])
             ).values()
         );
     }, [institutionAccounts]);
+
+    // --- FIX #1: Create a filtered list of accounts based on user role ---
+    const visibleAccounts = useMemo(() => {
+        if (isSuperAdmin) {
+            return institutionAccounts; // Super admins see all accounts
+        }
+        // Regular admins see ONLY accounts for their institution
+        return institutionAccounts.filter(acc => acc.institution?.id === user?.institutionId);
+    }, [institutionAccounts, isSuperAdmin, user?.institutionId]);
 
     if (!user) return <Navigate to="/" replace />;
 
@@ -211,14 +267,22 @@ export default function Dashboard() {
                                         </div>
                                         <div className="flex gap-3">
                                             <Button onClick={handleResetAllPayments} variant="destructive" size="sm" className="flex items-center gap-2"><RotateCcw size={16} /> Reset All</Button>
-                                            <Dialog><DialogTrigger asChild><Button variant="outline" size="sm" className="flex items-center gap-2"><Key size={16} /> Manage Accounts</Button></DialogTrigger><CredentialsManager accounts={institutionAccounts} setAccounts={setInstitutionAccounts} fetchAccounts={fetchAccounts} /></Dialog>
+                                            <Dialog><DialogTrigger asChild><Button variant="outline" size="sm" className="flex items-center gap-2"><Key size={16} /> Manage Accounts</Button></DialogTrigger><CredentialsManager accounts={institutionAccounts} fetchAccounts={fetchAccounts} /></Dialog>
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                                         <div className="lg:col-span-3"><SearchFilters onSearch={handleBackendSearch} /></div>
-                                        {isSuperAdmin && <div className="lg:col-span-1"><PaymentPicker accounts={institutionAccounts} onFetchPayments={(ids, action) => loadPayments(action, ids)} /></div>}
+                                        {/* --- FIX #2: Correctly show panel for ALL allowed users & pass filtered accounts --- */}
+                                        {canManagePayments && (
+                                            <div className="lg:col-span-1">
+                                                <PaymentPicker
+                                                    accounts={visibleAccounts}
+                                                    onFetchPayments={(ids, action) => loadPayments(action, ids)}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
 
                                     {displayedPayments.length > 0 && (<div className="relative mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder={`Search within the ${displayedPayments.length} loaded payments...`} value={localSearchTerm} onChange={e => setLocalSearchTerm(e.target.value)} className="pl-10 dark:bg-gray-800" /></div>)}
