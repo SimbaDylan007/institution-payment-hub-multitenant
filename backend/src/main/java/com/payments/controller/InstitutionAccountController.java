@@ -38,17 +38,14 @@ public class InstitutionAccountController {
 
     @PostMapping
     public ResponseEntity<InstitutionAccount> addOrUpdateAccount(@RequestBody InstitutionAccount account) {
-        // First, check if an account with this institutionId already exists
         Optional<InstitutionAccount> existingAccount = accountService.getAccountByInstitutionId(account.getInstitutionId());
 
         if (existingAccount.isPresent()) {
-            // If it exists, we just update its name.
             InstitutionAccount accountToUpdate = existingAccount.get();
             accountToUpdate.setAccountName(account.getAccountName());
             InstitutionAccount updated = accountService.updateAccount(accountToUpdate);
             return new ResponseEntity<>(updated, HttpStatus.OK);
         } else {
-            // If it's a NEW account, we must find and set its parent Institution.
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             Object principal = authentication.getPrincipal();
 
@@ -59,15 +56,12 @@ public class InstitutionAccountController {
             Institution currentUserInstitution = ((CustomUserDetails) principal).getInstitution();
 
             if (currentUserInstitution == null) {
-                // This would be a super admin trying to create an account without specifying which school
-                // or a regular user who is not linked to any institution.
+              
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create an account without a parent institution.");
             }
 
-            // Set the parent institution on the new account object
             account.setInstitution(currentUserInstitution);
 
-            // Now, save the complete account object
             InstitutionAccount newAccount = accountService.addAccount(account);
             return new ResponseEntity<>(newAccount, HttpStatus.CREATED);
         }

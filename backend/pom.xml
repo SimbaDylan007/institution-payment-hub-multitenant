@@ -9,9 +9,9 @@
         <relativePath/>
     </parent>
     <groupId>com.payments</groupId>
-    <artifactId>payment-service</artifactId>
+    <artifactId>multitenant-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>payment-service</name>
+    <name>multitenant-service</name>
     <description>Payment Service for MGOS</description>
     <properties>
         <java.version>11</java.version>
