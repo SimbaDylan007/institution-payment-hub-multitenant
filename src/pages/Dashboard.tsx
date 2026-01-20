@@ -31,8 +31,8 @@ import { UserPlus, FileText, Key, Plus, Trash2, Banknote, RotateCcw, Search, Bui
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- API Endpoints ---
-const ACCOUNTS_API_BASE_URL = 'http://194.163.141.113:8082/api/accounts';
-const PAYMENTS_API_BASE_URL = 'http://194.163.141.113:8082/api/payments';
+const ACCOUNTS_API_BASE_URL = '/api/accounts';
+const PAYMENTS_API_BASE_URL = '/api/payments';
 
 
 // --- Helper Components ---

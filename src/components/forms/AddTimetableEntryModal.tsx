@@ -62,7 +62,7 @@ const AddTimetableEntryModal: FC<AddTimetableEntryModalProps> = ({ onEntryAdded 
         }
 
         try {
-            const response = await apiFetch('http://194.163.141.113:8082/api/timetables', {
+            const response = await apiFetch('/api/timetables', {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });

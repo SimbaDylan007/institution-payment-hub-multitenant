@@ -42,7 +42,7 @@ export default function AuditTrail() {
         if (currentFilters.startDate) params.append('startDate', format(currentFilters.startDate, 'yyyy-MM-dd'));
         if (currentFilters.endDate) params.append('endDate', format(currentFilters.endDate, 'yyyy-MM-dd'));
 
-        apiFetch(`http://194.163.141.113:8082/api/audit-logs?${params.toString()}`)
+        apiFetch(`/api/audit-logs?${params.toString()}`)
             .then(res => res.json())
             .then(data => setLogPage(data))
             .catch(() => console.error("Failed to fetch audit logs"))

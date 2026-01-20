@@ -2,7 +2,7 @@ import { PaymentAlert, PickPaymentRequest } from "@/types";
 import { toast } from "sonner";
 import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
-const API_BASE_URL = "http://194.163.141.113:8082/api/payments";
+const API_BASE_URL = "/api/payments";
 
 // 2. The local `fetchWithErrorHandling` function is no longer needed.
 //    Authentication, Content-Type headers, and basic error toasts are now handled by `apiFetch`.
@@ -66,6 +66,7 @@ export async function pickAllPendingPayments(
 export async function getAllPayments(
     request: PickPaymentRequest
 ): Promise<PaymentAlert[]> {
+    // eslint-disable-next-line no-useless-catch
   try {
     const response = await apiFetch(`${API_BASE_URL}/all-payments`, {
       method: "POST",
@@ -81,6 +82,7 @@ export async function getAllPayments(
  * Resets a payment's status in the local database via our backend.
  */
 export async function resetPayment(paymentId: string): Promise<boolean> {
+    // eslint-disable-next-line no-useless-catch
   try {
     // Note: A GET request typically shouldn't change state, but we follow the existing pattern.
     // A PUT or POST to /reset might be more conventional.
@@ -97,6 +99,7 @@ export async function resetPayment(paymentId: string): Promise<boolean> {
  * Gets all payments stored in the local database as a fallback.
  */
 export async function getLocalPayments(): Promise<PaymentAlert[]> {
+    // eslint-disable-next-line no-useless-catch
   try {
     const response = await apiFetch(`${API_BASE_URL}/local`, {
       method: "GET",

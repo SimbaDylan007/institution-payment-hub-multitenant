@@ -58,7 +58,7 @@ const formatOptions = [ { value: 'PDF', label: 'PDF' }, { value: 'XLSX', label: 
 const grades = ["GRADE 1", "GRADE 2", "GRADE 3", "GRADE 4", "GRADE 5", "GRADE 6", "GRADE 7", "ECD"];
 const departments = ["Academics", "Administration", "Finance", "Support Staff", "IT"];
 const staffStatuses = ["ACTIVE", "ON_LEAVE", "TERMINATED", "INACTIVE"];
-const API_BASE_URL = 'http://194.163.141.113:8082';
+const API_BASE_URL = '';
 
 
 export default function MainReports() {

@@ -1,6 +1,6 @@
 import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
-const API_BASE_URL = "http://194.163.141.113:8082/api/staff";
+const API_BASE_URL = "/api/staff";
 
 // 2. The local `fetchWithErrorHandling` function has been removed.
 

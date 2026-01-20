@@ -36,7 +36,7 @@ export default function Communication() {
                 params.append('institutionId', selectedInstitution.id.toString());
             }
 
-            const response = await apiFetch(`http://194.163.141.113:8082/api/notifications?${params.toString()}`);
+            const response = await apiFetch(`/api/notifications?${params.toString()}`);
             if (response.ok) {
                 setNotificationsPage(await response.json());
             } else {
@@ -64,7 +64,7 @@ export default function Communication() {
     const formData = new FormData(e.currentTarget);
     const announcementData = { subject: formData.get('subject'), content: formData.get('content'), targetAudience: formData.get('targetAudience'), };
     try {
-      const res = await apiFetch('http://194.163.141.113:8082/api/notifications/announcements', {
+      const res = await apiFetch('/api/notifications/announcements', {
         method: 'POST',
         body: JSON.stringify(announcementData)
       });
@@ -85,7 +85,7 @@ export default function Communication() {
   // CORRECTED: This function now uses the apiFetch wrapper
   const handleMarkAsRead = async (id: number) => {
     try {
-      const response = await apiFetch(`http://194.163.141.113:8082/api/notifications/${id}/read`, { method: 'POST' });
+      const response = await apiFetch(`/api/notifications/${id}/read`, { method: 'POST' });
       if(response.ok) {
         setNotificationsPage(prev => {
           if (!prev) return null;

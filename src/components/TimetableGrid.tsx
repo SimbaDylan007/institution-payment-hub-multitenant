@@ -37,7 +37,7 @@ export default function TimetableGrid({ grade, section, onEditEntry, onAddEntry 
     setLoading(true);
     try {
       // 2. Use the apiFetch wrapper for the request.
-      const response = await apiFetch(`http://194.163.141.113:8082/api/timetables/grade/${selectedGrade}/section/${selectedSection}`);
+      const response = await apiFetch(`/api/timetables/grade/${selectedGrade}/section/${selectedSection}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -56,7 +56,7 @@ export default function TimetableGrid({ grade, section, onEditEntry, onAddEntry 
   const deleteEntry = async (id: number) => {
     try {
       // 3. Use the apiFetch wrapper for the DELETE request.
-      const response = await apiFetch(`http://194.163.141.113:8082/api/timetables/${id}`, {
+      const response = await apiFetch(`/api/timetables/${id}`, {
         method: 'DELETE'
       });
       if (response.ok) {

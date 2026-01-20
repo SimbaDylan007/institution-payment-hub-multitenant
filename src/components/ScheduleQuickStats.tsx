@@ -22,7 +22,7 @@ export default function ScheduleQuickStats() {
     setLoading(true);
     try {
 // Use the new, correct endpoint
-      const response = await apiFetch('http://194.163.141.113:8082/api/schedule/stats');
+      const response = await apiFetch('/api/schedule/stats');
 
       if (response.ok) {
         const data = await response.json();

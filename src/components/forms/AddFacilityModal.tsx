@@ -70,8 +70,8 @@ const AddFacilityModal: FC<Props> = ({ facilityToEdit, onSuccess }) => {
         }
 
         const url = facilityToEdit
-            ? `http://194.163.141.113:8082/api/facilities/${facilityToEdit.id}`
-            : 'http://194.163.141.113:8082/api/facilities';
+            ? `/api/facilities/${facilityToEdit.id}`
+            : '/api/facilities';
 
         const method = facilityToEdit ? 'PUT' : 'POST';
 

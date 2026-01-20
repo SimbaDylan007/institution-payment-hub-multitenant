@@ -58,7 +58,7 @@ const AddStaffModal: FC<AddStaffModalProps> = ({ isOpen, onClose, onSuccess }) =
         }
 
         try {
-            const response = await apiFetch('http://194.163.141.113:8082/api/staff', {
+            const response = await apiFetch('/api/staff', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });

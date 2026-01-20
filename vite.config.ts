@@ -6,14 +6,14 @@ import path from "path";
 export default defineConfig(({ mode }) => ({
   server: {
     // FIX 1: Change frontend port to avoid conflict with the backend
-    port: 8081,
+    port: 80,
 
     // FIX 2: Add the proxy to forward API calls to the backend
     proxy: {
       // Any request from the frontend that starts with "/api"
-      // will be sent to "http://194.163.141.113:8082/api"
+      // will be sent to "/api"
       '/api': {
-        target: 'http://194.163.141.113:8082', // Your Spring Boot backend address
+        target: '', // Your Spring Boot backend address
         changeOrigin: true, // Recommended for avoiding CORS issues
       }
     }

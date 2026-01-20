@@ -39,8 +39,8 @@ export const NewMessageModal: FC<NewMessageModalProps> = ({ onMessageSent }) => 
             setLoading(true);
             try {
                 const [usersRes, staffRes] = await Promise.all([
-                    apiFetch('http://194.163.141.113:8082/api/users?size=1000'),
-                    apiFetch('http://194.163.141.113:8082/api/staff?size=1000')
+                    apiFetch('/api/users?size=1000'),
+                    apiFetch('/api/staff?size=1000')
                 ]);
 
                 if (!usersRes.ok || !staffRes.ok) throw new Error("Failed to load recipient lists.");
@@ -96,7 +96,7 @@ export const NewMessageModal: FC<NewMessageModalProps> = ({ onMessageSent }) => 
                 recipientId: parseInt(formData.recipientId),
             };
 
-            const response = await apiFetch('http://194.163.141.113:8082/api/communication/messages', {
+            const response = await apiFetch('/api/communication/messages', {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });

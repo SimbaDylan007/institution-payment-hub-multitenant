@@ -46,7 +46,7 @@ export default function Library() {
             params.append('institutionId', selectedInstitution.id.toString());
         }
 
-        const url = `http://194.163.141.113:8082/api/library/books?${params.toString()}`;
+        const url = `/api/library/books?${params.toString()}`;
         apiFetch(url).then(res => res.json()).then(setBookPage).catch(() => toast.error('Failed to fetch books.')).finally(() => setLoading(false));
     }, [isSuperAdmin, selectedInstitution]);
 
@@ -59,7 +59,7 @@ export default function Library() {
             params.append('institutionId', selectedInstitution.id.toString());
         }
 
-        const url = `http://194.163.141.113:8082/api/library/transactions?${params.toString()}`;
+        const url = `/api/library/transactions?${params.toString()}`;
         apiFetch(url).then(res => res.json()).then(setLoanPage).catch(err => toast.error(err.message)).finally(() => setLoading(false));
     }, [isSuperAdmin, selectedInstitution]); // <-- Add dependencies
 
@@ -87,7 +87,7 @@ export default function Library() {
     e.preventDefault(); setLoading(true);
     const formData = new FormData(e.currentTarget);
     const bookData = { title: formData.get('title'), author: formData.get('author'), isbn: formData.get('isbn'), publisher: formData.get('publisher'), publishedDate: formData.get('publishedDate'), category: formData.get('category'), totalCopies: parseInt(formData.get('totalCopies') as string), location: formData.get('location') };
-    const url = selectedBook ? `http://194.163.141.113:8082/api/library/books/${selectedBook.id}` : 'http://194.163.141.113:8082/api/library/books';
+    const url = selectedBook ? `/api/library/books/${selectedBook.id}` : '/api/library/books';
     const method = selectedBook ? 'PUT' : 'POST';
     try {
       const response = await apiFetch(url, { method, body: JSON.stringify(bookData) });
@@ -102,7 +102,7 @@ export default function Library() {
   const handleDeleteBook = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this book?')) return;
     try {
-      const response = await apiFetch(`http://194.163.141.113:8082/api/library/books/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`/api/library/books/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success('Book deleted successfully');
         fetchBooks(bookPageNum, bookSearch);
@@ -116,7 +116,7 @@ export default function Library() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const response = await apiFetch('http://194.163.141.113:8082/api/library/books/bulk-upload', { method: 'POST', body: formData });
+      const response = await apiFetch('/api/library/books/bulk-upload', { method: 'POST', body: formData });
       if (response.ok) {
         const newBooks = await response.json();
         toast.success(`${newBooks.length} books imported/updated successfully!`);
@@ -142,7 +142,7 @@ export default function Library() {
     e.preventDefault();
     if (!selectedBook || !studentId) return toast.error("Book and Student ID are required.");
     setLoading(true);
-    const url = `http://194.163.141.113:8082/api/library/books/${transactionType}?bookId=${selectedBook.id}&studentId=${studentId}`;
+    const url = `/api/library/books/${transactionType}?bookId=${selectedBook.id}&studentId=${studentId}`;
     try {
       const response = await apiFetch(url, { method: 'POST' });
       if (response.ok) {

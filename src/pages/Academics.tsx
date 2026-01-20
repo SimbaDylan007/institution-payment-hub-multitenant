@@ -66,7 +66,7 @@ export default function Academics() {
             params.append('institutionId', selectedInstitution.id.toString());
         }
 
-        const url = `http://194.163.141.113:8082/api/academic/subjects?${params.toString()}`;
+        const url = `/api/academic/subjects?${params.toString()}`;
         apiFetch(url).then(res => res.json()).then(setSubjectPage).catch(() => toast.error("Failed to fetch subjects")).finally(() => setLoading(false));
     }, [isSuperAdmin, selectedInstitution]); // <-- Add dependencies
 
@@ -79,7 +79,7 @@ export default function Academics() {
             params.append('institutionId', selectedInstitution.id.toString());
         }
 
-        const url = `http://194.163.141.113:8082/api/academic/grades?${params.toString()}`;
+        const url = `/api/academic/grades?${params.toString()}`;
         apiFetch(url).then(res => res.json()).then(setGradePage).catch(() => toast.error("Failed to fetch grades")).finally(() => setLoading(false));
     }, [isSuperAdmin, selectedInstitution]); // <-- Add dependencies
 
@@ -107,7 +107,7 @@ export default function Academics() {
     e.preventDefault(); setLoading(true);
     const formData = new FormData(e.currentTarget);
     const subjectData = { name: formData.get('name'), code: formData.get('code'), grade: formData.get('grade'), credits: parseInt(formData.get('credits') as string), description: formData.get('description') };
-    const url = selectedSubject ? `http://194.163.141.113:8082/api/academic/subjects/${selectedSubject.id}` : 'http://194.163.141.113:8082/api/academic/subjects';
+    const url = selectedSubject ? `/api/academic/subjects/${selectedSubject.id}` : '/api/academic/subjects';
     const method = selectedSubject ? 'PUT' : 'POST';
     try {
       const response = await apiFetch(url, { method, body: JSON.stringify(subjectData) });
@@ -124,7 +124,7 @@ export default function Academics() {
     e.preventDefault(); setLoading(true);
     const formData = new FormData(e.currentTarget);
     const gradeData = { studentId: formData.get('studentId') as string, subjectId: formData.get('subjectId') as string, assessmentType: formData.get('assessmentType') as string, marksObtained: parseInt(formData.get('marksObtained') as string), maxMarks: parseInt(formData.get('maxMarks') as string), letterGrade: formData.get('letterGrade'), academicYear: formData.get('academicYear'), semester: formData.get('semester') as string };
-    const url = selectedGrade ? `http://194.163.141.113:8082/api/academic/grades/${selectedGrade.id}` : 'http://194.163.141.113:8082/api/academic/grades';
+    const url = selectedGrade ? `/api/academic/grades/${selectedGrade.id}` : '/api/academic/grades';
     const method = selectedGrade ? 'PUT' : 'POST';
     try {
       const response = await apiFetch(url, { method, body: JSON.stringify(gradeData) });
@@ -140,7 +140,7 @@ export default function Academics() {
   const handleDeleteSubject = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this subject?')) return;
     try {
-      const response = await apiFetch(`http://194.163.141.113:8082/api/academic/subjects/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`/api/academic/subjects/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success('Subject deleted successfully');
         fetchSubjects(subjectPageNum, subjectGradeFilter, subjectSearch);
@@ -151,7 +151,7 @@ export default function Academics() {
   const handleDeleteGrade = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this grade?')) return;
     try {
-      const response = await apiFetch(`http://194.163.141.113:8082/api/academic/grades/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`/api/academic/grades/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success('Grade deleted successfully');
         fetchGrades(gradePageNum, gradeYearFilter, gradeSemesterFilter, gradeSearch);
@@ -164,7 +164,7 @@ export default function Academics() {
     setLoading(true);
     const formData = new FormData();
     formData.append("file", importFile);
-    const url = `http://194.163.141.113:8082/api/academic/${type}/bulk-upload`;
+    const url = `/api/academic/${type}/bulk-upload`;
     try {
       const response = await apiFetch(url, { method: 'POST', body: formData }); // Use apiFetch for multipart
       if (response.ok) {

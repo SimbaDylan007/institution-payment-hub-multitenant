@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { apiFetch } from "@/utils/apiClient"; // 1. Import the centralized apiFetch
 
-const API_BASE_URL = "http://194.163.141.113:8082/api/academic";
+const API_BASE_URL = "/api/academic";
 
 // 2. The local fetchWithErrorHandling function is no longer needed and has been removed.
 

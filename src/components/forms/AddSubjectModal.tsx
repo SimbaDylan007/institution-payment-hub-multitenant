@@ -63,7 +63,7 @@ export const AddSubjectModal: FC<AddSubjectModalProps> = ({ onSubjectAdded }) =>
         }
 
         try {
-            const response = await apiFetch('http://194.163.141.113:8082/api/academic/subjects', {
+            const response = await apiFetch('/api/academic/subjects', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });

@@ -51,7 +51,7 @@ const AddStudentModal: FC<AddStudentModalProps> = ({ isOpen, onClose, onSuccess 
                 // For regular admins, the backend's automatic tenant filter will apply
 
                 try {
-                    const response = await apiFetch(`http://194.163.141.113:8082/api/student-categories?${params.toString()}`);
+                    const response = await apiFetch(`/api/student-categories?${params.toString()}`);
                     if (response.ok) {
                         const data = await response.json();
                         setCategories(data);
@@ -111,7 +111,7 @@ const AddStudentModal: FC<AddStudentModalProps> = ({ isOpen, onClose, onSuccess 
         }
 
         try {
-            const response = await apiFetch('http://194.163.141.113:8082/api/students', {
+            const response = await apiFetch('/api/students', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });

@@ -60,7 +60,7 @@ export default function Staff() {
             params.append('institutionId', selectedInstitution.id.toString());
         }
 
-        const url = `http://194.163.141.113:8082/api/staff?${params.toString()}`;
+        const url = `/api/staff?${params.toString()}`;
 
         apiFetch(url)
             .then(res => res.json())
@@ -91,7 +91,7 @@ export default function Staff() {
   const handleDeleteStaff = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this staff member?')) {
       try {
-        const response = await apiFetch(`http://194.163.141.113:8082/api/staff/${id}`, { method: 'DELETE' });
+        const response = await apiFetch(`/api/staff/${id}`, { method: 'DELETE' });
         if (response.ok) {
           toast.success('Staff member deleted successfully');
           fetchStaff(currentPage, searchTerm);
@@ -118,7 +118,7 @@ export default function Staff() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const response = await apiFetch('http://194.163.141.113:8082/api/staff/bulk-upload', {
+      const response = await apiFetch('/api/staff/bulk-upload', {
         method: 'POST',
         body: formData,
         // No 'Content-Type' header needed, the browser will set it correctly for FormData

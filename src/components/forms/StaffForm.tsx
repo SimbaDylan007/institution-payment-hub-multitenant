@@ -90,8 +90,8 @@ const StaffForm: FC<StaffFormProps> = ({ staff, onSuccess, onCancel }) => {
         try {
             // Use the full URL as per your other components
             const url = staff?.id
-                ? `http://194.163.141.113:8082/api/staff/${staff.id}`
-                : 'http://194.163.141.113:8082/api/staff';
+                ? `/api/staff/${staff.id}`
+                : '/api/staff';
 
             const method = staff?.id ? 'PUT' : 'POST';
 

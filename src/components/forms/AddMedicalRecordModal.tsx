@@ -43,7 +43,7 @@ export default function AddMedicalRecordModal({ studentId, onRecordAdded }: AddM
     setLoading(true);
 
     try {
-      const response = await fetch(`http://194.163.141.113:8082/api/students/${studentId}/medical-records`, {
+      const response = await fetch(`/api/students/${studentId}/medical-records`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

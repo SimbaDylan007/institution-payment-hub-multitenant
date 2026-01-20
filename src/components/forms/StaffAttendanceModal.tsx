@@ -44,7 +44,7 @@ export default function StaffAttendanceModal({ staffId, onAttendanceMarked }: St
     try {
       // Replace `fetch` with `apiFetch` and remove the manual headers.
       // apiFetch will automatically add the 'Authorization' and 'Content-Type' headers.
-      const response = await apiFetch(`http://194.163.141.113:8082/api/staff/${staffId}/attendance`, {
+      const response = await apiFetch(`/api/staff/${staffId}/attendance`, {
         method: "POST",
         body: JSON.stringify(formData),
       });

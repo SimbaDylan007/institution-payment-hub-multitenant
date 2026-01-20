@@ -51,7 +51,7 @@ const AddEventModal: FC<AddEventModalProps> = ({ onEventAdded }) => {
         // For regular admins, the backend will automatically use their institution.
 
         try {
-            const response = await apiFetch('http://194.163.141.113:8082/api/events', {
+            const response = await apiFetch('/api/events', {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });

@@ -42,7 +42,7 @@ export default function LeaveRequestModal({ staffId, onLeaveRequested }: LeaveRe
     try {
       // Replace `fetch` with `apiFetch` and remove the manual headers.
       // `apiFetch` will automatically add the 'Authorization' and 'Content-Type' headers.
-      const response = await apiFetch(`http://194.163.141.113:8082/api/staff/${staffId}/leave-requests`, {
+      const response = await apiFetch(`/api/staff/${staffId}/leave-requests`, {
         method: "POST",
         body: JSON.stringify(formData),
       });

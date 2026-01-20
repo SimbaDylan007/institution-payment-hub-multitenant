@@ -19,7 +19,7 @@ export default function DashboardHub() {
         const fetchHubData = async () => {
             setLoading(true); // Ensure loading state is true at the start
             try {
-                const response = await apiFetch('http://194.163.141.113:8082/api/dashboard/hub'); // This should be the new endpoint
+                const response = await apiFetch('/api/dashboard/hub'); // This should be the new endpoint
                 if (response.ok) {
                     setHubData(await response.json());
                 } else {

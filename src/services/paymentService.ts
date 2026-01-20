@@ -7,7 +7,7 @@ import 'jspdf-autotable';
 import autoTable from "jspdf-autotable";
 
 // The base URL for your backend API, defined once for easy maintenance.
-const API_BASE_URL = "http://194.163.141.113:8082/api";
+const API_BASE_URL = "/api";
 
 /**
  * A helper function for client-side filtering.

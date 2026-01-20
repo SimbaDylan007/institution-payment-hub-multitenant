@@ -45,7 +45,7 @@ export default function AddGuardianModal({ studentId, onGuardianAdded }: AddGuar
     setLoading(true);
 
     try {
-      const response = await fetch(`http://194.163.141.113:8082/api/students/${studentId}/guardians`, {
+      const response = await fetch(`/api/students/${studentId}/guardians`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

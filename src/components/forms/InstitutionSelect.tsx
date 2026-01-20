@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 
 const fetchInstitutions = async (): Promise<Institution[]> => {
-    const response = await apiFetch('http://194.163.141.113:8082/api/institutions');
+    const response = await apiFetch('/api/institutions');
     if (!response.ok) throw new Error("Failed to fetch institutions");
     return response.json();
 };

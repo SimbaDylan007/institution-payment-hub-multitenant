@@ -122,8 +122,8 @@ export default function Financials() {
         setCurrentStudent(student);
         try {
             const [ledgerRes, balanceRes] = await Promise.all([
-                apiFetch(`http://194.163.141.113:8082/api/financials/students/${student.studentId}/ledger`),
-                apiFetch(`http://194.163.141.113:8082/api/financials/students/${student.studentId}/balance`)
+                apiFetch(`/api/financials/students/${student.studentId}/ledger`),
+                apiFetch(`/api/financials/students/${student.studentId}/balance`)
             ]);
             if (ledgerRes.ok) setCurrentLedger(await ledgerRes.json());
             if (balanceRes.ok) setCurrentBalance(await balanceRes.json());
@@ -140,7 +140,7 @@ export default function Financials() {
         setLoading(true);
         const formData = new FormData(e.currentTarget);
         const feeTypeData = { name: formData.get('name'), defaultAmount: parseFloat(formData.get('defaultAmount') as string), description: formData.get('description'), currency: formData.get('currency') };
-        const url = selectedFeeType ? `http://194.163.141.113:8082/api/financials/fee-types/${selectedFeeType.id}` : 'http://194.163.141.113:8082/api/financials/fee-types';
+        const url = selectedFeeType ? `/api/financials/fee-types/${selectedFeeType.id}` : '/api/financials/fee-types';
         const method = selectedFeeType ? 'PUT' : 'POST';
         try {
             const response = await apiFetch(url, { method, body: JSON.stringify(feeTypeData) });
@@ -164,7 +164,7 @@ export default function Financials() {
         if (!window.confirm('Are you sure you want to delete this fee type?')) return;
         setLoading(true);
         try {
-            const response = await apiFetch(`http://194.163.141.113:8082/api/financials/fee-types/${feeTypeId}`, { method: 'DELETE' });
+            const response = await apiFetch(`/api/financials/fee-types/${feeTypeId}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success('Fee type deleted successfully!');
                 fetchAllData();
@@ -191,7 +191,7 @@ export default function Financials() {
             academicYear: formData.get('academicYear') as string, semester: formData.get('semester') as string,
             currency: formData.get('currency') as string
         };
-        const url = transactionType === 'DEBIT' ? 'http://194.163.141.113:8082/api/financials/students/charges' : 'http://194.163.141.113:8082/api/financials/students/payments';
+        const url = transactionType === 'DEBIT' ? '/api/financials/students/charges' : '/api/financials/students/payments';
         try {
             const response = await apiFetch(url, { method: 'POST', body: JSON.stringify(requestData) });
             if (response.ok) {
@@ -222,7 +222,7 @@ export default function Financials() {
             academicYear: formData.get('academicYear') as string, semester: formData.get('semester') as string,
             currency: formData.get('currency') as string
         };
-        const url = `http://194.163.141.113:8082/api/financials/ledger/${selectedLedgerEntry.id}`;
+        const url = `/api/financials/ledger/${selectedLedgerEntry.id}`;
         try {
             const response = await apiFetch(url, { method: 'PUT', body: JSON.stringify(requestData) });
             if (response.ok) {
@@ -246,7 +246,7 @@ export default function Financials() {
         if (!window.confirm('Are you sure you want to permanently delete this transaction?')) return;
         setLoading(true);
         try {
-            const response = await apiFetch(`http://194.163.141.113:8082/api/financials/ledger/${ledgerId}`, { method: 'DELETE' });
+            const response = await apiFetch(`/api/financials/ledger/${ledgerId}`, { method: 'DELETE' });
             if (response.ok) {
                 toast.success('Transaction deleted successfully!');
                 if (currentStudent) { await handleViewLedger(currentStudent); }
@@ -278,7 +278,7 @@ export default function Financials() {
         try {
             const token = localStorage.getItem("jwt_token");
             if (!token) throw new Error("Authentication token not found.");
-            const response = await fetch('http://194.163.141.113:8082/api/financials/charges/bulk', {
+            const response = await fetch('/api/financials/charges/bulk', {
                 method: 'POST',
                 body: formData,
                 headers: { "Authorization": "Bearer " + token }
@@ -309,7 +309,7 @@ export default function Financials() {
             const filters = { studentId: currentStudent.studentId, academicYear: ledgerYearFilter, semester: ledgerSemesterFilter, currency: ledgerCurrencyFilter };
             const requestBody = { reportType: 'FINANCIAL_STATEMENT', format, filters };
             const token = localStorage.getItem("jwt_token");
-            const response = await fetch('http://194.163.141.113:8082/api/main-reports/export', {
+            const response = await fetch('/api/main-reports/export', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(requestBody),

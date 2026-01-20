@@ -46,7 +46,7 @@ const StudentForm: FC<StudentFormProps> = ({ student, onSave, onCancel }) => {
             // For regular admins, the backend filter will apply automatically
 
             try {
-                const response = await apiFetch(`http://194.163.141.113:8082/api/student-categories?${params.toString()}`);
+                const response = await apiFetch(`/api/student-categories?${params.toString()}`);
                 if (response.ok) {
                     setCategories(await response.json());
                 } else {
@@ -112,7 +112,7 @@ const StudentForm: FC<StudentFormProps> = ({ student, onSave, onCancel }) => {
         }
 
         try {
-            const url = student ? `http://194.163.141.113:8082/api/students/${student.id}` : 'http://194.163.141.113:8082/api/students';
+            const url = student ? `/api/students/${student.id}` : '/api/students';
             const method = student ? 'PUT' : 'POST';
 
             const response = await apiFetch(url, { method, body: JSON.stringify(payload) });

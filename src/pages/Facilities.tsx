@@ -60,7 +60,7 @@ export default function Facilities() {
     const handleDelete = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this facility?")) return;
     try {
-      const response = await apiFetch(`http://194.163.141.113:8082/api/facilities/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`/api/facilities/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success("Facility deleted successfully.");
         fetchFacilities(currentPage); // Refresh
